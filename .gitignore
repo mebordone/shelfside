@@ -1,0 +1,32 @@
+# Convenciones locales de agentes / IDE (no versionar)
+AGENTS.MD
+
+# Datos y runtime local (SQLite, posters, etc.)
+/data/
+
+# Variables de entorno con secretos
+.env
+.env.*
+!.env.example
+
+# Node / frontend
+node_modules/
+dist/
+.svelte-kit/
+.vite/
+
+# Tauri / Rust
+src-tauri/target/
+
+# Logs y cachés
+*.log
+npm-debug.log*
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor (opcional; descomentá si no querés compartir ajustes de equipo)
+# .vscode/
+# .idea/
