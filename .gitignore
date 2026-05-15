@@ -12,8 +12,10 @@ AGENTS.MD
 # Node / frontend
 node_modules/
 dist/
+build/
 .svelte-kit/
 .vite/
+/package
 
 # Tauri / Rust
 src-tauri/target/
@@ -22,11 +24,13 @@ src-tauri/target/
 *.log
 npm-debug.log*
 .cache/
+/coverage/
+
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Editor (opcional; descomentá si no querés compartir ajustes de equipo)
-# .vscode/
-# .idea/
+# Editor (ajustes locales; no versionar)
+.vscode/
+.idea/
