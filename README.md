@@ -40,7 +40,7 @@ Con la app abierta (`npm run tauri dev`):
 1. **Migraciones:** si arranca sin error en pantalla, `001` y `002` se aplicaron. Si ves error de SQL o tablas faltantes y venías de una versión vieja, borrá la base del usuario (ver sección *Base de datos* más abajo) y reiniciá.
 2. **Inicio:** debería mostrar el panel por estado (vacío al principio) o enlaces a buscar/añadir manual; pie con estado de DB y selector de tema.
 3. **Manual (sin TMDB):** **Biblioteca** → **Añadir manual** → título + opcional imagen → guardar → debería aparecer en **Biblioteca** y en **Inicio** agrupado por estado; abrí detalle y **Editar** (estado, notas, si es TV: temporada/episodio).
-4. **TMDB:** con `VITE_TMDB_API_KEY` en `.env`, reiniciá `tauri dev`, entrá a **Buscar TMDB**, buscá un título, **Añadir a biblioteca** → detalle → **Actualizar desde TMDB** (poster en caché bajo datos de app si la red responde).
+4. **TMDB:** con `VITE_TMDB_API_KEY` en `.env`, reiniciá `tauri dev`, entrá a **Buscar TMDB**, buscá un título; en resultados, **Añadir a biblioteca** abre menú de estado (la pista bajo «Resultados» lo resume). Abrí el **detalle** de un resultado: sinopsis y sección **Sugerencias TMDB** (recomendaciones/similares) con acceso a otras fichas o alta con **+**. En **Biblioteca**, un ítem TMDB muestra las mismas sugerencias. Desde detalle de biblioteca: **Actualizar desde TMDB** (poster en caché bajo datos de app si la red responde).
 5. **Filtros:** en **Biblioteca**, probá tipo / estado / texto y **Aplicar** (opción “Todos” en estado no debe decir “Todos los tipos”).
 6. **Reinicio:** cerrá la app y volvé a abrir: la biblioteca y posters cacheados deben persistir.
 7. **Consola WebView (opcional):** en el flujo anterior no deberían aparecer errores rojos de JS.

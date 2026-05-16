@@ -15,6 +15,8 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 - **Inicio** como panel agrupado por estado con rejilla compacta de tarjetas; enlace a biblioteca completa.
 - Navegación superior con indicador de ruta activa.
 - Capabilities: `remote.urls` para `http://localhost:1420` (desarrollo con `devUrl`).
+- Detalle TMDB desde **Buscar** (`/search/movie|tv/[id]`): sección **Sugerencias TMDB** (recomendaciones y similares), misma UX que en el detalle de biblioteca para ítems TMDB (`TmdbRelatedSuggestionsBlock` compartido).
+- Listado de resultados TMDB: microcopy bajo «Resultados» sobre el menú de estado al añadir.
 
 ### Corregido
 
