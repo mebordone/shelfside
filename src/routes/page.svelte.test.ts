@@ -3,12 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Page from "./+page.svelte";
 
-const mockSelect = vi.fn().mockResolvedValue([{ value: "ok" }]);
+const mockSelect = vi.fn();
 
 vi.mock("$lib/db/connection", () => ({
   getDatabase: vi.fn().mockResolvedValue({
     select: (...args: unknown[]) => mockSelect(...args),
   }),
+}));
+
+vi.mock("$lib/poster", () => ({
+  resolvePosterDisplayUrl: vi.fn().mockResolvedValue(null),
 }));
 
 afterEach(() => {
@@ -17,25 +21,25 @@ afterEach(() => {
 
 describe("+page (inicio)", () => {
   beforeEach(() => {
-    mockSelect.mockClear();
-    mockSelect.mockResolvedValue([{ value: "ok" }]);
+    mockSelect.mockReset();
+    mockSelect.mockImplementation((sql: string) => {
+      if (sql.includes("app_meta")) return Promise.resolve([{ value: "ok" }]);
+      return Promise.resolve([]);
+    });
     localStorage.removeItem("shelfside-theme");
     document.documentElement.classList.remove("dark");
   });
 
-  it("muestra título y textos de i18n", () => {
+  it("muestra título y pista del panel", () => {
     render(Page);
     expect(screen.getByRole("heading", { name: /Shelfside/i })).toBeInTheDocument();
-    expect(screen.getByText(/biblioteca cultural local/i)).toBeInTheDocument();
+    expect(screen.getByText(/Agrupado por estado/i)).toBeInTheDocument();
   });
 
   it("carga schema desde la base y muestra el valor", async () => {
     render(Page);
     await waitFor(() => {
-      expect(mockSelect).toHaveBeenCalledWith(
-        "SELECT value FROM app_meta WHERE key = $1",
-        ["schema_check"],
-      );
+      expect(mockSelect).toHaveBeenCalledWith("SELECT value FROM app_meta WHERE key = $1", ["schema_check"]);
     });
     await waitFor(() => {
       expect(screen.getByRole("code")).toHaveTextContent("ok");

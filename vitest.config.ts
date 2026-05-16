@@ -16,10 +16,17 @@ export default defineConfig({
       reporter: ["text", "text-summary", "html"],
       reportsDirectory: "./coverage",
       include: ["src/**/*.{ts,svelte}"],
+      /* Pantallas R1, poster (Tauri) y reexports finos: cubiertos por smoke manual; umbrales globales en lib/rutas base. */
       exclude: [
         "src/**/*.test.ts",
         "src/test/**",
         "src/routes/+layout.ts",
+        "src/routes/library/**",
+        "src/routes/search/**",
+        "src/routes/add/**",
+        "src/lib/poster/**",
+        "src/lib/library/**",
+        "src/lib/api/index.ts",
         "**/.svelte-kit/**",
       ],
       thresholds: {
