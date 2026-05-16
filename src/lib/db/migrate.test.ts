@@ -36,10 +36,13 @@ describe("splitStatements", () => {
     expect(splitStatements("-- a\n-- b\n")).toEqual([]);
   });
 
-  it("una sentencia sin comentarios previos", () => {
-    const stmts = splitStatements("CREATE TABLE x (id INTEGER PRIMARY KEY);\n");
-    expect(stmts).toHaveLength(1);
-    expect(stmts[0]).toContain("CREATE TABLE x");
+  it("002_catalog_library produce sentencias CREATE válidas", () => {
+    const path = join(__dirname, "../../../migrations/002_catalog_library.sql");
+    const raw = readFileSync(path, "utf-8");
+    const stmts = splitStatements(raw);
+    expect(stmts.length).toBeGreaterThanOrEqual(2);
+    expect(stmts.some((s) => s.includes("catalog_item"))).toBe(true);
+    expect(stmts.some((s) => s.includes("library_entry"))).toBe(true);
   });
 });
 
