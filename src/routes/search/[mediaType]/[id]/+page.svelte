@@ -9,6 +9,7 @@
     type TmdbSearchHit,
   } from "$lib/api";
   import TmdbAddMenuButton from "$lib/components/TmdbAddMenuButton.svelte";
+  import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
   import { t } from "$lib/i18n/es";
@@ -160,6 +161,10 @@
           <h2 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("search.overview")}</h2>
           <p class="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{detail.overview}</p>
         </div>
+      {/if}
+
+      {#if hasKey && paramsValid}
+        <TmdbRelatedSuggestionsBlock mediaType={mediaType as "movie" | "tv"} tmdbId={tmdbId} />
       {/if}
     </article>
   {/if}
