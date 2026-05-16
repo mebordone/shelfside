@@ -25,7 +25,7 @@ export default defineConfig({
         "src/routes/search/**",
         "src/routes/add/**",
         "src/lib/poster/**",
-        "src/lib/library/**",
+        "src/lib/library/tmdbFlow.ts",
         "src/lib/api/index.ts",
         "**/.svelte-kit/**",
       ],
