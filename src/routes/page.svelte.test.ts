@@ -30,10 +30,11 @@ describe("+page (inicio)", () => {
     document.documentElement.classList.remove("dark");
   });
 
-  it("muestra título y pista del panel", () => {
+  it("sin ítems en progreso/planeado muestra mensaje de enfoque", async () => {
     render(Page);
-    expect(screen.getByRole("heading", { name: /Shelfside/i })).toBeInTheDocument();
-    expect(screen.getByText(/Agrupado por estado/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/No hay títulos en progreso o planeado/i)).toBeInTheDocument();
+    });
   });
 
   it("carga schema desde la base y muestra el valor", async () => {

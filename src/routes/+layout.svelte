@@ -35,6 +35,14 @@
       : `${base} text-zinc-700 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800`;
   }
 
+  /** Marca / inicio: misma fila que el menú, sin duplicar enlace “Inicio”. */
+  function brandClass(active: boolean): string {
+    const base = "shrink-0 rounded px-2 py-1 text-base font-semibold tracking-tight transition-colors";
+    return active
+      ? `${base} bg-emerald-600 text-white shadow-sm dark:bg-emerald-600 dark:text-white`
+      : `${base} text-emerald-900 hover:bg-zinc-200 dark:text-emerald-300 dark:hover:bg-zinc-800`;
+  }
+
   onMount(() => {
     initTheme();
     void (async () => {
@@ -59,13 +67,20 @@
 {:else}
   <div class="flex min-h-screen flex-col">
     <nav
-      class="flex flex-wrap items-center gap-1 border-b border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
+      class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
       aria-label={t("nav.aria")}
     >
-      <a class={navClass(navActive("home"))} href={resolve("/")}>{t("nav.home")}</a>
-      <a class={navClass(navActive("library"))} href={resolve("/library")}>{t("nav.library")}</a>
-      <a class={navClass(navActive("search"))} href={resolve("/search")}>{t("nav.search")}</a>
-      <a class={navClass(navActive("manual"))} href={resolve("/add/manual")}>{t("nav.manual")}</a>
+      <a
+        class={brandClass(navActive("home"))}
+        href={resolve("/")}
+        aria-current={navActive("home") ? "page" : undefined}
+        >{t("app.title")}</a
+      >
+      <div class="flex min-w-0 flex-wrap items-center gap-1">
+        <a class={navClass(navActive("library"))} href={resolve("/library")}>{t("nav.library")}</a>
+        <a class={navClass(navActive("search"))} href={resolve("/search")}>{t("nav.search")}</a>
+        <a class={navClass(navActive("manual"))} href={resolve("/add/manual")}>{t("nav.manual")}</a>
+      </div>
     </nav>
     <div class="flex-1">
       {@render children()}

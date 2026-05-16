@@ -3,7 +3,6 @@
   import { onMount } from "svelte";
   import { getDatabase } from "$lib/db/connection";
   import { listLibraryWithCatalog, type LibraryListRow } from "$lib/db";
-  import { STATUSES } from "$lib/db/types";
   import { t } from "$lib/i18n/es";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { setTheme, theme } from "$lib/stores/theme.svelte";
@@ -14,15 +13,22 @@
   let loading = $state(true);
   let schemaValue = $state<string | null>(null);
 
+  /** Solo en progreso y planeado en el inicio; orden fijo UX. */
+  const HOME_SECTION_ORDER = ["in_progress", "planning"] as const;
+
   const grouped = $derived.by(() => {
     const o: Record<string, Row[]> = {};
-    for (const st of STATUSES) o[st] = [];
+    for (const st of HOME_SECTION_ORDER) o[st] = [];
     for (const r of rows) {
       const bucket = o[r.status];
       if (bucket) bucket.push(r);
     }
     return o;
   });
+
+  const homeEntriesTotal = $derived(
+    HOME_SECTION_ORDER.reduce((n, st) => n + (grouped[st]?.length ?? 0), 0),
+  );
 
   function statusLabel(s: string): string {
     const k = `status.${s}`;
@@ -73,16 +79,11 @@
   });
 </script>
 
-<main class="mx-auto max-w-5xl space-y-8 px-4 py-8">
-  <header class="space-y-1">
-    <h1 class="text-2xl font-semibold tracking-tight">{t("app.title")}</h1>
-    <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("home.dashboard_hint")}</p>
-  </header>
-
+<main class="mx-auto max-w-5xl space-y-6 px-4 py-6">
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
-  {:else if rows.length === 0}
-    <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("library.empty")}</p>
+  {:else if homeEntriesTotal === 0}
+    <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("home.empty_focus")}</p>
     <p class="pt-4">
       <a
         class="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
@@ -95,7 +96,7 @@
       >
     </p>
   {:else}
-    {#each STATUSES as st (st)}
+    {#each HOME_SECTION_ORDER as st (st)}
       {@const list = grouped[st] ?? []}
       {#if list.length > 0}
         <section class="space-y-3">
