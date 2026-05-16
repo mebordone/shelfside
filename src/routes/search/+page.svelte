@@ -2,6 +2,8 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { createTmdbClient, getTmdbApiKeyFromEnv, type TmdbSearchHit } from "$lib/api";
+  import TmdbAddMenuButton from "$lib/components/TmdbAddMenuButton.svelte";
+  import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
   import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
   import { t } from "$lib/i18n/es";
@@ -9,8 +11,13 @@
   import { searchSession } from "$lib/stores/searchSession.svelte";
 
   let loading = $state(false);
+  let addingKey = $state<string | null>(null);
 
   const hasKey = $derived(Boolean(getTmdbApiKeyFromEnv().trim()));
+
+  function hitMenuId(h: TmdbSearchHit): string {
+    return `search-hit-${h.mediaType}-${h.id}`;
+  }
 
   async function runSearch() {
     if (!hasKey) {
@@ -37,14 +44,16 @@
     }
   }
 
-  async function addHit(hit: TmdbSearchHit) {
+  async function addHit(hit: TmdbSearchHit, status: Status) {
     if (!hasKey) return;
+    const key = hit.mediaType + "-" + String(hit.id);
+    addingKey = key;
     searchSession.err = null;
     searchSession.msg = null;
     try {
       const db = await getDatabase();
       const client = createTmdbClient({ apiKey: getTmdbApiKeyFromEnv() });
-      const r = await addTmdbHitToLibraryFlow(db, client, hit);
+      const r = await addTmdbHitToLibraryFlow(db, client, hit, status);
       if (r.alreadyInLibrary) {
         searchSession.msg = t("search.already");
       } else {
@@ -53,6 +62,8 @@
       }
     } catch (e) {
       searchSession.err = e instanceof Error ? e.message : String(e);
+    } finally {
+      addingKey = null;
     }
   }
 </script>
@@ -72,7 +83,7 @@
     }}
   >
     <input
-        class="shelf-field min-w-[12rem] flex-1"
+      class="shelf-field min-w-[12rem] flex-1"
       placeholder={t("search.query_placeholder")}
       bind:value={searchSession.query}
     />
@@ -117,14 +128,14 @@
               <p class="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{t("search.open_detail_hint")}</p>
             </div>
           </a>
-          <div class="flex shrink-0 flex-col justify-center">
-            <button
-              type="button"
-              class="rounded border border-emerald-600 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
-              onclick={() => void addHit(h)}
-            >
-              {t("search.add")}
-            </button>
+          <div class="flex shrink-0 flex-col justify-center self-center">
+            <TmdbAddMenuButton
+              menuId={hitMenuId(h)}
+              variant="row"
+              busy={addingKey === h.mediaType + "-" + String(h.id)}
+              disabled={!hasKey}
+              onAdd={(status) => addHit(h, status)}
+            />
           </div>
         </li>
       {/each}

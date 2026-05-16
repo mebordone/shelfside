@@ -8,6 +8,8 @@
     type TmdbDetail,
     type TmdbSearchHit,
   } from "$lib/api";
+  import TmdbAddMenuButton from "$lib/components/TmdbAddMenuButton.svelte";
+  import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
   import { t } from "$lib/i18n/es";
   import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
@@ -26,6 +28,10 @@
   const tmdbId = $derived(Number(rawId));
   const paramsValid = $derived(
     (mediaType === "movie" || mediaType === "tv") && Number.isFinite(tmdbId) && tmdbId > 0,
+  );
+
+  const detailMenuId = $derived(
+    paramsValid ? `search-detail-${mediaType}-${tmdbId}` : "search-detail-invalid",
   );
 
   function yearFromDetail(d: TmdbDetail): string | null {
@@ -86,14 +92,14 @@
     })();
   });
 
-  async function addToLibrary() {
+  async function addToLibrary(status: Status) {
     if (!detail || !hasKey) return;
     adding = true;
     err = null;
     try {
       const db = await getDatabase();
       const client = createTmdbClient({ apiKey: getTmdbApiKeyFromEnv() });
-      const r = await addTmdbHitToLibraryFlow(db, client, hitFromDetail(detail));
+      const r = await addTmdbHitToLibraryFlow(db, client, hitFromDetail(detail), status);
       if (r.alreadyInLibrary) {
         searchSession.msg = t("search.already");
         await goto(resolve("/search"));
@@ -133,14 +139,15 @@
           <p class="mt-1 text-sm text-zinc-500">
             {t(`media.${detail.mediaType}`)}{#if yearLabel} · {yearLabel}{/if}
           </p>
-          <button
-            type="button"
-            class="mt-3 rounded border border-emerald-600 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
-            disabled={adding || !hasKey}
-            onclick={() => void addToLibrary()}
-          >
-            {adding ? t("search.adding") : t("search.add")}
-          </button>
+          <div class="mt-3">
+            <TmdbAddMenuButton
+              menuId={detailMenuId}
+              variant="row"
+              busy={adding}
+              disabled={!hasKey}
+              onAdd={(status) => addToLibrary(status)}
+            />
+          </div>
         </div>
       </div>
 
