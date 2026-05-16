@@ -122,7 +122,7 @@
     type="button"
     class="{variant === 'compact'
       ? 'inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold leading-none text-white shadow-md ring-1 ring-black/20 hover:bg-emerald-500 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300'
-      : 'rounded-md border border-emerald-600 px-3 py-1.5 text-sm font-medium text-emerald-800 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-500 dark:text-emerald-200 dark:hover:bg-emerald-950'}"
+      : 'rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300'}"
     disabled={disabled || busy}
     aria-expanded={menuOpen}
     aria-haspopup="menu"

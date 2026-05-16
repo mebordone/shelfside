@@ -109,11 +109,12 @@
     <p class="text-sm text-zinc-600">{t("search.empty")}</p>
   {:else if searchSession.hits.length > 0}
     <h2 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("search.results")}</h2>
+    <p class="mb-2 text-xs text-zinc-500 dark:text-zinc-400">{t("search.add_status_hint")}</p>
     <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
       {#each searchSession.hits as h (h.mediaType + "-" + String(h.id))}
-        <li class="flex gap-3 bg-white p-3 dark:bg-zinc-900">
+        <li class="flex items-center gap-3 bg-white p-3 dark:bg-zinc-900">
           <a
-            class="group flex min-w-0 flex-1 gap-3 rounded-md outline-none ring-emerald-500/40 focus-visible:ring-2"
+            class="group flex min-h-0 min-w-0 flex-1 items-center gap-3 self-stretch rounded-md outline-none ring-emerald-500/40 focus-visible:ring-2"
             href={resolve("/search/[mediaType]/[id]", { mediaType: h.mediaType, id: String(h.id) })}
             aria-label={t("search.aria_open_detail")}
           >
@@ -128,7 +129,7 @@
               <p class="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{t("search.open_detail_hint")}</p>
             </div>
           </a>
-          <div class="flex shrink-0 flex-col justify-center self-center">
+          <div class="flex shrink-0 flex-col justify-center border-l border-zinc-200/70 pl-3 dark:border-zinc-700/70">
             <TmdbAddMenuButton
               menuId={hitMenuId(h)}
               variant="row"
