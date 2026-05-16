@@ -4,6 +4,8 @@
   import { open } from "@tauri-apps/plugin-dialog";
   import { getDatabase } from "$lib/db/connection";
   import { addManualToLibrary } from "$lib/db";
+  import { STATUSES, type Status } from "$lib/db/types";
+  import { persistDefaultAddStatus, readDefaultAddStatus } from "$lib/stores/defaultAddStatus";
   import { guessImageExtFromPath, saveManualPosterCopy } from "$lib/poster";
   import { t } from "$lib/i18n/es";
 
@@ -13,6 +15,7 @@
   let pickedPath = $state<string | null>(null);
   let saving = $state(false);
   let err = $state<string | null>(null);
+  let addStatus = $state<Status>(readDefaultAddStatus());
 
   async function pickImage() {
     err = null;
@@ -48,6 +51,7 @@
         media_type: mediaType,
         notes: notes.trim() || null,
         posterLocalPath: posterLocal,
+        initial_status: addStatus,
       });
       await goto(resolve("/library/[id]", { id: String(libraryId) }));
     } catch (e) {
@@ -88,6 +92,20 @@
         <option value="movie">{t("media.movie")}</option>
         <option value="tv">{t("media.tv")}</option>
       </select>
+    </label>
+
+    <label class="block text-sm">
+      <span class="text-zinc-600 dark:text-zinc-400">{t("add.status_label")}</span>
+      <select
+        class="mt-1 shelf-field"
+        bind:value={addStatus}
+        onchange={() => persistDefaultAddStatus(addStatus)}
+      >
+        {#each STATUSES as st (st)}
+          <option value={st}>{t(`status.${st}`)}</option>
+        {/each}
+      </select>
+      <span class="mt-1 block text-xs text-zinc-500">{t("add.status_hint")}</span>
     </label>
 
     <label class="block text-sm">
