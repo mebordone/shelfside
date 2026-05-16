@@ -56,6 +56,8 @@ const messages: Record<string, string> = {
   "detail.refresh_for_seasons":
     "Usá «Actualizar desde TMDB» en el detalle para cargar temporadas y episodios totales.",
   "detail.related_heading": "Sugerencias TMDB",
+  "detail.related_subtitle":
+    "Películas y series que TMDB relaciona con esta ficha (recomendaciones y similares).",
   "detail.related_loading": "Cargando sugerencias…",
   "detail.related_empty": "Sin sugerencias por ahora.",
   "detail.related_in_library": "En tu biblioteca",
@@ -66,6 +68,7 @@ const messages: Record<string, string> = {
   "detail.related_confirm_add": "Añadir",
   "detail.related_added": "Añadido a la biblioteca.",
   "detail.related_open_tmdb": "Ver detalle TMDB",
+  "detail.related_add_hint": "Tocá + y elegí un estado para añadir sin salir de esta pantalla.",
   "edit.title": "Editar entrada",
   "edit.context_label": "Editando",
   "edit.subtitle": "Ajustá estado, puntuación, progreso y notas.",
@@ -82,6 +85,7 @@ const messages: Record<string, string> = {
   "search.query_placeholder": "Título…",
   "search.submit": "Buscar",
   "search.results": "Resultados",
+  "search.add_status_hint": "En «Añadir» elegís el estado; el último queda guardado para la próxima vez.",
   "search.add": "Añadir a biblioteca",
   "search.empty": "Sin resultados.",
   "search.need_key": "Configurá VITE_TMDB_API_KEY en .env para buscar.",
