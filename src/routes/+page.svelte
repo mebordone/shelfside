@@ -13,8 +13,8 @@
   let loading = $state(true);
   let schemaValue = $state<string | null>(null);
 
-  /** Solo en progreso y planeado en el inicio; orden fijo UX. */
-  const HOME_SECTION_ORDER = ["in_progress", "planning"] as const;
+  /** En progreso, pausa y cola en el inicio; orden fijo UX. */
+  const HOME_SECTION_ORDER = ["in_progress", "paused", "planning"] as const;
 
   const grouped = $derived.by(() => {
     const o: Record<string, Row[]> = {};

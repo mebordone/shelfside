@@ -33,7 +33,7 @@ describe("+page (inicio)", () => {
   it("sin ítems en progreso/planeado muestra mensaje de enfoque", async () => {
     render(Page);
     await waitFor(() => {
-      expect(screen.getByText(/No hay títulos en progreso o planeado/i)).toBeInTheDocument();
+      expect(screen.getByText(/No hay títulos en progreso, pausados o planeados/i)).toBeInTheDocument();
     });
   });
 
