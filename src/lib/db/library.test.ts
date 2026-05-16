@@ -159,6 +159,7 @@ describe("updateLibraryEntry", () => {
         title: "T",
         image_url: null,
         poster_local_path: null,
+        metadata_json: null,
       },
     ]);
 

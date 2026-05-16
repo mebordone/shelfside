@@ -39,7 +39,7 @@ export async function listLibraryWithCatalog(db: SqlDb, filters: LibraryFilters)
   const sql = `
     SELECT le.id, le.catalog_item_id, le.status, le.score, le.current_season, le.last_episode_watched,
            le.progress_current, le.progress_total, le.owned, le.started_at, le.completed_at, le.notes, le.updated_at,
-           ci.media_type, ci.source, ci.external_id, ci.title, ci.image_url, ci.poster_local_path
+           ci.media_type, ci.source, ci.external_id, ci.title, ci.image_url, ci.poster_local_path, ci.metadata_json
     FROM library_entry le
     JOIN catalog_item ci ON ci.id = le.catalog_item_id
     WHERE ${where.join(" AND ")}
@@ -53,7 +53,7 @@ export async function getLibraryEntryById(db: SqlDb, libraryId: number): Promise
   const rows = await db.select<LibraryListRow[]>(
     `SELECT le.id, le.catalog_item_id, le.status, le.score, le.current_season, le.last_episode_watched,
             le.progress_current, le.progress_total, le.owned, le.started_at, le.completed_at, le.notes, le.updated_at,
-            ci.media_type, ci.source, ci.external_id, ci.title, ci.image_url, ci.poster_local_path
+            ci.media_type, ci.source, ci.external_id, ci.title, ci.image_url, ci.poster_local_path, ci.metadata_json
      FROM library_entry le
      JOIN catalog_item ci ON ci.id = le.catalog_item_id
      WHERE le.id = $1`,

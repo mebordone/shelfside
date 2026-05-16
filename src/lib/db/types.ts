@@ -46,6 +46,8 @@ export type LibraryListRow = LibraryEntryRow & {
   title: string;
   image_url: string | null;
   poster_local_path: string | null;
+  /** JSON de TMDB u otras fuentes; en TV suele incluir number_of_seasons. */
+  metadata_json: string | null;
 };
 
 export function isStatus(s: string): s is Status {
