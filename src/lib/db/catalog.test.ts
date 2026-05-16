@@ -8,7 +8,7 @@ import {
 } from "./catalog";
 
 function mockDb(): { db: SqlDb; execute: ReturnType<typeof vi.fn>; select: ReturnType<typeof vi.fn> } {
-  const execute = vi.fn().mockResolvedValue(undefined);
+  const execute = vi.fn().mockResolvedValue({ rowsAffected: 0 });
   const select = vi.fn();
   return { db: { execute, select }, execute, select };
 }
@@ -47,9 +47,9 @@ describe("insertCatalogItem", () => {
     vi.clearAllMocks();
   });
 
-  it("inserta y devuelve last_insert_rowid", async () => {
-    const { db, select, execute } = mockDb();
-    select.mockResolvedValueOnce([{ id: 7 }]);
+  it("inserta y devuelve lastInsertId del execute", async () => {
+    const { db, execute } = mockDb();
+    execute.mockResolvedValueOnce({ lastInsertId: 7, rowsAffected: 1 });
     const id = await insertCatalogItem(db, {
       media_type: "movie",
       source: "tmdb",

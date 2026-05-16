@@ -1,8 +1,14 @@
 import type { CatalogItemRow } from "./types";
 
+/** Resultado de `execute` del plugin SQL (SQLite expone `lastInsertId`). */
+export type SqlExecuteResult = {
+  rowsAffected?: number;
+  lastInsertId?: number;
+};
+
 export type SqlDb = {
   select<T>(query: string, bind?: unknown[]): Promise<T>;
-  execute(query: string, bind?: unknown[]): Promise<unknown>;
+  execute(query: string, bind?: unknown[]): Promise<SqlExecuteResult>;
 };
 
 export type InsertCatalogInput = {
@@ -41,7 +47,7 @@ export async function getCatalogById(db: SqlDb, id: number): Promise<CatalogItem
 }
 
 export async function insertCatalogItem(db: SqlDb, input: InsertCatalogInput): Promise<number> {
-  await db.execute(
+  const res = await db.execute(
     `INSERT INTO catalog_item (
        media_type, source, external_id, title, image_url, poster_local_path, metadata_json, updated_at
      ) VALUES ($1, $2, $3, $4, $5, $6, $7, datetime('now'))`,
@@ -55,8 +61,11 @@ export async function insertCatalogItem(db: SqlDb, input: InsertCatalogInput): P
       input.metadata_json ?? null,
     ],
   );
-  const rows = await db.select<{ id: number }[]>("SELECT last_insert_rowid() as id");
-  return Number(rows[0]?.id ?? 0);
+  const id = res.lastInsertId;
+  if (typeof id !== "number" || !Number.isFinite(id) || id <= 0) {
+    throw new Error("insertCatalogItem: el INSERT no devolvió lastInsertId válido (¿pool SQL?).");
+  }
+  return id;
 }
 
 export async function updateCatalogItem(
