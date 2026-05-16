@@ -107,4 +107,63 @@ describe("createTmdbClient", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });
+
+  it("getMovieRecommendations mapea resultados de película", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () =>
+        JSON.stringify({
+          results: [
+            {
+              id: 10,
+              title: "Rel",
+              overview: "x",
+              poster_path: "/p.jpg",
+              release_date: "2021-06-01",
+            },
+          ],
+        }),
+    });
+    const client = createTmdbClient({ apiKey: "k", fetchImpl });
+    const hits = await client.getMovieRecommendations(99);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("/movie/99/recommendations"),
+      expect.anything(),
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({
+      mediaType: "movie",
+      id: 10,
+      title: "Rel",
+      yearLabel: "2021",
+    });
+  });
+
+  it("getTvSimilar mapea resultados de TV", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () =>
+        JSON.stringify({
+          results: [
+            {
+              id: 20,
+              name: "Show",
+              overview: null,
+              poster_path: null,
+              first_air_date: "2018-01-15",
+            },
+          ],
+        }),
+    });
+    const client = createTmdbClient({ apiKey: "k", fetchImpl });
+    const hits = await client.getTvSimilar(5);
+    expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("/tv/5/similar"), expect.anything());
+    expect(hits[0]?.mediaType).toBe("tv");
+    expect(hits[0]?.title).toBe("Show");
+    expect(hits[0]?.yearLabel).toBe("2018");
+  });
 });

@@ -80,6 +80,68 @@ function hitFromMultiRow(r: TmdbMultiRow): TmdbSearchHit | null {
   };
 }
 
+/** Fila de lista TMDB para /movie/{id}/recommendations y /similar (sin media_type). */
+type TmdbMovieListRow = {
+  id?: number;
+  title?: string;
+  overview?: string | null;
+  poster_path?: string | null;
+  release_date?: string | null;
+};
+
+/** Fila de lista TMDB para /tv/{id}/recommendations y /similar (sin media_type). */
+type TmdbTvListRow = {
+  id?: number;
+  name?: string;
+  overview?: string | null;
+  poster_path?: string | null;
+  first_air_date?: string | null;
+};
+
+function hitFromMovieListRow(r: TmdbMovieListRow): TmdbSearchHit | null {
+  if (typeof r.id !== "number") return null;
+  const title = (r.title ?? "").trim() || "(sin título)";
+  return {
+    mediaType: "movie",
+    id: r.id,
+    title,
+    overview: r.overview ?? null,
+    posterPath: r.poster_path ?? null,
+    yearLabel: yearFromTmdbDate(r.release_date),
+  };
+}
+
+function hitFromTvListRow(r: TmdbTvListRow): TmdbSearchHit | null {
+  if (typeof r.id !== "number") return null;
+  const title = (r.name ?? "").trim() || "(sin título)";
+  return {
+    mediaType: "tv",
+    id: r.id,
+    title,
+    overview: r.overview ?? null,
+    posterPath: r.poster_path ?? null,
+    yearLabel: yearFromTmdbDate(r.first_air_date),
+  };
+}
+
+function hitsFromMovieResults(results: TmdbMovieListRow[] | undefined): TmdbSearchHit[] {
+  const hits: TmdbSearchHit[] = [];
+  for (const r of results ?? []) {
+    const h = hitFromMovieListRow(r);
+    if (h) hits.push(h);
+  }
+  return hits;
+}
+
+function hitsFromTvResults(results: TmdbTvListRow[] | undefined): TmdbSearchHit[] {
+  const hits: TmdbSearchHit[] = [];
+  for (const r of results ?? []) {
+    const h = hitFromTvListRow(r);
+    if (h) hits.push(h);
+  }
+  return hits;
+}
+
 async function readJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   try {
@@ -185,6 +247,26 @@ export function createTmdbClient(opts: TmdbClientOptions) {
         posterPath: m.poster_path ?? null,
         rawJson: JSON.stringify(m),
       };
+    },
+
+    async getMovieRecommendations(id: number): Promise<TmdbSearchHit[]> {
+      const data = await request<{ results?: TmdbMovieListRow[] }>(`/movie/${id}/recommendations`);
+      return hitsFromMovieResults(data.results);
+    },
+
+    async getMovieSimilar(id: number): Promise<TmdbSearchHit[]> {
+      const data = await request<{ results?: TmdbMovieListRow[] }>(`/movie/${id}/similar`);
+      return hitsFromMovieResults(data.results);
+    },
+
+    async getTvRecommendations(id: number): Promise<TmdbSearchHit[]> {
+      const data = await request<{ results?: TmdbTvListRow[] }>(`/tv/${id}/recommendations`);
+      return hitsFromTvResults(data.results);
+    },
+
+    async getTvSimilar(id: number): Promise<TmdbSearchHit[]> {
+      const data = await request<{ results?: TmdbTvListRow[] }>(`/tv/${id}/similar`);
+      return hitsFromTvResults(data.results);
     },
 
     posterUrlFromPath,
