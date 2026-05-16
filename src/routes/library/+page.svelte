@@ -58,10 +58,7 @@
     <div class="flex flex-wrap gap-3">
       <label class="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
         {t("library.media_filter")}
-        <select
-          class="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-          bind:value={mediaFilter}
-        >
+        <select class="shelf-field text-sm" bind:value={mediaFilter}>
           <option value="">{t("media.all")}</option>
           <option value="movie">{t("media.movie")}</option>
           <option value="tv">{t("media.tv")}</option>
@@ -69,10 +66,7 @@
       </label>
       <label class="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
         {t("library.status_filter")}
-        <select
-          class="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-          bind:value={statusFilter}
-        >
+        <select class="shelf-field text-sm" bind:value={statusFilter}>
           <option value="">{t("filter.all")}</option>
           {#each STATUSES as st (st)}
             <option value={st}>{statusLabel(st)}</option>
@@ -81,10 +75,7 @@
       </label>
       <label class="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
         {t("library.search_placeholder")}
-        <input
-          class="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-          bind:value={search}
-        />
+        <input class="shelf-field text-sm" bind:value={search} />
       </label>
       <div class="flex items-end">
         <button

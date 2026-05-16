@@ -77,17 +77,14 @@
       <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_title")}</span>
       <input
         required
-        class="mt-1 w-full rounded border border-zinc-300 bg-white px-2 py-2 dark:border-zinc-600 dark:bg-zinc-950"
+        class="mt-1 shelf-field"
         bind:value={title}
       />
     </label>
 
     <label class="block text-sm">
       <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_type")}</span>
-      <select
-        class="mt-1 w-full rounded border border-zinc-300 bg-white px-2 py-2 dark:border-zinc-600 dark:bg-zinc-950"
-        bind:value={mediaType}
-      >
+      <select class="mt-1 shelf-field" bind:value={mediaType}>
         <option value="movie">{t("media.movie")}</option>
         <option value="tv">{t("media.tv")}</option>
       </select>
@@ -97,7 +94,7 @@
       <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_notes")}</span>
       <textarea
         rows="3"
-        class="mt-1 w-full rounded border border-zinc-300 bg-white px-2 py-2 dark:border-zinc-600 dark:bg-zinc-950"
+        class="mt-1 shelf-field min-h-[5rem] resize-y"
         bind:value={notes}
       ></textarea>
     </label>
