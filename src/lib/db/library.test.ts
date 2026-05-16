@@ -4,26 +4,54 @@ import {
   addManualToLibrary,
   addTmdbToLibrary,
   getLibraryEntryById,
+  getTmdbHitsLibraryPresence,
   listLibraryWithCatalog,
   updateLibraryEntry,
 } from "./library";
 
 function mockDb(): { db: SqlDb; execute: ReturnType<typeof vi.fn>; select: ReturnType<typeof vi.fn> } {
-  const execute = vi.fn().mockResolvedValue(undefined);
+  const execute = vi.fn().mockResolvedValue({ rowsAffected: 0 });
   const select = vi.fn();
   return { db: { execute, select }, execute, select };
 }
 
+describe("getTmdbHitsLibraryPresence", () => {
+  it("devuelve library_id por hit o null", async () => {
+    const { db, select } = mockDb();
+    select.mockResolvedValueOnce([
+      { media_type: "movie", external_id: "10", library_id: 100 },
+      { media_type: "tv", external_id: "20", library_id: 200 },
+    ]);
+
+    const m = await getTmdbHitsLibraryPresence(db, [
+      { mediaType: "movie", id: 10 },
+      { mediaType: "tv", id: 20 },
+      { mediaType: "movie", id: 99 },
+    ]);
+
+    expect(m.get("movie-10")).toBe(100);
+    expect(m.get("tv-20")).toBe(200);
+    expect(m.get("movie-99")).toBeNull();
+    const q = String(select.mock.calls[0]?.[0]);
+    expect(q).toContain("IN ($1, $2, $3)");
+    expect(select.mock.calls[0]?.[1]).toEqual(["10:movie", "20:tv", "99:movie"]);
+  });
+});
+
 describe("addManualToLibrary", () => {
   it("inserta catálogo y biblioteca", async () => {
-    const { db, execute, select } = mockDb();
-    let calls = 0;
-    select.mockImplementation(async (q: string) => {
-      if (String(q).includes("last_insert_rowid")) {
-        calls += 1;
-        return [{ id: calls }];
+    const { db, execute } = mockDb();
+    let insertSeq = 0;
+    execute.mockImplementation(async (q: string) => {
+      if (String(q).includes("INSERT INTO catalog_item")) {
+        insertSeq += 1;
+        return { lastInsertId: insertSeq, rowsAffected: 1 };
       }
-      return [];
+      if (String(q).includes("INSERT INTO library_entry")) {
+        insertSeq += 1;
+        return { lastInsertId: insertSeq, rowsAffected: 1 };
+      }
+      return { rowsAffected: 0 };
     });
 
     const r = await addManualToLibrary(db, { title: "Mi obra", notes: "n" });
@@ -44,12 +72,13 @@ describe("addTmdbToLibrary", () => {
 
   it("crea catálogo y biblioteca si no existen", async () => {
     const { db, execute, select } = mockDb();
-    let rowid = 0;
+    execute.mockImplementation(async (q: string) => {
+      const s = String(q);
+      if (s.includes("INSERT INTO catalog_item")) return { lastInsertId: 1, rowsAffected: 1 };
+      if (s.includes("INSERT INTO library_entry")) return { lastInsertId: 2, rowsAffected: 1 };
+      return { rowsAffected: 0 };
+    });
     select.mockImplementation(async (q: string) => {
-      if (String(q).includes("last_insert_rowid")) {
-        rowid += 1;
-        return [{ id: rowid }];
-      }
       if (String(q).includes("FROM catalog_item WHERE source")) {
         return [];
       }
@@ -70,6 +99,46 @@ describe("addTmdbToLibrary", () => {
     expect(r.alreadyInLibrary).toBe(false);
     expect(execute).toHaveBeenCalled();
     expect(r.catalogId).toBe(1);
+    const libIns = execute.mock.calls.find((c) => String(c[0]).includes("INSERT INTO library_entry"));
+    expect(libIns?.[1]?.[1]).toBe("planning");
+    expect(libIns?.[1]?.[3]).toBeNull();
+    expect(libIns?.[1]?.[4]).toBeNull();
+  });
+
+  it("inserta in_progress con started_at al pasar initial_status", async () => {
+    const { db, execute, select } = mockDb();
+    execute.mockImplementation(async (q: string) => {
+      const s = String(q);
+      if (s.includes("INSERT INTO catalog_item")) return { lastInsertId: 1, rowsAffected: 1 };
+      if (s.includes("INSERT INTO library_entry")) return { lastInsertId: 2, rowsAffected: 1 };
+      return { rowsAffected: 0 };
+    });
+    select.mockImplementation(async (q: string) => {
+      if (String(q).includes("FROM catalog_item WHERE source")) {
+        return [];
+      }
+      if (String(q).includes("FROM library_entry WHERE catalog_item_id")) {
+        return [];
+      }
+      return [];
+    });
+
+    await addTmdbToLibrary(
+      db,
+      {
+        media_type: "movie",
+        source: "tmdb",
+        external_id: "99",
+        title: "Film",
+        image_url: "https://x/p.jpg",
+      },
+      { initial_status: "in_progress" },
+    );
+
+    const libIns = execute.mock.calls.find((c) => String(c[0]).includes("INSERT INTO library_entry"));
+    expect(libIns?.[1]?.[1]).toBe("in_progress");
+    expect(libIns?.[1]?.[3]).toEqual(expect.any(String));
+    expect(libIns?.[1]?.[4]).toBeNull();
   });
 
   it("detecta ya en biblioteca", async () => {

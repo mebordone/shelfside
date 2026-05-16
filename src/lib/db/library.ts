@@ -3,6 +3,44 @@ import { mergeStatusTimestamps, normalizeScore } from "./libraryRules";
 import type { LibraryListRow, Status } from "./types";
 import { isStatus } from "./types";
 
+/** Referencia TMDB (mismo criterio que en catálogo: source tmdb + external_id + media_type). */
+export type TmdbHitRef = {
+  mediaType: "movie" | "tv";
+  id: number;
+};
+
+/**
+ * Para cada hit TMDB, devuelve el `id` de `library_entry` si ya está en la biblioteca, o `null`.
+ * Clave del mapa: `${mediaType}-${id}` (id numérico como en TMDB).
+ */
+export async function getTmdbHitsLibraryPresence(db: SqlDb, hits: TmdbHitRef[]): Promise<Map<string, number | null>> {
+  const map = new Map<string, number | null>();
+  if (hits.length === 0) return map;
+
+  for (const h of hits) {
+    map.set(`${h.mediaType}-${h.id}`, null);
+  }
+
+  const tuplePlaceholders = hits.map((_, i) => `$${i + 1}`).join(", ");
+  const tupleArgs = hits.map((h) => `${String(h.id)}:${h.mediaType}`);
+
+  const rows = await db.select<{ media_type: string; external_id: string; library_id: number }[]>(
+    `SELECT ci.media_type, ci.external_id, le.id AS library_id
+     FROM catalog_item ci
+     INNER JOIN library_entry le ON le.catalog_item_id = ci.id
+     WHERE ci.source = 'tmdb'
+       AND (ci.external_id || ':' || ci.media_type) IN (${tuplePlaceholders})`,
+    tupleArgs,
+  );
+
+  for (const row of rows) {
+    const key = `${row.media_type}-${String(row.external_id)}`;
+    map.set(key, row.library_id);
+  }
+
+  return map;
+}
+
 export type LibraryFilters = {
   mediaType?: string;
   status?: string;
@@ -73,15 +111,28 @@ export async function getLibraryIdForCatalog(db: SqlDb, catalogItemId: number): 
 export async function insertLibraryEntry(
   db: SqlDb,
   catalogItemId: number,
-  overrides?: { notes?: string | null },
+  overrides?: { notes?: string | null; status?: Status },
 ): Promise<number> {
-  await db.execute(
-    `INSERT INTO library_entry (catalog_item_id, status, notes, updated_at)
-     VALUES ($1, 'planning', $2, datetime('now'))`,
-    [catalogItemId, overrides?.notes ?? null],
+  const raw = overrides?.status ?? "planning";
+  if (!isStatus(raw)) throw new Error("Estado no válido.");
+  const status = raw;
+  const nowIso = new Date().toISOString();
+  const { started_at, completed_at } = mergeStatusTimestamps(
+    "planning",
+    status,
+    { started_at: null, completed_at: null },
+    nowIso,
   );
-  const rows = await db.select<{ id: number }[]>("SELECT last_insert_rowid() as id");
-  return Number(rows[0]?.id ?? 0);
+  const res = await db.execute(
+    `INSERT INTO library_entry (catalog_item_id, status, notes, started_at, completed_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, datetime('now'))`,
+    [catalogItemId, status, overrides?.notes ?? null, started_at, completed_at],
+  );
+  const id = res.lastInsertId;
+  if (typeof id !== "number" || !Number.isFinite(id) || id <= 0) {
+    throw new Error("insertLibraryEntry: el INSERT no devolvió lastInsertId válido (¿pool SQL?).");
+  }
+  return id;
 }
 
 export type AddManualInput = {
@@ -90,9 +141,11 @@ export type AddManualInput = {
   notes?: string | null;
   imageUrl?: string | null;
   posterLocalPath?: string | null;
+  /** Estado inicial de la entrada (por defecto planning). */
+  initial_status?: Status;
 };
 
-/** Crea catálogo manual (external_id UUID) y fila de biblioteca en estado planning. */
+/** Crea catálogo manual (external_id UUID) y fila de biblioteca. */
 export async function addManualToLibrary(db: SqlDb, input: AddManualInput): Promise<{ catalogId: number; libraryId: number }> {
   const external_id = crypto.randomUUID();
   const mediaType = input.media_type ?? "movie";
@@ -104,17 +157,28 @@ export async function addManualToLibrary(db: SqlDb, input: AddManualInput): Prom
     image_url: input.imageUrl ?? null,
     poster_local_path: input.posterLocalPath ?? null,
   });
-  const libraryId = await insertLibraryEntry(db, catalogId, { notes: input.notes ?? null });
+  const libraryId = await insertLibraryEntry(db, catalogId, {
+    notes: input.notes ?? null,
+    status: input.initial_status,
+  });
   return { catalogId, libraryId };
 }
 
 export type AddTmdbInput = InsertCatalogInput;
 
+export type AddTmdbOptions = {
+  initial_status?: Status;
+};
+
 /**
  * Inserta o reutiliza catalog_item TMDB y crea library_entry si no existe.
  * Devuelve libraryId y si ya existía en biblioteca (alreadyInLibrary).
  */
-export async function addTmdbToLibrary(db: SqlDb, input: AddTmdbInput): Promise<{
+export async function addTmdbToLibrary(
+  db: SqlDb,
+  input: AddTmdbInput,
+  options?: AddTmdbOptions,
+): Promise<{
   catalogId: number;
   libraryId: number;
   alreadyInLibrary: boolean;
@@ -132,7 +196,7 @@ export async function addTmdbToLibrary(db: SqlDb, input: AddTmdbInput): Promise<
     catalogId = await insertCatalogItem(db, input);
   }
 
-  const libraryId = await insertLibraryEntry(db, catalogId);
+  const libraryId = await insertLibraryEntry(db, catalogId, { status: options?.initial_status });
   return { catalogId, libraryId, alreadyInLibrary: false };
 }
 

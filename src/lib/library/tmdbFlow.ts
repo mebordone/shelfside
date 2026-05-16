@@ -4,6 +4,7 @@ import {
   getCatalogById,
   updateCatalogItem,
   type SqlDb,
+  type Status,
 } from "$lib/db";
 import { downloadPosterToApp, posterRelativePath } from "$lib/poster";
 
@@ -11,18 +12,23 @@ export async function addTmdbHitToLibraryFlow(
   db: SqlDb,
   client: TmdbClient,
   hit: TmdbSearchHit,
+  initialStatus?: Status,
 ): Promise<{ catalogId: number; libraryId: number; alreadyInLibrary: boolean }> {
   const detail = hit.mediaType === "movie" ? await client.getMovieDetail(hit.id) : await client.getTvDetail(hit.id);
   const imageUrl = client.posterUrlFromPath(detail.posterPath);
 
-  const r = await addTmdbToLibrary(db, {
-    media_type: detail.mediaType,
-    source: "tmdb",
-    external_id: String(detail.id),
-    title: detail.title,
-    image_url: imageUrl,
-    metadata_json: detail.rawJson,
-  });
+  const r = await addTmdbToLibrary(
+    db,
+    {
+      media_type: detail.mediaType,
+      source: "tmdb",
+      external_id: String(detail.id),
+      title: detail.title,
+      image_url: imageUrl,
+      metadata_json: detail.rawJson,
+    },
+    initialStatus != null ? { initial_status: initialStatus } : undefined,
+  );
 
   if (!r.alreadyInLibrary && imageUrl) {
     try {

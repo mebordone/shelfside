@@ -18,8 +18,11 @@ export {
   addTmdbToLibrary,
   updateLibraryEntry,
   getLibraryIdForCatalog,
+  getTmdbHitsLibraryPresence,
   type LibraryFilters,
   type AddManualInput,
   type AddTmdbInput,
+  type AddTmdbOptions,
   type UpdateLibraryInput,
+  type TmdbHitRef,
 } from "./library";
