@@ -41,16 +41,44 @@ describe("createTmdbClient", () => {
     });
 
     const client = createTmdbClient({ apiKey: "k", fetchImpl });
-    const hits = await client.searchMulti("x");
+    const page = await client.searchMulti("x");
 
-    expect(hits).toHaveLength(2);
+    expect(page.hits).toHaveLength(2);
+    expect(page.page).toBe(0);
+    expect(page.pageSize).toBe(20);
     expect(fetchImpl).toHaveBeenCalledWith(
       expect.stringContaining("api_key=k"),
       expect.anything(),
     );
-    expect(hits[0]?.mediaType).toBe("movie");
-    expect(hits[0]?.yearLabel).toBe("2020");
-    expect(hits[1]?.mediaType).toBe("tv");
+    expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("page=1"), expect.anything());
+    expect(page.hits[0]?.mediaType).toBe("movie");
+    expect(page.hits[0]?.yearLabel).toBe("2020");
+    expect(page.hits[1]?.mediaType).toBe("tv");
+  });
+
+  it("searchMulti respeta page y total_pages", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () =>
+        JSON.stringify({
+          page: 2,
+          total_results: 100,
+          total_pages: 5,
+          results: [],
+        }),
+    });
+    const client = createTmdbClient({ apiKey: "k", fetchImpl });
+    const page = await client.searchMulti("matrix", { page: 1 });
+
+    expect(page.page).toBe(1);
+    expect(page.totalResults).toBe(100);
+    expect(page.totalPages).toBe(5);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("page=2"),
+      expect.anything(),
+    );
   });
 
   it("con JWT (eyJ...) usa Bearer y no api_key en la URL", async () => {
@@ -64,7 +92,7 @@ describe("createTmdbClient", () => {
     const client = createTmdbClient({ apiKey: jwt, fetchImpl });
     await client.searchMulti("matrix");
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.themoviedb.org/3/search/multi?query=matrix",
+      "https://api.themoviedb.org/3/search/multi?query=matrix&page=1",
       expect.objectContaining({
         headers: { Authorization: `Bearer ${jwt}` },
       }),

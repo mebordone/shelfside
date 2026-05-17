@@ -3,6 +3,22 @@ import { TmdbConfigError, TmdbHttpError } from "./errors";
 const TMDB_BASE = "https://api.themoviedb.org/3";
 export const TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500";
 
+/** Resultados por página en búsqueda multi (fijo en la API TMDB). */
+export const TMDB_SEARCH_PAGE_SIZE = 20;
+
+export type SearchMultiOptions = {
+  /** Página 0-based en la app (se envía como page+1 a TMDB). */
+  page?: number;
+};
+
+export type TmdbSearchPage = {
+  hits: TmdbSearchHit[];
+  totalResults: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+};
+
 export type TmdbSearchHit = {
   mediaType: "movie" | "tv";
   id: number;
@@ -199,18 +215,32 @@ export function createTmdbClient(opts: TmdbClientOptions) {
   }
 
   return {
-    async searchMulti(query: string): Promise<TmdbSearchHit[]> {
+    async searchMulti(query: string, options?: SearchMultiOptions): Promise<TmdbSearchPage> {
       const q = query.trim();
-      if (!q) return [];
-      const data = await request<{ results?: TmdbMultiRow[] }>(
-        `/search/multi?query=${encodeURIComponent(q)}`,
-      );
+      const page0 = options?.page ?? 0;
+      const pageSize = TMDB_SEARCH_PAGE_SIZE;
+
+      if (!q) {
+        return { hits: [], totalResults: 0, totalPages: 0, page: 0, pageSize };
+      }
+
+      const page1 = page0 + 1;
+      const data = await request<{
+        results?: TmdbMultiRow[];
+        total_results?: number;
+        total_pages?: number;
+      }>(`/search/multi?query=${encodeURIComponent(q)}&page=${String(page1)}`);
+
       const hits: TmdbSearchHit[] = [];
       for (const r of data.results ?? []) {
         const hit = hitFromMultiRow(r);
         if (hit) hits.push(hit);
       }
-      return hits;
+
+      const totalResults = typeof data.total_results === "number" ? data.total_results : hits.length;
+      const totalPages = typeof data.total_pages === "number" ? data.total_pages : 1;
+
+      return { hits, totalResults, totalPages, page: page0, pageSize };
     },
 
     async getMovieDetail(id: number): Promise<TmdbDetail> {
