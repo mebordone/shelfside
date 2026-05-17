@@ -1,7 +1,7 @@
 export const MEDIA_TYPES = ["movie", "tv", "season", "episode", "anime", "game", "book"] as const;
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
-export const SOURCES = ["tmdb", "manual"] as const;
+export const SOURCES = ["tmdb", "manual", "openlibrary"] as const;
 export type Source = (typeof SOURCES)[number];
 
 export const STATUSES = ["completed", "in_progress", "planning", "paused", "dropped"] as const;

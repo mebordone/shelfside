@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SqlDb } from "./catalog";
 import {
   addManualToLibrary,
+  addOpenLibraryToLibrary,
   addTmdbToLibrary,
   getLibraryEntryById,
+  getOpenLibraryHitsLibraryPresence,
   getTmdbHitsLibraryPresence,
   listLibraryWithCatalog,
   updateLibraryEntry,
@@ -38,6 +40,26 @@ describe("getTmdbHitsLibraryPresence", () => {
   });
 });
 
+describe("getOpenLibraryHitsLibraryPresence", () => {
+  it("devuelve library_id por editionId o null", async () => {
+    const { db, select } = mockDb();
+    select.mockResolvedValueOnce([
+      { external_id: "OL1M", library_id: 50 },
+    ]);
+
+    const m = await getOpenLibraryHitsLibraryPresence(db, [
+      { editionId: "OL1M" },
+      { editionId: "OL2M" },
+    ]);
+
+    expect(m.get("OL1M")).toBe(50);
+    expect(m.get("OL2M")).toBeNull();
+    const q = String(select.mock.calls[0]?.[0]);
+    expect(q).toContain("openlibrary");
+    expect(q).toContain("IN ($1, $2)");
+  });
+});
+
 describe("addManualToLibrary", () => {
   it("inserta catálogo y biblioteca", async () => {
     const { db, execute } = mockDb();
@@ -62,6 +84,107 @@ describe("addManualToLibrary", () => {
     expect(insertCat?.[1]).toEqual(
       expect.arrayContaining(["movie", "manual", expect.any(String), "Mi obra", null, null, null]),
     );
+  });
+
+  it("inserta libro manual con metadata_json", async () => {
+    const { db, execute } = mockDb();
+    let insertSeq = 0;
+    execute.mockImplementation(async (q: string) => {
+      if (String(q).includes("INSERT INTO catalog_item")) {
+        insertSeq += 1;
+        return { lastInsertId: insertSeq, rowsAffected: 1 };
+      }
+      if (String(q).includes("INSERT INTO library_entry")) {
+        insertSeq += 1;
+        return { lastInsertId: insertSeq, rowsAffected: 1 };
+      }
+      return { rowsAffected: 0 };
+    });
+
+    await addManualToLibrary(db, {
+      title: "Mi libro",
+      media_type: "book",
+      metadata_json: '{"authors":["A"],"year":2020}',
+    });
+
+    const insertCat = execute.mock.calls.find((c) => String(c[0]).includes("INSERT INTO catalog_item"));
+    expect(insertCat?.[1]).toEqual(
+      expect.arrayContaining(["book", "manual", expect.any(String), "Mi libro", null, null, '{"authors":["A"],"year":2020}']),
+    );
+  });
+});
+
+describe("addOpenLibraryToLibrary", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("crea catálogo y biblioteca si no existen", async () => {
+    const { db, execute, select } = mockDb();
+    execute.mockImplementation(async (q: string) => {
+      const s = String(q);
+      if (s.includes("INSERT INTO catalog_item")) return { lastInsertId: 1, rowsAffected: 1 };
+      if (s.includes("INSERT INTO library_entry")) return { lastInsertId: 2, rowsAffected: 1 };
+      return { rowsAffected: 0 };
+    });
+    select.mockImplementation(async (q: string) => {
+      if (String(q).includes("FROM catalog_item WHERE source")) return [];
+      if (String(q).includes("FROM library_entry WHERE catalog_item_id")) return [];
+      return [];
+    });
+
+    const r = await addOpenLibraryToLibrary(db, {
+      media_type: "book",
+      source: "openlibrary",
+      external_id: "OL123M",
+      title: "Libro",
+      image_url: "https://covers.openlibrary.org/b/olid/OL123M-L.jpg",
+    });
+
+    expect(r.alreadyInLibrary).toBe(false);
+    expect(r.catalogId).toBe(1);
+    expect(r.libraryId).toBe(2);
+  });
+
+  it("detecta ya en biblioteca por editionId", async () => {
+    const { db, execute, select } = mockDb();
+    select.mockImplementation(async (q: string) => {
+      if (String(q).includes("FROM catalog_item WHERE source")) {
+        return [
+          {
+            id: 3,
+            media_type: "book",
+            source: "openlibrary",
+            external_id: "OL123M",
+            title: "Libro",
+            image_url: null,
+            poster_local_path: null,
+            season_number: null,
+            episode_number: null,
+            parent_catalog_id: null,
+            metadata_json: null,
+            created_at: "",
+            updated_at: "",
+          },
+        ];
+      }
+      if (String(q).includes("FROM library_entry WHERE catalog_item_id")) {
+        return [{ id: 77 }];
+      }
+      return [];
+    });
+
+    const r = await addOpenLibraryToLibrary(db, {
+      media_type: "book",
+      source: "openlibrary",
+      external_id: "OL123M",
+      title: "Libro",
+      image_url: null,
+    });
+
+    expect(r.alreadyInLibrary).toBe(true);
+    expect(r.libraryId).toBe(77);
+    expect(execute).not.toHaveBeenCalled();
   });
 });
 
@@ -194,6 +317,26 @@ describe("listLibraryWithCatalog", () => {
     expect(q).toContain("ci.media_type = $1");
     expect(q).toContain("le.status = $2");
     expect(q).toContain("LIKE");
+  });
+});
+
+describe("listLibraryWithCatalogPage", () => {
+  it("pagina con LIMIT/OFFSET y devuelve total", async () => {
+    const { db, select } = mockDb();
+    select
+      .mockResolvedValueOnce([{ c: 45 }])
+      .mockResolvedValueOnce([{ id: 1, title: "A", media_type: "movie", status: "planning" }]);
+
+    const { listLibraryWithCatalogPage } = await import("./library");
+    const page = await listLibraryWithCatalogPage(db, { mediaType: "movie" }, 1);
+
+    expect(page.total).toBe(45);
+    expect(page.page).toBe(1);
+    expect(page.pageSize).toBe(20);
+    expect(page.rows).toHaveLength(1);
+    const listQ = String(select.mock.calls[1]?.[0]);
+    expect(listQ).toContain("LIMIT $2 OFFSET $3");
+    expect(select.mock.calls[1]?.[1]).toEqual(["movie", 20, 20]);
   });
 });
 
