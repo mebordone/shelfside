@@ -5,7 +5,7 @@
 
   interface Props {
     onAdd: (status: Status) => void | Promise<void>;
-    /** Debe ser único en la página (ej. hit-movie-99 o rel-tv-12). */
+    /** Debe ser único en la página (ej. hit-movie-99 o rel-ol-12). */
     menuId: string;
     busy?: boolean;
     disabled?: boolean;
@@ -17,7 +17,6 @@
 
   let menuOpen = $state(false);
   let triggerRef = $state<HTMLButtonElement | null>(null);
-  /** Estilos inline para el menú en `position: fixed` (evita recortes por overflow del carrusel). */
   let menuBoxStyle = $state("");
 
   const MENU_WIDTH = 168;

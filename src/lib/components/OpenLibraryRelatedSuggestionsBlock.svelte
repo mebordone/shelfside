@@ -1,24 +1,26 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
-  import { createTmdbClient, getTmdbApiKeyFromEnv, type TmdbSearchHit } from "$lib/api";
+  import { createOpenLibraryClient, type OpenLibrarySearchHit } from "$lib/api";
   import { getDatabase } from "$lib/db/connection";
-  import { getTmdbHitsLibraryPresence } from "$lib/db";
+  import { getOpenLibraryHitsLibraryPresence } from "$lib/db";
   import type { Status } from "$lib/db/types";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
   import { t } from "$lib/i18n/es";
-  import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
-  import { mergeRelatedTmdbHits, RELATED_TMDB_HITS_CAP } from "$lib/library/tmdbRelatedHits";
+  import { addOpenLibraryHitToLibraryFlow } from "$lib/library/openLibraryFlow";
+  import {
+    mergeRelatedOpenLibraryHits,
+    RELATED_OPEN_LIBRARY_HITS_CAP,
+  } from "$lib/library/openLibraryRelatedHits";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { SvelteMap } from "svelte/reactivity";
 
-  type RelatedRow = TmdbSearchHit & { thumb: string | null };
+  type RelatedRow = OpenLibrarySearchHit & { thumb: string | null };
 
   interface Props {
-    mediaType: "movie" | "tv";
-    tmdbId: number;
+    editionId: string;
   }
 
-  let { mediaType, tmdbId }: Props = $props();
+  let { editionId }: Props = $props();
 
   let relatedHits = $state<RelatedRow[]>([]);
   let relatedPresence = new SvelteMap<string, number | null>();
@@ -27,17 +29,9 @@
   let relatedMsg = $state<string | null>(null);
   let relatedAddingKey = $state<string | null>(null);
 
-  const hasTmdbKey = $derived(Boolean(getTmdbApiKeyFromEnv().trim()));
-
-  function hitKey(h: { mediaType: string; id: number }): string {
-    return `${h.mediaType}-${h.id}`;
-  }
-
   $effect(() => {
-    const mt = mediaType;
-    const tid = tmdbId;
-    const keyOk = hasTmdbKey;
-    if (!keyOk || !Number.isFinite(tid) || tid <= 0 || (mt !== "movie" && mt !== "tv")) {
+    const eid = editionId.replace(/^\/books\//, "");
+    if (!/^OL[\dA-Z]+M$/i.test(eid)) {
       relatedHits = [];
       relatedPresence.clear();
       relatedLoading = false;
@@ -52,23 +46,21 @@
 
     void (async () => {
       try {
-        const apiKey = getTmdbApiKeyFromEnv();
-        const client = createTmdbClient({ apiKey });
-        const [rec, sim] =
-          mt === "movie"
-            ? await Promise.all([client.getMovieRecommendations(tid), client.getMovieSimilar(tid)])
-            : await Promise.all([client.getTvRecommendations(tid), client.getTvSimilar(tid)]);
-        const merged = mergeRelatedTmdbHits([rec, sim], {
-          cap: RELATED_TMDB_HITS_CAP,
-          excludeMediaType: mt,
-          excludeId: tid,
+        const client = createOpenLibraryClient();
+        const raw = await client.getRelatedEditionHits(eid);
+        const merged = mergeRelatedOpenLibraryHits([raw], {
+          cap: RELATED_OPEN_LIBRARY_HITS_CAP,
+          excludeEditionId: eid,
         });
         const db = await getDatabase();
-        const presence = await getTmdbHitsLibraryPresence(db, merged);
+        const presence = await getOpenLibraryHitsLibraryPresence(
+          db,
+          merged.map((h) => ({ editionId: h.editionId })),
+        );
         const withThumbs: RelatedRow[] = await Promise.all(
           merged.map(async (h) => ({
             ...h,
-            thumb: await resolvePosterDisplayUrl(null, client.posterUrlFromPath(h.posterPath)),
+            thumb: await resolvePosterDisplayUrl(null, h.coverUrl),
           })),
         );
         if (!cancelled) {
@@ -93,15 +85,14 @@
   });
 
   async function addRelatedWithStatus(hit: RelatedRow, status: Status) {
-    if (!hasTmdbKey) return;
-    const rk = hitKey(hit);
+    const rk = hit.editionId;
     relatedAddingKey = rk;
     relatedErr = null;
     relatedMsg = null;
     try {
       const db = await getDatabase();
-      const client = createTmdbClient({ apiKey: getTmdbApiKeyFromEnv() });
-      const r = await addTmdbHitToLibraryFlow(db, client, hit, status);
+      const client = createOpenLibraryClient();
+      const r = await addOpenLibraryHitToLibraryFlow(db, client, hit, status);
       relatedPresence.set(rk, r.libraryId);
       relatedMsg = r.alreadyInLibrary ? t("search.already") : t("detail.related_added");
     } catch (e) {
@@ -114,13 +105,14 @@
 
 <section
   class="rounded-lg border border-zinc-200 dark:border-zinc-800"
-  aria-label={t("detail.related_heading")}
+  aria-label={t("detail.related_openlibrary_heading")}
 >
   <h2 class="border-b border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 dark:border-zinc-800 dark:text-zinc-200">
-    {t("detail.related_heading")}
+    {t("detail.related_openlibrary_heading")}
   </h2>
   <p class="border-b border-zinc-200 px-3 pb-2 pt-0 text-xs leading-relaxed text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-    {t("detail.related_subtitle")}{#if relatedHits.length > 0 && !relatedLoading} {t("detail.related_add_hint")}{/if}
+    {t("detail.related_openlibrary_subtitle")}{#if relatedHits.length > 0 && !relatedLoading}
+      {t("detail.related_add_hint")}{/if}
   </p>
   {#if relatedMsg}
     <p class="border-b border-zinc-200 px-3 py-2 text-xs text-emerald-700 dark:border-zinc-800 dark:text-emerald-400">
@@ -137,9 +129,8 @@
     <div
       class="flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth px-2 pb-2 pt-3 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5"
     >
-      {#each relatedHits as h (hitKey(h))}
-        {@const rk = hitKey(h)}
-        {@const libId = relatedPresence.get(rk) ?? null}
+      {#each relatedHits as h (h.editionId)}
+        {@const libId = relatedPresence.get(h.editionId) ?? null}
         <article
           class="w-[6.75rem] shrink-0 snap-start overflow-visible rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900 sm:w-[7.25rem]"
         >
@@ -154,15 +145,15 @@
                 class="pointer-events-auto line-clamp-2 text-[10px] font-semibold leading-tight text-white drop-shadow-sm hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white"
                 href={libId != null
                   ? resolve("/library/[id]", { id: String(libId) })
-                  : resolve("/search/[mediaType]/[id]", { mediaType: h.mediaType, id: String(h.id) })}
-                aria-label={libId != null ? t("detail.related_open_aria") : t("detail.related_open_tmdb")}
+                  : resolve("/search/book/[editionId]", { editionId: h.editionId })}
+                aria-label={libId != null ? t("detail.related_open_aria") : t("detail.related_openlibrary_open")}
                 title={libId != null ? t("detail.related_open") : undefined}
                 onclick={(e) => e.stopPropagation()}
               >
                 {h.title}
               </a>
               <p class="mt-0.5 truncate text-[9px] text-white/90">
-                {h.mediaType}{#if h.yearLabel} · {h.yearLabel}{/if}
+                {h.authors[0] ?? ""}{#if h.year} · {h.year}{/if}
               </p>
             </div>
             <div class="absolute right-1 bottom-1 z-[2]">
@@ -181,10 +172,9 @@
                 </a>
               {:else}
                 <AddToLibraryMenuButton
-                  menuId={`related-${rk}`}
+                  menuId={`related-ol-${h.editionId}`}
                   variant="compact"
-                  busy={relatedAddingKey === rk}
-                  disabled={!hasTmdbKey}
+                  busy={relatedAddingKey === h.editionId}
                   onAdd={(status) => addRelatedWithStatus(h, status)}
                 />
               {/if}

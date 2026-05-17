@@ -8,7 +8,7 @@
     type TmdbDetail,
     type TmdbSearchHit,
   } from "$lib/api";
-  import TmdbAddMenuButton from "$lib/components/TmdbAddMenuButton.svelte";
+  import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
@@ -141,7 +141,7 @@
             {t(`media.${detail.mediaType}`)}{#if yearLabel} · {yearLabel}{/if}
           </p>
           <div class="mt-3">
-            <TmdbAddMenuButton
+            <AddToLibraryMenuButton
               menuId={detailMenuId}
               variant="row"
               busy={adding}
