@@ -138,13 +138,18 @@ Completá los valores en `.env` (no lo subas al repo: está en `.gitignore`). La
 
 Para **buscar y añadir películas/series desde TMDB** necesitás al menos `VITE_TMDB_API_KEY`. Podés usar la **clave API v3** (hex de 32 caracteres) o el **token de acceso de lectura** (JWT que empieza con `eyJ`); el cliente elige el método según el formato.
 
+**Libros (Open Library)** no requieren clave: la búsqueda y el detalle usan la API pública con `lang=es`.
+
 ---
 
 ## Release 1 — Biblioteca y catálogo (0.2.0)
 
-- **Rutas:** `/` (inicio / panel por estado), `/library` (lista paginada con filtros en chips), `/library/[id]` (detalle y refresco TMDB/OL), `/library/[id]/edit`, `/search` (TMDB u Open Library, paginado), `/search/book/[editionId]`, `/add/manual`.
+Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
+
+- **Rutas:** `/` (inicio / panel por estado), `/library` (lista paginada con filtros en chips), `/library/[id]` (detalle y refresco TMDB u Open Library), `/library/[id]/edit`, `/search` (chips TMDB / Libros, paginado), `/search/movie|tv/[id]`, `/search/book/[editionId]`, `/add/manual` (película, serie o libro).
+- **Catálogo:** TMDB para cine y TV; **Open Library** para libros (búsqueda, detalle por edición, refresco y sugerencias por tema/autor); entradas **manuales** para los tres tipos con imagen local opcional.
 - **UI:** `FilterChipBar` para filtros compactos (inicio, buscar, biblioteca); `SearchResultsPagination` compartido entre buscar y biblioteca.
-- **Datos:** tablas `catalog_item` y `library_entry` (migración `002_catalog_library.sql`); estado por defecto `planning`; puntuación 1–10; progreso TV (`current_season`, `last_episode_watched`).
+- **Datos:** tablas `catalog_item` y `library_entry` (migración `002_catalog_library.sql`); estado por defecto `planning`; puntuación 1–10; progreso TV (`current_season`, `last_episode_watched`); metadatos de libro en `metadata_json` cuando aplica.
 - **Posters:** se descargan a disco bajo el directorio de datos de la app (`BaseDirectory.AppLocalData`, carpeta `posters/`); en la UI se sirven con `convertFileSrc` cuando hay `poster_local_path`.
 - **Permisos Tauri:** plugins **sql**, **fs** y **dialog**; capabilities con `fs:default` + `fs:scope` (`$APPLOCALDATA`, `$APPDATA`, `$APPCACHE`) y `remote.urls` para Vite en desarrollo (`http://localhost:1420`, etc.).
 
@@ -203,7 +208,7 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 ## Versión
 
-- **0.2.0** — Release 1: biblioteca, TMDB (película/TV), manual, posters en caché, panel de inicio por estado (detalle en [CHANGELOG.md](./CHANGELOG.md) y [roadmap.md](./roadmap.md)).
+- **0.2.0** — Release 1: biblioteca, TMDB (película/TV), **libros (Open Library)**, manual (incl. libro), paginación, `FilterChipBar`, posters en caché, panel de inicio por estado (detalle en [CHANGELOG.md](./CHANGELOG.md) y [roadmap.md](./roadmap.md)).
 - **0.1.0** — Release 0: fundación (scaffold, SQLite, migraciones, tema, i18n base).
 
 Antes de etiquetar un release: `npm run verify` (lint + cobertura + `svelte-check` + build Vite). Con **Rust** y prerequisitos de Tauri instalados: `npm run tauri build` (artefactos bajo `src-tauri/target/release/` y bundles según `tauri.conf.json`).
@@ -211,5 +216,5 @@ Antes de etiquetar un release: `npm run verify` (lint + cobertura + `svelte-chec
 Para crear la etiqueta git del corte (cuando los cambios ya estén commiteados en la rama deseada):
 
 ```bash
-git tag -a v0.2.0 -m "Release 1: biblioteca y catálogo MVP"
+git tag -a v0.2.0 -m "Release 1: biblioteca, TMDB, Open Library (libros) y catálogo MVP"
 ```
