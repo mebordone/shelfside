@@ -37,7 +37,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | Pantallas | Lista, detalle, edición; filtros por tipo, estado y texto |
 | Caché de posters | Bajo `app_data_dir()`; biblioteca usable offline con datos ya cacheados (`project.md` §8 offline) |
 
-**Opcional en el mismo release si hay capacidad:** libros con **Open Library** (segunda API; ver orden alternativo en `project.md` §6 Fase 1).
+**Opcional en el mismo release si hay capacidad:** libros con **Open Library** (segunda API; ver orden alternativo en `project.md` §6 Fase 1). Libros en R1 usan `status` y metadatos; el campo **`owned`** (quiero / lo tengo) queda para **R2** junto con juegos (ver fila `owned` en la tabla de R2).
 
 **Criterio de cierre:** un usuario puede poblar la biblioteca solo con TMDB + manual, editar estados y progreso TV, y ver la lista filtrada sin errores en consola en el flujo feliz.
 
@@ -51,7 +51,8 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 |------------|--------|
 | Anime (`media_type` anime) | Cliente **AniList GraphQL** como fuente canónica; sin secret para queries públicas |
 | Progreso anime | Misma regla que TV: una fila, temporada + último episodio visto |
-| Juegos | Cliente **IGDB**; estado en v1; campo `owned` reservado/nullable |
+| Juegos | Cliente **IGDB**; estado de consumo en v1 (`planning`, `in_progress`, etc.) |
+| Campo **`owned`** (juegos **y libros**) | Hoy la columna existe en `library_entry` pero no se escribe ni se muestra. Al implementarlo: **solo** `media_type` **juego** y **libro**. Semántica tipo Steam: marcar si **lo quiero** (wishlist / aún no lo tengo) vs **lo tengo** (físico o digital en mi biblioteca). Es independiente de `status` (si lo leí/jugué o no). UI en detalle y edición; persistencia en alta y `updateLibraryEntry`. Definir valores concretos en el issue (p. ej. `NULL` = sin marcar, `0` = quiero, `1` = tengo). |
 | Claves y límites | TMDB / Twitch+IGDB según `project.md` §8; manejo de rate limit y errores de red |
 
 **Criterio de cierre:** los cinco tipos v1 (película, TV, anime, juego, libro si ya estaba en R1) tienen camino de búsqueda o creación coherente con la especificación; manual sigue funcionando.
