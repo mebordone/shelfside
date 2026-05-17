@@ -2,12 +2,15 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
-  import { createTmdbClient, getTmdbApiKeyFromEnv } from "$lib/api";
+  import { createOpenLibraryClient, createTmdbClient, getTmdbApiKeyFromEnv } from "$lib/api";
   import { getDatabase } from "$lib/db/connection";
   import { getLibraryEntryById, type LibraryListRow } from "$lib/db";
+  import { bookCatalogFromMetadata } from "$lib/library/openLibraryCatalogMeta";
+  import { refreshOpenLibraryCatalogFlow } from "$lib/library/openLibraryFlow";
   import { refreshTmdbCatalogFlow } from "$lib/library/tmdbFlow";
   import { tmdbTvCatalogFromMetadata } from "$lib/library/tmdbCatalogMeta";
   import { t } from "$lib/i18n/es";
+  import OpenLibraryRelatedSuggestionsBlock from "$lib/components/OpenLibraryRelatedSuggestionsBlock.svelte";
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import { resolvePosterDisplayUrl } from "$lib/poster";
 
@@ -21,6 +24,10 @@
 
   const tvCatalog = $derived(
     row?.media_type === "tv" && row.metadata_json != null ? tmdbTvCatalogFromMetadata(row.metadata_json) : null,
+  );
+
+  const bookCatalog = $derived(
+    row?.media_type === "book" && row.metadata_json != null ? bookCatalogFromMetadata(row.metadata_json) : null,
   );
 
   const hasTmdbKey = $derived(Boolean(getTmdbApiKeyFromEnv().trim()));
@@ -55,7 +62,7 @@
     return v === k ? m : v;
   }
 
-  async function refresh() {
+  async function refreshTmdb() {
     if (!row || row.source !== "tmdb") return;
     busy = true;
     err = null;
@@ -64,6 +71,23 @@
       const client = createTmdbClient({ apiKey: key });
       const db = await getDatabase();
       await refreshTmdbCatalogFlow(db, client, row.catalog_item_id);
+      row = await getLibraryEntryById(db, libraryId);
+      posterUrl = row ? await resolvePosterDisplayUrl(row.poster_local_path, row.image_url) : null;
+    } catch (e) {
+      err = e instanceof Error ? e.message : String(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function refreshOpenLibrary() {
+    if (!row || row.source !== "openlibrary") return;
+    busy = true;
+    err = null;
+    try {
+      const client = createOpenLibraryClient();
+      const db = await getDatabase();
+      await refreshOpenLibraryCatalogFlow(db, client, row.catalog_item_id);
       row = await getLibraryEntryById(db, libraryId);
       posterUrl = row ? await resolvePosterDisplayUrl(row.poster_local_path, row.image_url) : null;
     } catch (e) {
@@ -105,6 +129,49 @@
       <p class="text-sm text-red-600 dark:text-red-400">{err}</p>
     {/if}
 
+    {#if row.media_type === "book" && bookCatalog}
+      <section class="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+        {#if bookCatalog.authors.length > 0}
+          <p>
+            <span class="font-medium">{t("detail.book_authors")}:</span>
+            {bookCatalog.authors.join(", ")}
+          </p>
+        {/if}
+        {#if bookCatalog.year != null}
+          <p class="mt-1">
+            <span class="font-medium">{t("detail.book_year")}:</span>
+            {bookCatalog.year}
+          </p>
+        {/if}
+        {#if bookCatalog.isbn}
+          <p class="mt-1">
+            <span class="font-medium">{t("detail.book_isbn")}:</span>
+            {bookCatalog.isbn}
+          </p>
+        {/if}
+        {#if bookCatalog.languages.length > 0}
+          <p class="mt-1">
+            <span class="font-medium">{t("detail.book_languages")}:</span>
+            {bookCatalog.languages.join(", ")}
+          </p>
+        {/if}
+        {#if bookCatalog.openLibraryUrl}
+          <p class="mt-2">
+            <button
+              type="button"
+              class="text-left text-emerald-700 hover:underline dark:text-emerald-400"
+              onclick={() => window.open(bookCatalog.openLibraryUrl!, "_blank", "noopener,noreferrer")}
+            >
+              {t("detail.book_open_library")}
+            </button>
+          </p>
+        {/if}
+        {#if bookCatalog.overview}
+          <p class="mt-3 whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">{bookCatalog.overview}</p>
+        {/if}
+      </section>
+    {/if}
+
     {#if row.media_type === "tv"}
       <section class="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800">
         <p class="font-medium">{t("detail.progress_tv")}</p>
@@ -133,6 +200,10 @@
       <TmdbRelatedSuggestionsBlock mediaType={row.media_type} tmdbId={Number(row.external_id)} />
     {/if}
 
+    {#if row.source === "openlibrary" && row.media_type === "book"}
+      <OpenLibraryRelatedSuggestionsBlock editionId={row.external_id} />
+    {/if}
+
     {#if row.notes}
       <section class="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800">
         <p class="font-medium">{t("detail.notes")}</p>
@@ -150,9 +221,19 @@
           type="button"
           class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
           disabled={busy}
-          onclick={() => void refresh()}
+          onclick={() => void refreshTmdb()}
         >
           {t("detail.refresh_tmdb")}
+        </button>
+      {/if}
+      {#if row.source === "openlibrary"}
+        <button
+          type="button"
+          class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
+          disabled={busy}
+          onclick={() => void refreshOpenLibrary()}
+        >
+          {t("detail.refresh_openlibrary")}
         </button>
       {/if}
       <button

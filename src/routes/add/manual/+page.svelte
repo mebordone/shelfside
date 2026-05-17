@@ -6,11 +6,14 @@
   import { addManualToLibrary } from "$lib/db";
   import { STATUSES, type Status } from "$lib/db/types";
   import { persistDefaultAddStatus, readDefaultAddStatus } from "$lib/stores/defaultAddStatus";
+  import { buildManualBookMetadata } from "$lib/library/openLibraryCatalogMeta";
   import { guessImageExtFromPath, saveManualPosterCopy } from "$lib/poster";
   import { t } from "$lib/i18n/es";
 
   let title = $state("");
-  let mediaType = $state<"movie" | "tv">("movie");
+  let mediaType = $state<"movie" | "tv" | "book">("movie");
+  let author = $state("");
+  let yearStr = $state("");
   let notes = $state("");
   let pickedPath = $state<string | null>(null);
   let saving = $state(false);
@@ -34,6 +37,15 @@
     }
   }
 
+  function manualBookMetadata(): string | null {
+    if (mediaType !== "book") return null;
+    const yearParsed = yearStr.trim() ? Number.parseInt(yearStr.trim(), 10) : null;
+    return buildManualBookMetadata({
+      authors: author.trim() || null,
+      year: yearParsed != null && Number.isFinite(yearParsed) ? yearParsed : null,
+    });
+  }
+
   async function submit() {
     if (!title.trim()) return;
     saving = true;
@@ -51,6 +63,7 @@
         media_type: mediaType,
         notes: notes.trim() || null,
         posterLocalPath: posterLocal,
+        metadata_json: manualBookMetadata(),
         initial_status: addStatus,
       });
       await goto(resolve("/library/[id]", { id: String(libraryId) }));
@@ -91,8 +104,20 @@
       <select class="mt-1 shelf-field" bind:value={mediaType}>
         <option value="movie">{t("media.movie")}</option>
         <option value="tv">{t("media.tv")}</option>
+        <option value="book">{t("media.book")}</option>
       </select>
     </label>
+
+    {#if mediaType === "book"}
+      <label class="block text-sm">
+        <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_author")}</span>
+        <input class="mt-1 shelf-field" bind:value={author} />
+      </label>
+      <label class="block text-sm">
+        <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_year")}</span>
+        <input class="mt-1 shelf-field" type="number" min="0" bind:value={yearStr} />
+      </label>
+    {/if}
 
     <label class="block text-sm">
       <span class="text-zinc-600 dark:text-zinc-400">{t("add.status_label")}</span>

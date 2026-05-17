@@ -3,8 +3,15 @@
   import { onMount } from "svelte";
   import { getDatabase } from "$lib/db/connection";
   import { listLibraryWithCatalog, type LibraryListRow } from "$lib/db";
+  import FilterChipBar from "$lib/components/FilterChipBar.svelte";
   import { t } from "$lib/i18n/es";
+  import { buildMediaFilterChipOptions } from "$lib/library/searchSourceOptions";
   import { resolvePosterDisplayUrl } from "$lib/poster";
+  import {
+    persistHomeMediaFilter,
+    readHomeMediaFilter,
+    type HomeMediaFilter,
+  } from "$lib/stores/homeMediaFilter";
   import { setTheme, theme } from "$lib/stores/theme.svelte";
 
   type Row = LibraryListRow & { displayUrl: string | null };
@@ -12,14 +19,19 @@
   let rows = $state<Row[]>([]);
   let loading = $state(true);
   let schemaValue = $state<string | null>(null);
+  let mediaFilter = $state<HomeMediaFilter>(readHomeMediaFilter());
 
   /** En progreso, pausa y cola en el inicio; orden fijo UX. */
   const HOME_SECTION_ORDER = ["in_progress", "paused", "planning"] as const;
 
+  const filteredRows = $derived(
+    mediaFilter ? rows.filter((r) => r.media_type === mediaFilter) : rows,
+  );
+
   const grouped = $derived.by(() => {
     const o: Record<string, Row[]> = {};
     for (const st of HOME_SECTION_ORDER) o[st] = [];
-    for (const r of rows) {
+    for (const r of filteredRows) {
       const bucket = o[r.status];
       if (bucket) bucket.push(r);
     }
@@ -29,6 +41,14 @@
   const homeEntriesTotal = $derived(
     HOME_SECTION_ORDER.reduce((n, st) => n + (grouped[st]?.length ?? 0), 0),
   );
+
+  const mediaChipOptions = $derived(buildMediaFilterChipOptions(t, mediaLabel));
+
+  function onHomeMediaFilterChange(value: string) {
+    mediaFilter = value as HomeMediaFilter;
+    persistHomeMediaFilter(mediaFilter);
+    void loadLibrary();
+  }
 
   function statusLabel(s: string): string {
     const k = `status.${s}`;
@@ -54,7 +74,7 @@
     loading = true;
     try {
       const db = await getDatabase();
-      const base = await listLibraryWithCatalog(db, {});
+      const base = await listLibraryWithCatalog(db, mediaFilter ? { mediaType: mediaFilter } : {});
       rows = await Promise.all(
         base.map(async (r) => ({
           ...r,
@@ -82,7 +102,16 @@
 <main class="mx-auto max-w-5xl space-y-6 px-4 py-6">
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
-  {:else if homeEntriesTotal === 0}
+  {:else}
+    <FilterChipBar
+      options={mediaChipOptions}
+      value={mediaFilter}
+      includeAll
+      allLabel={t("media.all")}
+      ariaLabel={t("home.media_filter")}
+      onchange={onHomeMediaFilterChange}
+    />
+    {#if homeEntriesTotal === 0}
     <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("home.empty_focus")}</p>
     <p class="pt-4">
       <a
@@ -95,7 +124,7 @@
         href={resolve("/add/manual")}>{t("nav.manual")}</a
       >
     </p>
-  {:else}
+    {:else}
     {#each HOME_SECTION_ORDER as st (st)}
       {@const list = grouped[st] ?? []}
       {#if list.length > 0}
@@ -139,6 +168,7 @@
         </section>
       {/if}
     {/each}
+    {/if}
   {/if}
 
   <p class="pt-2">

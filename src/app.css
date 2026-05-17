@@ -30,4 +30,11 @@
   select.shelf-field {
     @apply cursor-pointer;
   }
+
+  .shelf-field-compact {
+    @apply w-auto min-w-0 rounded-md border px-3 py-1.5 text-sm leading-normal text-zinc-900 shadow-sm outline-none transition-colors;
+    @apply border-zinc-300 bg-zinc-50;
+    @apply focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30;
+    @apply dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100;
+  }
 }
