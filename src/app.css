@@ -3,7 +3,38 @@
 @variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
     @apply min-h-screen bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+  }
+}
+
+@layer components {
+  /**
+   * Inputs/select/textarea con texto y fondo explícitos.
+   * En WebKit (Tauri/Linux) los <select> nativos a veces ignoran solo `dark:bg-zinc-950` sin `color-scheme` + color de texto.
+   */
+  .shelf-field {
+    @apply w-full rounded-md border px-3 py-2 text-sm leading-normal text-zinc-900 shadow-sm outline-none transition-colors;
+    @apply border-zinc-300 bg-zinc-50;
+    @apply focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30;
+    @apply dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100;
+  }
+
+  select.shelf-field {
+    @apply cursor-pointer;
+  }
+
+  .shelf-field-compact {
+    @apply w-auto min-w-0 rounded-md border px-3 py-1.5 text-sm leading-normal text-zinc-900 shadow-sm outline-none transition-colors;
+    @apply border-zinc-300 bg-zinc-50;
+    @apply focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30;
+    @apply dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100;
   }
 }

@@ -4,21 +4,48 @@ Aplicación minimalista para seguimiento de consumos culturales con soberanía d
 
 - Especificación: [project.md](./project.md)
 - Roadmap: [roadmap.md](./roadmap.md)
+- Cambios por versión: [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
 ## Cómo correr el proyecto (mínimo)
 
-1. Instalá **Node.js** (LTS), **Rust** y las **librerías de sistema** de tu SO (ver abajo; en Linux son paquetes tipo WebKitGTK).
+1. Instalá **Node.js** (LTS), **Rust** (`rustup` + stable) y las **librerías de sistema** de tu SO (ver abajo; en Linux: WebKitGTK, etc.).
 2. En la carpeta del repo:
 
 ```bash
 npm install
-cp .env.example .env   # opcional hasta que uses APIs
-npm run tauri dev
+cp .env.example .env
+# Editá .env y poné al menos VITE_TMDB_API_KEY para usar /search (TMDB).
+npm run tauri:dev
+# equivalente: npm run tauri dev
 ```
 
-Para validar todo antes de un PR o un release:
+La primera vez que corrés Tauri, **Cargo** descargará dependencias Rust (plugins `sql`, `fs`, `dialog`); puede tardar varios minutos.
+
+Para validar solo el frontend (sin ventana de escritorio):
+
+```bash
+npm run dev
+```
+
+(La base SQLite y los plugins Tauri **no** están disponibles en el navegador; servís para revisar UI estática. El flujo real de biblioteca es con `npm run tauri dev`.)
+
+---
+
+## Probar el funcionamiento (checklist rápido)
+
+Con la app abierta (`npm run tauri dev`):
+
+1. **Migraciones:** si arranca sin error en pantalla, `001` y `002` se aplicaron. Si ves error de SQL o tablas faltantes y venías de una versión vieja, borrá la base del usuario (ver sección *Base de datos* más abajo) y reiniciá.
+2. **Inicio:** panel por estado con barra de chips de tipo (Todos / Película / Serie TV / Libro; recuerda el último en `localStorage`); pie con estado de DB y selector de tema.
+3. **Manual:** **Añadir manual** → película, serie o **libro** (autor/año opcionales) + imagen opcional → guardar → **Biblioteca** e **Inicio**; **Editar** (estado, notas; TV: temporada/episodio).
+4. **Buscar:** chips **Pelis y series** (TMDB; requiere `VITE_TMDB_API_KEY`) u **Libros** (Open Library; sin clave). Resultados paginados (20 ítems por página en TMDB, 10 en libros); contador y Anterior/Siguiente; caché al volver atrás. **Añadir** con menú de estado. Detalle libro: `/search/book/[editionId]`; sugerencias TMDB u OL por tema/autor. En biblioteca: **Actualizar desde TMDB** o **Actualizar desde Open Library** según la fuente.
+5. **Filtros:** en **Biblioteca**, chips de tipo y estado (recarga al instante), búsqueda por título con **Aplicar** o Enter; lista paginada (20 por página).
+6. **Reinicio:** cerrá la app y volvé a abrir: la biblioteca y posters cacheados deben persistir.
+7. **Consola WebView (opcional):** en el flujo anterior no deberían aparecer errores rojos de JS.
+
+Antes de un PR o release:
 
 ```bash
 npm run verify   # lint + cobertura + check + build
@@ -109,15 +136,34 @@ cp .env.example .env
 
 Completá los valores en `.env` (no lo subas al repo: está en `.gitignore`). Las variables `VITE_*` las usa el frontend en build/dev.
 
+Para **buscar y añadir películas/series desde TMDB** necesitás al menos `VITE_TMDB_API_KEY`. Podés usar la **clave API v3** (hex de 32 caracteres) o el **token de acceso de lectura** (JWT que empieza con `eyJ`); el cliente elige el método según el formato.
+
+---
+
+## Release 1 — Biblioteca y catálogo (0.2.0)
+
+- **Rutas:** `/` (inicio / panel por estado), `/library` (lista paginada con filtros en chips), `/library/[id]` (detalle y refresco TMDB/OL), `/library/[id]/edit`, `/search` (TMDB u Open Library, paginado), `/search/book/[editionId]`, `/add/manual`.
+- **UI:** `FilterChipBar` para filtros compactos (inicio, buscar, biblioteca); `SearchResultsPagination` compartido entre buscar y biblioteca.
+- **Datos:** tablas `catalog_item` y `library_entry` (migración `002_catalog_library.sql`); estado por defecto `planning`; puntuación 1–10; progreso TV (`current_season`, `last_episode_watched`).
+- **Posters:** se descargan a disco bajo el directorio de datos de la app (`BaseDirectory.AppLocalData`, carpeta `posters/`); en la UI se sirven con `convertFileSrc` cuando hay `poster_local_path`.
+- **Permisos Tauri:** plugins **sql**, **fs** y **dialog**; capabilities con `fs:default` + `fs:scope` (`$APPLOCALDATA`, `$APPDATA`, `$APPCACHE`) y `remote.urls` para Vite en desarrollo (`http://localhost:1420`, etc.).
+
 ---
 
 ## Base de datos
 
-SQLite con [`@tauri-apps/plugin-sql`](https://v2.tauri.app/plugin/sql/): archivo bajo el directorio de datos de la app (`sqlite:shelfside.db`). Migraciones en [`migrations/`](./migrations/), aplicadas al arranque desde `src/lib/db/`.
+SQLite con [`@tauri-apps/plugin-sql`](https://v2.tauri.app/plugin/sql/): archivo `shelfside.db` bajo el **directorio de datos de la aplicación** del SO (no dentro del repo). El identificador de la app es `com.mebordone.shelfside` en `tauri.conf.json`.
+
+- **Linux (típico):** `~/.local/share/com.mebordone.shelfside/` — ahí está `shelfside.db` y la carpeta `posters/` (caché de carátulas).
+- **Respaldo:** copiá ese directorio (o al menos `shelfside.db` + `posters/`) antes de reinstalar o borrar datos.
+
+Migraciones en [`migrations/`](./migrations/), aplicadas al arranque desde `src/lib/db/`.
 
 En Tauri 2 el **ACL** del plugin SQL exige permisos explícitos además de `sql:default`. Este repo declara en [`src-tauri/capabilities/default.json`](src-tauri/capabilities/default.json) también `sql:allow-load`, `sql:allow-execute` y `sql:allow-select`. Si aparece un error del tipo `sql.execute not allowed`, revisá que esa capability siga aplicada a la ventana `main`.
 
 Si ves **`no such table: app_meta`** después de actualizar el proyecto: puede quedar una **base vieja** creada cuando el runner de migraciones omitía los `CREATE` (bug ya corregido). Borrá el archivo SQLite de la app (p. ej. `shelfside.db` bajo el directorio de datos de Shelfside en tu usuario, típicamente `~/.local/share/com.mebordone.shelfside/` en Linux) o desinstalá datos de la app y volvé a ejecutar `npm run tauri dev`.
+
+Tras actualizar a **0.2.0**, si falta el esquema de biblioteca (`no such table: catalog_item`), borrá la misma base para que se apliquen `001` y `002` desde cero.
 
 ---
 
@@ -131,13 +177,21 @@ npm run check         # svelte-check + TypeScript
 npm run build         # build estático (SvelteKit)
 ```
 
-Cobertura: `src/**/*.{ts,svelte}` excluyendo `*.test.ts`, `src/test/` y `src/routes/+layout.ts`. Umbrales mínimos alineados con **AGENTS** (60 % líneas/declaraciones; ver [`vitest.config.ts`](vitest.config.ts)).
+Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `poster`, reexport `api/index` y tests (ver [`vitest.config.ts`](vitest.config.ts)); umbrales globales mínimos 60 % líneas/declaraciones. La lógica de `src/lib/db/**` y `src/lib/api/tmdb/**` se cubre con tests unitarios.
 
 | Área | Archivo(s) |
 |------|----------------|
 | i18n `t()` | [`src/lib/i18n/es.test.ts`](src/lib/i18n/es.test.ts) |
 | Migraciones (`splitStatements`, `runMigrations`) | [`src/lib/db/migrate.test.ts`](src/lib/db/migrate.test.ts) |
 | Reexport `db` | [`src/lib/db/index.test.ts`](src/lib/db/index.test.ts) |
+| Catálogo SQL | [`src/lib/db/catalog.test.ts`](src/lib/db/catalog.test.ts) |
+| Biblioteca / reglas | [`src/lib/db/library.test.ts`](src/lib/db/library.test.ts), [`src/lib/db/libraryRules.test.ts`](src/lib/db/libraryRules.test.ts) |
+| TMDB (cliente HTTP) | [`src/lib/api/tmdb/client.test.ts`](src/lib/api/tmdb/client.test.ts) |
+| Open Library (cliente HTTP) | [`src/lib/api/openlibrary/client.test.ts`](src/lib/api/openlibrary/client.test.ts), [`editionDetail.test.ts`](src/lib/api/openlibrary/editionDetail.test.ts) |
+| Catálogo libros / related OL | [`src/lib/library/openLibraryCatalogMeta.test.ts`](src/lib/library/openLibraryCatalogMeta.test.ts), [`src/lib/library/openLibraryRelatedHits.test.ts`](src/lib/library/openLibraryRelatedHits.test.ts), [`openLibraryFlow.test.ts`](src/lib/library/openLibraryFlow.test.ts) |
+| Paginación búsqueda / biblioteca | [`src/lib/library/searchPagination.test.ts`](src/lib/library/searchPagination.test.ts), [`catalogSearchPage.test.ts`](src/lib/library/catalogSearchPage.test.ts) |
+| FilterChipBar | [`src/lib/components/FilterChipBar.svelte.test.ts`](src/lib/components/FilterChipBar.svelte.test.ts) |
+| Posters (rutas relativas) | [`src/lib/poster/storage.test.ts`](src/lib/poster/storage.test.ts) |
 | Conexión SQLite (mock del plugin) | [`src/lib/db/connection.test.ts`](src/lib/db/connection.test.ts) |
 | Store de tema | [`src/lib/stores/theme.svelte.test.ts`](src/lib/stores/theme.svelte.test.ts) |
 | Layout arranque | [`src/routes/layout.svelte.test.ts`](src/routes/layout.svelte.test.ts) + [`src/test/LayoutHarness.svelte`](src/test/LayoutHarness.svelte) |
@@ -149,4 +203,13 @@ Cobertura: `src/**/*.{ts,svelte}` excluyendo `*.test.ts`, `src/test/` y `src/rou
 
 ## Versión
 
-Release 0 — fundación: **0.1.0** (ver [roadmap.md](./roadmap.md)).
+- **0.2.0** — Release 1: biblioteca, TMDB (película/TV), manual, posters en caché, panel de inicio por estado (detalle en [CHANGELOG.md](./CHANGELOG.md) y [roadmap.md](./roadmap.md)).
+- **0.1.0** — Release 0: fundación (scaffold, SQLite, migraciones, tema, i18n base).
+
+Antes de etiquetar un release: `npm run verify` (lint + cobertura + `svelte-check` + build Vite). Con **Rust** y prerequisitos de Tauri instalados: `npm run tauri build` (artefactos bajo `src-tauri/target/release/` y bundles según `tauri.conf.json`).
+
+Para crear la etiqueta git del corte (cuando los cambios ya estén commiteados en la rama deseada):
+
+```bash
+git tag -a v0.2.0 -m "Release 1: biblioteca y catálogo MVP"
+```

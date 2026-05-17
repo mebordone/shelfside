@@ -1,6 +1,6 @@
 [package]
 name = "shelfside"
-version = "0.1.0"
+version = "0.2.0"
 description = "Shelfside — seguimiento cultural local"
 authors = ["you"]
 edition = "2021"
@@ -16,4 +16,6 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
