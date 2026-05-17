@@ -2,6 +2,22 @@
 
 Todos los cambios notables de **Shelfside** se documentan aquí (formato inspirado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)).
 
+## [Unreleased]
+
+### Añadido
+
+- **Open Library:** búsqueda de libros en `/search` (sin API key; `lang=es`), detalle por edición (`/search/book/[editionId]`), alta y refresco en biblioteca; sugerencias por temas/autor del work.
+- **Libros manuales** en `/add/manual` (autor, año, metadatos en `metadata_json`).
+- **Paginación** en Buscar (TMDB: 20/página; Open Library: 10/página) y en lista de Biblioteca (20/página), con contador, Anterior/Siguiente y caché de páginas ya visitadas.
+- **FilterChipBar:** filtros compactos en inicio (tipo de medio), buscar (fuente TMDB/OL) y biblioteca (tipo + estado).
+- Filtro de tipo en inicio persistido en `localStorage` (`homeMediaFilter`).
+- Componente unificado `AddToLibraryMenuButton` (reemplaza `TmdbAddMenuButton`).
+
+### Cambiado
+
+- Pantalla Buscar unificada (TMDB + Open Library) con `searchSession` compartido entre rutas.
+- Biblioteca: toolbar de chips en lugar del panel de selects; recarga inmediata al cambiar tipo/estado.
+
 ## [0.2.0] — 2026-05-15
 
 ### Añadido

@@ -38,10 +38,10 @@ npm run dev
 Con la app abierta (`npm run tauri dev`):
 
 1. **Migraciones:** si arranca sin error en pantalla, `001` y `002` se aplicaron. Si ves error de SQL o tablas faltantes y venías de una versión vieja, borrá la base del usuario (ver sección *Base de datos* más abajo) y reiniciá.
-2. **Inicio:** debería mostrar el panel por estado (vacío al principio) o enlaces a buscar/añadir manual; pie con estado de DB y selector de tema.
-3. **Manual (sin TMDB):** **Biblioteca** → **Añadir manual** → título + opcional imagen → guardar → debería aparecer en **Biblioteca** y en **Inicio** agrupado por estado; abrí detalle y **Editar** (estado, notas, si es TV: temporada/episodio).
-4. **TMDB:** con `VITE_TMDB_API_KEY` en `.env`, reiniciá `tauri dev`, entrá a **Buscar TMDB**, buscá un título; en resultados, **Añadir a biblioteca** abre menú de estado (la pista bajo «Resultados» lo resume). Abrí el **detalle** de un resultado: sinopsis y sección **Sugerencias TMDB** (recomendaciones/similares) con acceso a otras fichas o alta con **+**. En **Biblioteca**, un ítem TMDB muestra las mismas sugerencias. Desde detalle de biblioteca: **Actualizar desde TMDB** (poster en caché bajo datos de app si la red responde).
-5. **Filtros:** en **Biblioteca**, probá tipo / estado / texto y **Aplicar** (opción “Todos” en estado no debe decir “Todos los tipos”).
+2. **Inicio:** panel por estado con barra de chips de tipo (Todos / Película / Serie TV / Libro; recuerda el último en `localStorage`); pie con estado de DB y selector de tema.
+3. **Manual:** **Añadir manual** → película, serie o **libro** (autor/año opcionales) + imagen opcional → guardar → **Biblioteca** e **Inicio**; **Editar** (estado, notas; TV: temporada/episodio).
+4. **Buscar:** chips **Pelis y series** (TMDB; requiere `VITE_TMDB_API_KEY`) u **Libros** (Open Library; sin clave). Resultados paginados (20 ítems por página en TMDB, 10 en libros); contador y Anterior/Siguiente; caché al volver atrás. **Añadir** con menú de estado. Detalle libro: `/search/book/[editionId]`; sugerencias TMDB u OL por tema/autor. En biblioteca: **Actualizar desde TMDB** o **Actualizar desde Open Library** según la fuente.
+5. **Filtros:** en **Biblioteca**, chips de tipo y estado (recarga al instante), búsqueda por título con **Aplicar** o Enter; lista paginada (20 por página).
 6. **Reinicio:** cerrá la app y volvé a abrir: la biblioteca y posters cacheados deben persistir.
 7. **Consola WebView (opcional):** en el flujo anterior no deberían aparecer errores rojos de JS.
 
@@ -142,7 +142,8 @@ Para **buscar y añadir películas/series desde TMDB** necesitás al menos `VITE
 
 ## Release 1 — Biblioteca y catálogo (0.2.0)
 
-- **Rutas:** `/` (inicio / panel por estado), `/library` (lista con filtros), `/library/[id]` (detalle y refresco TMDB), `/library/[id]/edit`, `/search` (TMDB), `/add/manual`.
+- **Rutas:** `/` (inicio / panel por estado), `/library` (lista paginada con filtros en chips), `/library/[id]` (detalle y refresco TMDB/OL), `/library/[id]/edit`, `/search` (TMDB u Open Library, paginado), `/search/book/[editionId]`, `/add/manual`.
+- **UI:** `FilterChipBar` para filtros compactos (inicio, buscar, biblioteca); `SearchResultsPagination` compartido entre buscar y biblioteca.
 - **Datos:** tablas `catalog_item` y `library_entry` (migración `002_catalog_library.sql`); estado por defecto `planning`; puntuación 1–10; progreso TV (`current_season`, `last_episode_watched`).
 - **Posters:** se descargan a disco bajo el directorio de datos de la app (`BaseDirectory.AppLocalData`, carpeta `posters/`); en la UI se sirven con `convertFileSrc` cuando hay `poster_local_path`.
 - **Permisos Tauri:** plugins **sql**, **fs** y **dialog**; capabilities con `fs:default` + `fs:scope` (`$APPLOCALDATA`, `$APPDATA`, `$APPCACHE`) y `remote.urls` para Vite en desarrollo (`http://localhost:1420`, etc.).
@@ -186,6 +187,10 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 | Catálogo SQL | [`src/lib/db/catalog.test.ts`](src/lib/db/catalog.test.ts) |
 | Biblioteca / reglas | [`src/lib/db/library.test.ts`](src/lib/db/library.test.ts), [`src/lib/db/libraryRules.test.ts`](src/lib/db/libraryRules.test.ts) |
 | TMDB (cliente HTTP) | [`src/lib/api/tmdb/client.test.ts`](src/lib/api/tmdb/client.test.ts) |
+| Open Library (cliente HTTP) | [`src/lib/api/openlibrary/client.test.ts`](src/lib/api/openlibrary/client.test.ts), [`editionDetail.test.ts`](src/lib/api/openlibrary/editionDetail.test.ts) |
+| Catálogo libros / related OL | [`src/lib/library/openLibraryCatalogMeta.test.ts`](src/lib/library/openLibraryCatalogMeta.test.ts), [`src/lib/library/openLibraryRelatedHits.test.ts`](src/lib/library/openLibraryRelatedHits.test.ts), [`openLibraryFlow.test.ts`](src/lib/library/openLibraryFlow.test.ts) |
+| Paginación búsqueda / biblioteca | [`src/lib/library/searchPagination.test.ts`](src/lib/library/searchPagination.test.ts), [`catalogSearchPage.test.ts`](src/lib/library/catalogSearchPage.test.ts) |
+| FilterChipBar | [`src/lib/components/FilterChipBar.svelte.test.ts`](src/lib/components/FilterChipBar.svelte.test.ts) |
 | Posters (rutas relativas) | [`src/lib/poster/storage.test.ts`](src/lib/poster/storage.test.ts) |
 | Conexión SQLite (mock del plugin) | [`src/lib/db/connection.test.ts`](src/lib/db/connection.test.ts) |
 | Store de tema | [`src/lib/stores/theme.svelte.test.ts`](src/lib/stores/theme.svelte.test.ts) |
