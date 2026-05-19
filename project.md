@@ -141,7 +141,9 @@ Eventos tipo "marcó episodio 5", "cambió a completado" — similar al historia
 3. **Detalle** → refrescar metadatos bajo demanda ("Actualizar desde TMDB / AniList").  
 4. **Editar** → estado, progreso, nota, puntuación. Al cambiar a `in_progress` se registra `started_at`; al cambiar a `completed` se registra `completed_at`. Ambos automáticos.  
 5. **Listar / filtrar** → por tipo, estado, texto.  
-6. **Etiquetas / listas personalizadas** → no prioritario en v1; se puede posponer.
+6. **Configuración** → tema, idioma (es/en), backup/export (CSV, MD), reinicio total (`/settings`).  
+7. **Estadísticas** → conteos por estado y tipo; gráficos simples (`/stats`, ruta propia).  
+8. **Etiquetas / listas personalizadas** → no prioritario en v1; se puede posponer.
 
 ---
 
@@ -160,22 +162,28 @@ Eventos tipo "marcó episodio 5", "cambió a completado" — similar al historia
 - **Películas (TMDB)** + **Libros (Open Library)** primero si quieres APIs sencillas de validar; o **TMDB películas + TMDB TV** si prefieres un solo cliente TMDB.
 - Entradas **`manual`** mínimas (añadir sin API).
 
-### Fase 2 — Anime y juegos
+### Fase 2 — Configuración, exportaciones y estadísticas
+
+- Pantalla **Configuración** (`/settings`): tema, idioma (es \| en, traducción completa), datos (backup, export CSV/MD a ruta elegida, reinicio total).
+- Export **CSV** y **Markdown** (carpeta destino elegida por el usuario; compatible Obsidian/Joplin).
+- Pantalla **Estadísticas** (`/stats`): conteos por estado y tipo; gráficos livianos.
+
+### Fase 3 — Anime y juegos
 
 - Anime: **AniList GraphQL** (fuente canónica; no requiere secret para queries públicas).
 - Juegos: IGDB.
 
-### Fase 3 — Pulido de datos y portable
+### Fase 4 — Pulido portable (empaquetado)
 
-- Export **CSV** (decisión v1); import/export más formal si no entra en Fase 1.
+- Build **Windows**; releases sin telemetría.
 - Opcional: episodio a episodio o etiquetas/listas si el uso lo pide.
 
-### Fase 4 — Calendario / próximos estrenos
+### Fase 5 — Calendario / próximos estrenos
 
 - TV: TMDB fechas + opcional TVMaze.
 - Anime: AniList `airingSchedule`.
 
-### Fase 5 — Baja prioridad
+### Fase 6 — Baja prioridad
 
 - Manga, cómics, tableros, importaciones masivas (Trakt), notificaciones, **cliente móvil** (Tauri u otro) cuando el desktop esté estable.
 
@@ -238,9 +246,26 @@ Resumen único para implementar sin reabrir discusiones. Todas las preguntas est
 
 ### Exportación, portable, offline
 
-- Export mínimo v1: **CSV**.  
-- **Portable:** datos en SQLite + caché en `app_data_dir()`; respaldo copiando carpeta o archivo. No se asume edición concurrente desde dos máquinas.
+- Export mínimo v1: **CSV** y **Markdown** (carpeta, un `.md` por ítem de biblioteca).  
+- **Markdown (Obsidian / Joplin):** el usuario elige carpeta destino (`tauri-plugin-dialog`); un `.md` por ítem; frontmatter YAML con metadatos de Shelfside; cuerpo = `notes` si existe. Nombres de archivo seguros (slug + `shelfside_id`). v1 = **solo export** (sin import ni sync bidireccional). Posters: no embebidos por defecto (rutas locales no portables); opcional enlace `image_url` en frontmatter.
+- **Reiniciar datos:** borra **todo** el contenido de usuario: tablas de biblioteca/catálogo (vía SQL o borrado de `shelfside.db` + migraciones) y archivos en `posters/` bajo `app_data_dir()`. Requiere confirmación explícita en UI.
+- **Portable:** datos en SQLite + caché en `app_data_dir()`; respaldo = copiar `shelfside.db` o carpeta de datos desde **Configuración**.
 - **Offline:** ver y editar la biblioteca y posters en caché; **búsqueda** de obras nuevas requiere red.
+
+### Configuración (UI)
+
+- Pantalla **`/settings`**: tema claro/oscuro, idioma UI, bloque **Datos** (ruta/tamaño DB, export CSV/MD a ruta elegida, backup `.sqlite`, reiniciar **todo** con confirmación).
+- Pantalla **`/stats`**: estadísticas (ruta propia, no dentro de settings).
+- **Inicio (`/`):** sin controles técnicos; resumen por estado únicamente.
+
+### Idioma UI (i18n)
+
+- Selector **español** e **inglés** en Release 3 (`v0.3.0`); **traducción completa** (todas las claves `t()` en `en`); sin fallback parcial en esa release.
+- Persistencia de locale en `localStorage` (o `app_meta` si se unifica con otras preferencias).
+
+### Estadísticas
+
+- Ruta **`/stats`**; agregados sobre `library_entry` + `catalog_item` (sin `activity_log`): conteos por **estado** y por **tipo de medio**; gráficos **simples** (HTML/CSS, sin librería de charts pesada).
 
 ### Catálogo manual
 
