@@ -4,7 +4,7 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
-## [0.2.0] — 2026-05-16
+## [0.2.0] — Release 2 — 2026-05-16
 
 ### Añadido
 
@@ -41,6 +41,6 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 - Regenerá las claves TMDB si alguna vez se publicaron en un canal inseguro; no subas `.env` al repositorio.
 
-## [0.1.0] — Release 0
+## [0.1.0] — Release 1
 
 - Fundación: Tauri + SvelteKit estático, SQLite + migraciones numeradas, tema claro/oscuro, i18n base (español), README y build Linux.

@@ -142,7 +142,7 @@ Para **buscar y añadir películas/series desde TMDB** necesitás al menos `VITE
 
 ---
 
-## Release 1 — Biblioteca y catálogo (0.2.0)
+## Release 2 — Biblioteca y catálogo (`v0.2.0`)
 
 Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
 
@@ -208,13 +208,13 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 ## Versión
 
-- **0.2.0** — Release 1: biblioteca, TMDB (película/TV), **libros (Open Library)**, manual (incl. libro), paginación, `FilterChipBar`, posters en caché, panel de inicio por estado (detalle en [CHANGELOG.md](./CHANGELOG.md) y [roadmap.md](./roadmap.md)).
-- **0.1.0** — Release 0: fundación (scaffold, SQLite, migraciones, tema, i18n base).
+- **v0.2.0** — Release 2: biblioteca, TMDB (película/TV), **libros (Open Library)**, manual (incl. libro), paginación, `FilterChipBar`, posters en caché, panel de inicio por estado (detalle en [CHANGELOG.md](./CHANGELOG.md) y [roadmap.md](./roadmap.md)).
+- **v0.1.0** — Release 1: fundación (scaffold, SQLite, migraciones, tema, i18n base).
 
 Antes de etiquetar un release: `npm run verify` (lint + cobertura + `svelte-check` + build Vite). Con **Rust** y prerequisitos de Tauri instalados: `npm run tauri build` (artefactos bajo `src-tauri/target/release/` y bundles según `tauri.conf.json`).
 
 Para crear la etiqueta git del corte (cuando los cambios ya estén commiteados en la rama deseada):
 
 ```bash
-git tag -a v0.2.0 -m "Release 1: biblioteca, TMDB, Open Library (libros) y catálogo MVP"
+git tag -a v0.2.0 -m "Release 2: biblioteca, TMDB, Open Library (libros) y catálogo MVP"
 ```
