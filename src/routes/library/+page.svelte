@@ -9,39 +9,30 @@
   } from "$lib/db";
   import FilterChipBar from "$lib/components/FilterChipBar.svelte";
   import SearchResultsPagination from "$lib/components/SearchResultsPagination.svelte";
-  import { t } from "$lib/i18n/es";
+  import { applyPageFromCache, commitSearchPage } from "$lib/library/catalogSearchPage";
+  import { t } from "$lib/i18n";
   import {
     buildMediaFilterChipOptions,
     buildStatusFilterChipOptions,
   } from "$lib/library/searchSourceOptions";
   import { resolvePosterDisplayUrl } from "$lib/poster";
+  import {
+    clearLibraryPagination,
+    librarySession,
+    type LibraryListRowWithPoster,
+  } from "$lib/stores/librarySession.svelte";
 
-  type Row = LibraryListRow & { displayUrl: string | null };
-
-  let rows = $state<Row[]>([]);
-  let loading = $state(true);
-  let mediaFilter = $state("");
-  let statusFilter = $state("");
-  let search = $state("");
-  let page = $state(0);
-  let total = $state(0);
-  let pageCache = $state<Record<number, Row[]>>({});
+  let loading = $state(false);
 
   function currentFilters() {
     const f: { mediaType?: string; status?: string; search?: string } = {};
-    if (mediaFilter) f.mediaType = mediaFilter;
-    if (statusFilter) f.status = statusFilter;
-    if (search.trim()) f.search = search.trim();
+    if (librarySession.mediaFilter) f.mediaType = librarySession.mediaFilter;
+    if (librarySession.statusFilter) f.status = librarySession.statusFilter;
+    if (librarySession.search.trim()) f.search = librarySession.search.trim();
     return f;
   }
 
-  function clearPagination() {
-    page = 0;
-    total = 0;
-    pageCache = {};
-  }
-
-  async function mapRowsWithPosters(base: LibraryListRow[]): Promise<Row[]> {
+  async function mapRowsWithPosters(base: LibraryListRow[]): Promise<LibraryListRowWithPoster[]> {
     return Promise.all(
       base.map(async (r) => ({
         ...r,
@@ -51,10 +42,10 @@
   }
 
   async function loadPage(targetPage: number) {
-    const cached = pageCache[targetPage];
+    const cached = applyPageFromCache(librarySession.pageCache, targetPage);
     if (cached) {
-      page = targetPage;
-      rows = cached;
+      librarySession.page = targetPage;
+      librarySession.rows = cached;
       return;
     }
 
@@ -63,17 +54,18 @@
       const db = await getDatabase();
       const result = await listLibraryWithCatalogPage(db, currentFilters(), targetPage);
       const mapped = await mapRowsWithPosters(result.rows);
-      pageCache = { ...pageCache, [targetPage]: mapped };
-      page = result.page;
-      total = result.total;
-      rows = mapped;
+      librarySession.pageCache = commitSearchPage(librarySession.pageCache, targetPage, mapped);
+      librarySession.page = result.page;
+      librarySession.total = result.total;
+      librarySession.rows = mapped;
+      librarySession.hydrated = true;
     } finally {
       loading = false;
     }
   }
 
   function reloadFromFilters() {
-    clearPagination();
+    clearLibraryPagination();
     void loadPage(0);
   }
 
@@ -92,7 +84,11 @@
   const mediaChipOptions = $derived(buildMediaFilterChipOptions(t, mediaLabel));
   const statusChipOptions = $derived(buildStatusFilterChipOptions(t, statusLabel));
 
-  onMount(() => void loadPage(0));
+  onMount(() => {
+    if (!librarySession.hydrated) {
+      void loadPage(0);
+    }
+  });
 </script>
 
 <div class="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -101,31 +97,31 @@
   <div class="space-y-2" aria-label={t("library.filters")}>
     <FilterChipBar
       options={mediaChipOptions}
-      value={mediaFilter}
+      value={librarySession.mediaFilter}
       includeAll
       allLabel={t("media.all")}
       ariaLabel={t("library.media_filter")}
       onchange={(v) => {
-        mediaFilter = v;
+        librarySession.mediaFilter = v;
         reloadFromFilters();
       }}
     />
     <div class="flex flex-wrap items-center gap-2">
       <FilterChipBar
         options={statusChipOptions}
-        value={statusFilter}
+        value={librarySession.statusFilter}
         includeAll
         allLabel={t("filter.all")}
         ariaLabel={t("library.status_filter")}
         onchange={(v) => {
-          statusFilter = v;
+          librarySession.statusFilter = v;
           reloadFromFilters();
         }}
       />
       <input
         class="shelf-field shelf-field-compact min-w-[12rem] flex-1"
         placeholder={t("library.search_placeholder")}
-        bind:value={search}
+        bind:value={librarySession.search}
         onkeydown={(e) => {
           if (e.key === "Enter") reloadFromFilters();
         }}
@@ -142,20 +138,20 @@
 
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
-  {:else if rows.length === 0 && total === 0}
+  {:else if librarySession.rows.length === 0 && librarySession.total === 0}
     <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("library.empty")}</p>
-  {:else if rows.length > 0}
+  {:else if librarySession.rows.length > 0}
     <SearchResultsPagination
-      {page}
+      page={librarySession.page}
       pageSize={LIBRARY_LIST_PAGE_SIZE}
-      {total}
-      shownCount={rows.length}
+      total={librarySession.total}
+      shownCount={librarySession.rows.length}
       {loading}
-      onPrev={() => void loadPage(page - 1)}
-      onNext={() => void loadPage(page + 1)}
+      onPrev={() => void loadPage(librarySession.page - 1)}
+      onNext={() => void loadPage(librarySession.page + 1)}
     />
     <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-      {#each rows as r (r.id)}
+      {#each librarySession.rows as r (r.id)}
         <li class="flex gap-3 bg-white p-3 dark:bg-zinc-900">
           {#if r.displayUrl}
             <img src={r.displayUrl} alt="" class="h-16 w-11 shrink-0 rounded object-cover" />

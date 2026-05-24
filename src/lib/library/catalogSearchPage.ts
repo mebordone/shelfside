@@ -90,18 +90,18 @@ export async function fetchSearchPage(
   return fetchOlSearchPage(query, page);
 }
 
-export function applyPageFromCache(
-  pageCache: Record<number, SearchHitRow[]>,
+export function applyPageFromCache<T>(
+  pageCache: Record<number, T[]>,
   page: number,
-): SearchHitRow[] | null {
+): T[] | null {
   const cached = pageCache[page];
   return cached ?? null;
 }
 
-export function commitSearchPage(
-  pageCache: Record<number, SearchHitRow[]>,
+export function commitSearchPage<T>(
+  pageCache: Record<number, T[]>,
   page: number,
-  rows: SearchHitRow[],
-): Record<number, SearchHitRow[]> {
+  rows: T[],
+): Record<number, T[]> {
   return { ...pageCache, [page]: rows };
 }
