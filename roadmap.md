@@ -8,13 +8,15 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 |---------|---------|--------|
 | 1 — Fundación | `v0.1.0` | Entregado |
 | 2 — Biblioteca y catálogo MVP | `v0.2.0` | Entregado |
-| 3 — Configuración, exportaciones y estadísticas | `v0.3.0` | Planificado |
+| 3 — Configuración, exportaciones y estadísticas | `v0.3.0` | Entregado |
 | 4 — Anime y juegos | `v0.4.0` | Planificado |
-| 5 — Portable, Windows y pulido | `v0.5.0` | Planificado |
+| 5 — Android (Tauri) y sincronización | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
 | 7 — Backlog y expansión | `v0.7.0+` | Sin versión fija |
 
-Tras el MVP desktop estable: **`v1.0.0`**. Calendario y expansiones posteriores: `v1.1.0`, `v1.2.0`, etc.
+Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri): **`v1.0.0`**. Calendario y expansiones posteriores: `v1.1.0`, `v1.2.0`, etc.
+
+**Plataformas:** desarrollo diario en **Linux**; **Android** (APK sideload, sin Play Store) antes que **Windows**; **macOS** solo si surge necesidad (backlog).
 
 ---
 
@@ -64,16 +66,18 @@ Tras el MVP desktop estable: **`v1.0.0`**. Calendario y expansiones posteriores:
 
 | Entregable | Notas |
 |------------|--------|
-| Pantalla **`/settings`** | Tema claro/oscuro, selector de **idioma UI** (`es` \| `en`, **traducción completa** en `v0.3.0`; persistencia en `localStorage` o `app_meta`), bloque **Datos** |
-| **Inicio** sin pie técnico | Quitar de `/` el selector de tema y el estado de DB; Inicio = resumen/biblioteca por estado solamente |
-| **Datos** en settings | Ruta y tamaño de `shelfside.db` (solo lectura); **exportar CSV**; **backup** (copiar `.sqlite` a ruta elegida); **exportar Markdown** (destino elegido por el usuario); **reiniciar base** con confirmación fuerte (**borra todo**: tablas SQLite + carpeta `posters/`) |
-| Export **Markdown** | El usuario elige carpeta destino (`dialog` Tauri); un `.md` por ítem; frontmatter YAML; cuerpo = `notes` si hay; compatible **Obsidian** y **Joplin** (sin sync bidireccional en v1). Ver `project.md` §8 |
-| Export **CSV** | Como en `project.md` §8; columnas documentadas; destino elegido por el usuario |
+| Pantalla **`/settings`** | Tema claro/oscuro, selector de **idioma UI** (`es` \| `en`, traducción completa; `localStorage`), bloque **Datos** |
+| **Inicio** sin pie técnico | Sin selector de tema ni estado de DB en `/` |
+| **Datos** en settings | Ruta y tamaño de `shelfside.db` (solo lectura); **exportar CSV** y **backup** con diálogo «Guardar como…»; **exportar/importar Markdown** vía carpeta sync; **reiniciar base** (zona peligro) |
+| Export **Markdown** | Carpeta sync persistida; `library/{slug}-{id}.md`; frontmatter con **`shelfside_id`** y **`updated_at`**; solo upsert (sin propagar borrados). Ver `project.md` §8 |
+| **Import / merge** desde carpeta sync (manual) | Last-write-wins por `shelfside_id` + `updated_at`; no elimina entradas locales |
+| Setting **carpeta de sincronización** | `localStorage`; Syncthing / Nextcloud |
+| Export **CSV** | Diálogo al exportar; columnas en README |
 | Pantalla **`/stats`** (ruta propia) | Conteos por **estado** y por **tipo de medio**; gráficos **simples y livianos** (CSS/HTML). Sin `activity_log` en esta release |
 | Navegación | Enlace a `/settings` y `/stats` desde layout o menú principal |
 | Pulido UX menor | Errores de export/backup visibles; estados vacíos en stats |
 
-**Criterio de cierre:** el usuario configura tema e idioma (es/en completos), ve dónde están sus datos, exporta CSV y MD a carpetas elegidas, hace backup de la DB, reinicia datos por completo si lo confirma, consulta `/stats` y el Inicio quedó limpio de controles técnicos.
+**Criterio de cierre:** el usuario configura tema e idioma (es/en completos), ve dónde están sus datos, exporta CSV y MD a carpetas elegidas, importa/merge desde carpeta de sync en desktop, hace backup de la DB, reinicia datos por completo si lo confirma, consulta `/stats` y el Inicio quedó limpio de controles técnicos.
 
 ---
 
@@ -94,19 +98,25 @@ Tras el MVP desktop estable: **`v1.0.0`**. Calendario y expansiones posteriores:
 
 ---
 
-## Release 5 — Portable, Windows y pulido · `v0.5.0`
+## Release 5 — Android (Tauri) y sincronización · `v0.5.0`
 
-**Objetivo:** segunda plataforma y uso diario “serio” sin nuevas features de dominio.
+**Objetivo:** mismo producto en el celular (uso personal, **software libre**, **sin Play Store**) y biblioteca alineada con el escritorio vía **carpeta compartida** (Syncthing / Nextcloud), sin servidor propio.
 
 | Entregable | Notas |
 |------------|--------|
-| Build **Windows** | Segunda plataforma después de Linux (`project.md` §1, §7) |
-| Empaquetado / releases | Binarios o instrucciones en GitHub Releases sin telemetría |
-| Pulido UX | Listas largas, errores de API visibles y recuperables |
+| **Tauri Android** | `tauri android init`, targets en CI o doc de build; APK instalable por sideload (`adb` / archivo) |
+| **UI responsive** | Layout usable en pantalla táctil; navegación y formularios adaptados a móvil (mismo Svelte que desktop) |
+| **Plugins en Android** | Validar `tauri-plugin-sql`, `fs`, `dialog` en dispositivo; permisos de almacenamiento para carpeta sync |
+| **Sync al iniciar** | Al abrir la app: leer `library/*.md` de la carpeta configurada, merge en SQLite local, exportar filas locales más nuevas. Opcional: botón «Sincronizar ahora» y sync al cerrar |
+| **Carpeta sync** | Misma semántica que en desktop (R3); ruta típica = carpeta que Syncthing Android ya replica; **no** sincronizar el `.sqlite` vivo entre dispositivos |
+| **Documentación** | Prerrequisitos Android SDK/NDK, build APK, flujo PC ↔ Syncthing ↔ celu, disciplina de uso (no editar en dos sitios a la vez) |
+| **Pulido UX móvil** | Listas largas, errores de API visibles; estados vacíos |
 
-**Opcional:** `activity_log` (`project.md` §4.3) para estadísticas históricas; etiquetas/listas; seguimiento episodio a episodio.
+**Fuera de alcance en esta release:** publicación en Play Store; sync en tiempo real; copiar `shelfside.db` por Syncthing como mecanismo principal.
 
-**Criterio de cierre:** Windows compila o se documenta el bloqueador; releases publicables sin telemetría.
+**Opcional:** detección de archivos `*.sync-conflict`; `activity_log`; etiquetas/listas.
+
+**Criterio de cierre:** APK instala y abre; flujo feliz biblioteca (TMDB / Open Library / manual según releases previos); tras editar en Linux y sincronizar la carpeta, al abrir en Android los cambios aparecen (y viceversa) con merge predecible.
 
 ---
 
@@ -126,16 +136,18 @@ Tras el MVP desktop estable: **`v1.0.0`**. Calendario y expansiones posteriores:
 
 ## Release 7 — Backlog y expansión · `v0.7.0+`
 
-**Objetivo:** todo lo explícitamente **baja prioridad** o **post–desktop maduro** en `project.md` §6 Fase 6 y §7.
+**Objetivo:** plataformas y features **post–MVP Linux + Android** en `project.md` §6 Fase 6 y §7.
 
 Temas candidatos (no orden estricto; cada uno puede ser su propia versión `v0.7.0`, `v0.8.0`, … o `v1.x`):
 
+- Build **Windows** (después de Android; ver `project.md` §1)
+- **macOS** si surge necesidad
 - Manga, cómics, juegos de mesa (nuevas fuentes)
 - Importaciones masivas (p. ej. Trakt), OAuth, notificaciones
 - Import/export JSON más formal si CSV/MD quedan cortos
-- Import desde CSV/MD (hoy solo **export** en Release 3 / `v0.3.0`)
 - Sync bidireccional con vault Obsidian (campo `external_note_path`)
-- **Cliente móvil** u otra superficie: solo cuando el desktop esté estable
+- Sync al iniciar en segundo plano / resolución avanzada de conflictos
+- Empaquetado / releases GitHub ampliado (artefactos Windows, etc.)
 
 ---
 
@@ -147,7 +159,7 @@ Temas candidatos (no orden estricto; cada uno puede ser su propia versión `v0.7
 | 2 | `v0.2.0` | Fase 1 |
 | 3 | `v0.3.0` | Fase 2 |
 | 4 | `v0.4.0` | Fase 3 |
-| 5 | `v0.5.0` | Fase 4 |
+| 5 | `v0.5.0` | Fase 4 (Android + sync) |
 | 6 | `v0.6.0` | Fase 5 |
 | 7 | `v0.7.0+` | Fase 6 |
 
@@ -155,7 +167,7 @@ Temas candidatos (no orden estricto; cada uno puede ser su propia versión `v0.7
 
 ## Después de `v1.0.0` (orientación)
 
-Cuando el MVP desktop (**releases 1–5**: fundación, biblioteca, config/export/stats, anime/juegos, Windows) esté estable en Linux + Windows, sin telemetría y con documentación de usuario aceptable, etiquetar **`v1.0.0`**.
+Cuando el MVP personal (**releases 1–5**: fundación, biblioteca, config/export/sync, anime/juegos, **Android** con carpeta compartida) esté estable en **Linux + Android**, sin telemetría y con documentación de usuario aceptable, etiquetar **`v1.0.0`**.
 
 - Calendario (Release 6 / `v0.6.0`) puede publicarse antes o después de `1.0.0` según prioridad; si va después, etiquetar p. ej. **`v1.1.0`**.
-- Expansiones (Release 7): `v1.2.0`, etc.
+- **Windows** y demás temas del Release 7: `v1.2.0`, etc., según prioridad.

@@ -4,6 +4,22 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.3.0] — Release 3 — 2026-05-23
+
+### Añadido
+
+- Pantalla **`/settings`**: tema, idioma **es/en** (traducción completa), ruta/tamaño de DB, carpeta de sync, export/import Markdown, export CSV y backup DB (diálogo «Guardar como…»), reinicio de fábrica (zona peligro).
+- Pantalla **`/stats`**: conteos por estado y tipo de medio; barras CSS.
+- i18n: [`src/lib/i18n/index.ts`](src/lib/i18n/index.ts), [`en.ts`](src/lib/i18n/en.ts); locale en `localStorage`.
+- Export/sync: [`src/lib/export/`](src/lib/export/) (CSV, Markdown, backup, slug), [`src/lib/sync/`](src/lib/sync/) (parse, merge LWW).
+- [`src/lib/db/stats.ts`](src/lib/db/stats.ts), [`src/lib/db/reset.ts`](src/lib/db/reset.ts).
+- Navegación: enlaces a Configuración y Estadísticas.
+
+### Cambiado
+
+- Inicio (`/`): sin pie técnico de tema ni metadatos de DB.
+- Capabilities FS: scope `$HOME/**` para carpetas elegidas y sync.
+
 ## [0.2.0] — Release 2 — 2026-05-16
 
 ### Añadido

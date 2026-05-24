@@ -1,10 +1,12 @@
 # Shelfside
 
-Aplicación minimalista para seguimiento de consumos culturales con soberanía de datos y portabilidad (escritorio **Tauri** + **Svelte 5**).
+Aplicación minimalista para seguimiento de consumos culturales con soberanía de datos y portabilidad (**Tauri** + **Svelte 5**).
 
 - Especificación: [project.md](./project.md)
 - Roadmap: [roadmap.md](./roadmap.md)
 - Cambios por versión: [CHANGELOG.md](./CHANGELOG.md)
+
+**Plataformas (roadmap):** desarrollo y uso diario en **Linux**; **Android** (Tauri, APK sideload) en Release 5 (`v0.5.0`), antes que **Windows** (backlog Release 7+). Biblioteca compartida PC ↔ celu vía carpeta **Syncthing / Nextcloud** y archivos Markdown (no servidor propio). Ver [roadmap.md](./roadmap.md) y `project.md` §8.
 
 ---
 
@@ -119,10 +121,14 @@ sudo apt install -y \
 
 **Otras distribuciones** (Arch, Fedora, openSUSE, etc.): listas de paquetes equivalentes en la misma [página de prerequisitos de Tauri](https://tauri.app/start/prerequisites/#linux).
 
-### Windows y macOS
+### Android (Release 5 — planificado)
 
-- **Windows:** [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (carga de trabajo “Desarrollo para escritorio con C++”) y [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/). Detalle: [prerequisites — Windows](https://tauri.app/start/prerequisites/#windows).
-- **macOS:** Xcode o al menos **Xcode Command Line Tools** (`xcode-select --install`). Detalle: [prerequisites — macOS](https://tauri.app/start/prerequisites/#macos).
+Cuando se implemente el cliente móvil: [prerrequisitos Android de Tauri](https://tauri.app/start/prerequisites/#android) (SDK, NDK, etc.), build con `tauri android build`, instalación por **sideload** (sin Play Store). La carpeta de sync suele ser la que **Syncthing** replica en el dispositivo.
+
+### Windows y macOS (backlog)
+
+- **Windows** (Release 7+): [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) y [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/). Detalle: [prerequisites — Windows](https://tauri.app/start/prerequisites/#windows).
+- **macOS:** Xcode o **Xcode Command Line Tools** (`xcode-select --install`). Detalle: [prerequisites — macOS](https://tauri.app/start/prerequisites/#macos).
 
 ---
 
@@ -151,7 +157,16 @@ Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
 - **UI:** `FilterChipBar` para filtros compactos (inicio, buscar, biblioteca); `SearchResultsPagination` compartido entre buscar y biblioteca.
 - **Datos:** tablas `catalog_item` y `library_entry` (migración `002_catalog_library.sql`); estado por defecto `planning`; puntuación 1–10; progreso TV (`current_season`, `last_episode_watched`); metadatos de libro en `metadata_json` cuando aplica.
 - **Posters:** se descargan a disco bajo el directorio de datos de la app (`BaseDirectory.AppLocalData`, carpeta `posters/`); en la UI se sirven con `convertFileSrc` cuando hay `poster_local_path`.
-- **Permisos Tauri:** plugins **sql**, **fs** y **dialog**; capabilities con `fs:default` + `fs:scope` (`$APPLOCALDATA`, `$APPDATA`, `$APPCACHE`) y `remote.urls` para Vite en desarrollo (`http://localhost:1420`, etc.).
+- **Permisos Tauri:** plugins **sql**, **fs** y **dialog**; capabilities con `fs:default` + `fs:scope` (`$APPLOCALDATA`, `$APPDATA`, `$APPCACHE`, `$HOME`) y `remote.urls` para Vite en desarrollo (`http://localhost:1420`, etc.).
+
+---
+
+## Release 3 — Configuración, export y estadísticas (`v0.3.0`)
+
+- **Rutas:** `/settings` (tema, idioma es/en, datos, sync, export CSV, backup DB, reinicio de fábrica), `/stats` (conteos por estado y tipo).
+- **Sync Markdown:** carpeta de sincronización persistida (`library/*.md`); botones **Exportar** e **Importar / combinar** (solo altas y ediciones; no elimina entradas locales). Pensado para **Syncthing** / **Nextcloud** entre PC y (futuro) Android.
+- **CSV y backup:** diálogo «Guardar como…» cada vez (`library.csv`, `shelfside-YYYY-MM-DD-HHmm.db`).
+- **CSV columnas:** `shelfside_id`, `title`, `media_type`, `source`, `external_id`, `status`, `score`, `current_season`, `last_episode_watched`, `started_at`, `completed_at`, `notes`, `image_url`, `catalog_updated_at`, `library_updated_at`.
 
 ---
 
@@ -186,7 +201,9 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 | Área | Archivo(s) |
 |------|----------------|
-| i18n `t()` | [`src/lib/i18n/es.test.ts`](src/lib/i18n/es.test.ts) |
+| i18n `t()` | [`src/lib/i18n/i18n.test.ts`](src/lib/i18n/i18n.test.ts) |
+| Export / sync | [`src/lib/export/`](src/lib/export/), [`src/lib/sync/`](src/lib/sync/) |
+| Stats / reset | [`src/lib/db/stats.test.ts`](src/lib/db/stats.test.ts), [`src/lib/db/reset.test.ts`](src/lib/db/reset.test.ts) |
 | Migraciones (`splitStatements`, `runMigrations`) | [`src/lib/db/migrate.test.ts`](src/lib/db/migrate.test.ts) |
 | Reexport `db` | [`src/lib/db/index.test.ts`](src/lib/db/index.test.ts) |
 | Catálogo SQL | [`src/lib/db/catalog.test.ts`](src/lib/db/catalog.test.ts) |
@@ -208,7 +225,8 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 ## Versión
 
-- **v0.2.0** — Release 2: biblioteca, TMDB (película/TV), **libros (Open Library)**, manual (incl. libro), paginación, `FilterChipBar`, posters en caché, panel de inicio por estado (detalle en [CHANGELOG.md](./CHANGELOG.md) y [roadmap.md](./roadmap.md)).
+- **v0.3.0** — Release 3: `/settings`, `/stats`, i18n es/en, export CSV, backup DB, sync Markdown (carpeta + merge manual), reinicio de fábrica (detalle en [CHANGELOG.md](./CHANGELOG.md)).
+- **v0.2.0** — Release 2: biblioteca, TMDB (película/TV), **libros (Open Library)**, manual (incl. libro), paginación, `FilterChipBar`, posters en caché, panel de inicio por estado.
 - **v0.1.0** — Release 1: fundación (scaffold, SQLite, migraciones, tema, i18n base).
 
 Antes de etiquetar un release: `npm run verify` (lint + cobertura + `svelte-check` + build Vite). Con **Rust** y prerequisitos de Tauri instalados: `npm run tauri build` (artefactos bajo `src-tauri/target/release/` y bundles según `tauri.conf.json`).

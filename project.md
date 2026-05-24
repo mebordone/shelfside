@@ -17,7 +17,7 @@ Documento vivo de especificación para **Shelfside**: implementación pequeña, 
 | **Complejidad acotada** | Sin Celery/Redis obligatorios en la v1; refrescos de metadatos y calendario **bajo demanda** o cron opcional más adelante. |
 | **Privacidad** | **Cero telemetría** (sin analytics ni reportes de uso). Actualizaciones del cliente **sin seguimiento**: p. ej. releases en el repo o instalación manual; sin canales que identifiquen al usuario. |
 | **Portable** | Datos en **SQLite + caché local** (p. ej. posters en `app_data_dir()`); respaldo = copiar carpeta o el archivo de base. **Import/export** puede ser v1 sencillo o v1.1; copiar/pegar el `.sqlite` es válido como mecanismo "manual". |
-| **Plataformas (empaquetado)** | **Linux primero** (uso diario del autor), **Windows** después; **macOS** solo si surge necesidad. |
+| **Plataformas (empaquetado)** | **Linux** (desarrollo y uso diario), **Android** (Tauri, APK sideload, sin Play Store) en Release 5; **Windows** en backlog (Release 7+); **macOS** solo si surge necesidad. Mismo shell **Tauri** en todas las superficies. |
 
 Referencia en este repo: modelo `Item` y enumeraciones `Sources`, `MediaTypes`, `Status` en `src/app/models.py`.
 
@@ -151,10 +151,10 @@ Eventos tipo "marcó episodio 5", "cambió a completado" — similar al historia
 
 ### Fase 0 — Proyecto
 
-- **Tauri + Svelte 5 + TypeScript + Tailwind CSS**, **desktop first** (mobile en un release posterior).
+- **Tauri + Svelte 5 + TypeScript + Tailwind CSS**; desarrollo en **Linux**, UI preparada para responsive antes de Android.
 - Repo, formato de config (`.env.example`), SQLite en `app_data_dir()`, caché de posters en `app_data_dir()` para uso offline de la biblioteca.
 - Esquema inicial + migraciones con **scripts SQL a mano** + tabla `migrations` (sin librerías externas).
-- Empaquetado: **Linux primero**, luego **Windows**.
+- Empaquetado: **Linux** primero; **Android** (Release 5 / `v0.5.0`); **Windows** después (backlog).
 
 ### Fase 1 — Catálogo + librería (sin auth)
 
@@ -173,9 +173,11 @@ Eventos tipo "marcó episodio 5", "cambió a completado" — similar al historia
 - Anime: **AniList GraphQL** (fuente canónica; no requiere secret para queries públicas).
 - Juegos: IGDB.
 
-### Fase 4 — Pulido portable (empaquetado)
+### Fase 4 — Android y sincronización entre dispositivos
 
-- Build **Windows**; releases sin telemetría.
+- **Tauri Android** (APK sideload; sin Play Store; software libre de uso personal).
+- UI **responsive**; validación de plugins (`sql`, `fs`, `dialog`) en Android.
+- **Sync por carpeta** (Syncthing / Nextcloud): un `.md` por ítem en carpeta compartida; merge al **iniciar** la app (y opcionalmente al cerrar o botón manual); SQLite **solo local** en cada dispositivo (no replicar el `.db` vivo).
 - Opcional: episodio a episodio o etiquetas/listas si el uso lo pide.
 
 ### Fase 5 — Calendario / próximos estrenos
@@ -185,7 +187,9 @@ Eventos tipo "marcó episodio 5", "cambió a completado" — similar al historia
 
 ### Fase 6 — Baja prioridad
 
-- Manga, cómics, tableros, importaciones masivas (Trakt), notificaciones, **cliente móvil** (Tauri u otro) cuando el desktop esté estable.
+- Build **Windows** (y **macOS** si aplica); releases ampliados sin telemetría.
+- Manga, cómics, tableros, importaciones masivas (Trakt), notificaciones.
+- Sync avanzado (conflictos `*.sync-conflict`, vault Obsidian bidireccional, etc.).
 
 ---
 
@@ -193,7 +197,7 @@ Eventos tipo "marcó episodio 5", "cambió a completado" — similar al historia
 
 | Capa | Elección | Notas |
 |------|----------|-------|
-| **App shell** | **Tauri** | Ejecutable liviano, datos locales, sin servidor propio. Desktop first. |
+| **App shell** | **Tauri** | Linux + Android (mismo frontend); Windows en backlog. Datos locales, sin servidor propio. |
 | **Frontend** | **Svelte 5 + TypeScript** | Sin virtual DOM; compila a JS vanilla; bundle mínimo; poco boilerplate. |
 | **Estilos** | **Tailwind CSS** | Tema claro/oscuro; componentes propios sin librería de UI pesada. |
 | **Base de datos** | **SQLite vía `tauri-plugin-sql`** | SQL directo desde TypeScript; sin commands Rust por cada query. |
@@ -213,8 +217,9 @@ Resumen único para implementar sin reabrir discusiones. Todas las preguntas est
 
 ### Stack, plataformas y fases de cliente
 
-- **Tauri**, **solo escritorio en v1**; **mismo producto en móvil** pensado para **otro release**, cuando el desktop esté maduro.
-- **Linux** es la primera plataforma de empaquetado y uso; **Windows** a continuación.
+- **Tauri** en **Linux** (desarrollo diario) y **Android** (Release 5 / `v0.5.0`); **Windows** en Release 7+ (backlog).
+- **Sin Play Store** en v1: distribución Android por **APK sideload** (software libre; quien quiera lo instala).
+- **Uso personal:** PC en casa, celular fuera; misma biblioteca vía **carpeta sincronizada** (ver §8 sync), no cuenta en la nube propia de Shelfside.
 - **Frontend:** Svelte 5 + TypeScript + Tailwind CSS.
 - **Lógica de negocio:** TypeScript; Rust solo para filesystem y operaciones que TypeScript no puede hacer directamente.
 - **SQLite:** vía `tauri-plugin-sql` (sin `sqlx` ni `rusqlite`).
@@ -247,21 +252,22 @@ Resumen único para implementar sin reabrir discusiones. Todas las preguntas est
 ### Exportación, portable, offline
 
 - Export mínimo v1: **CSV** y **Markdown** (carpeta, un `.md` por ítem de biblioteca).  
-- **Markdown (Obsidian / Joplin):** el usuario elige carpeta destino (`tauri-plugin-dialog`); un `.md` por ítem; frontmatter YAML con metadatos de Shelfside; cuerpo = `notes` si existe. Nombres de archivo seguros (slug + `shelfside_id`). v1 = **solo export** (sin import ni sync bidireccional). Posters: no embebidos por defecto (rutas locales no portables); opcional enlace `image_url` en frontmatter.
+- **Markdown (Obsidian / Joplin / sync):** carpeta de sincronización persistida (`localStorage`); un `.md` por ítem en `library/`; frontmatter YAML con **`shelfside_id`** y **`updated_at`**; cuerpo = `notes`. **Release 3:** export + import/merge manual en desktop (solo altas/ediciones, last-write-wins; **sin** sincronizar borrados). **CSV y backup:** diálogo «Guardar como…» cada vez. **Release 5:** mismo flujo MD en Android. Posters: no embebidos; opcional `image_url` en frontmatter.
+- **Sync entre PC y celu:** carpeta replicada por **Syncthing** o **Nextcloud**; Shelfside no implementa red — solo lee/escribe archivos. **No** usar el archivo `shelfside.db` como artefacto sincronizado entre dispositivos.
 - **Reiniciar datos:** borra **todo** el contenido de usuario: tablas de biblioteca/catálogo (vía SQL o borrado de `shelfside.db` + migraciones) y archivos en `posters/` bajo `app_data_dir()`. Requiere confirmación explícita en UI.
 - **Portable:** datos en SQLite + caché en `app_data_dir()`; respaldo = copiar `shelfside.db` o carpeta de datos desde **Configuración**.
 - **Offline:** ver y editar la biblioteca y posters en caché; **búsqueda** de obras nuevas requiere red.
 
 ### Configuración (UI)
 
-- Pantalla **`/settings`**: tema claro/oscuro, idioma UI, bloque **Datos** (ruta/tamaño DB, export CSV/MD a ruta elegida, backup `.sqlite`, reiniciar **todo** con confirmación).
+- Pantalla **`/settings`**: tema claro/oscuro, idioma UI, bloque **Datos** (ruta/tamaño DB, carpeta de sincronización, export CSV/MD, backup `.sqlite`, reiniciar **todo** con confirmación).
 - Pantalla **`/stats`**: estadísticas (ruta propia, no dentro de settings).
 - **Inicio (`/`):** sin controles técnicos; resumen por estado únicamente.
 
 ### Idioma UI (i18n)
 
 - Selector **español** e **inglés** en Release 3 (`v0.3.0`); **traducción completa** (todas las claves `t()` en `en`); sin fallback parcial en esa release.
-- Persistencia de locale en `localStorage` (o `app_meta` si se unifica con otras preferencias).
+- Persistencia de locale en `localStorage`.
 
 ### Estadísticas
 
