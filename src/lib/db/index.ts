@@ -34,3 +34,6 @@ export {
   type TmdbHitRef,
   type OpenLibraryHitRef,
 } from "./library";
+export { countByMediaType, countByStatus, countLibraryEntries } from "./stats";
+export type { MediaTypeCount, StatusCount } from "./stats";
+export { resetAllUserData } from "./reset";
