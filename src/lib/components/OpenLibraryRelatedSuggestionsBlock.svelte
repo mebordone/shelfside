@@ -5,7 +5,7 @@
   import { getOpenLibraryHitsLibraryPresence } from "$lib/db";
   import type { Status } from "$lib/db/types";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
   import { addOpenLibraryHitToLibraryFlow } from "$lib/library/openLibraryFlow";
   import {
     mergeRelatedOpenLibraryHits,

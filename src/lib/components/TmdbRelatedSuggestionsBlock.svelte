@@ -5,7 +5,7 @@
   import { getTmdbHitsLibraryPresence } from "$lib/db";
   import type { Status } from "$lib/db/types";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
   import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
   import { mergeRelatedTmdbHits, RELATED_TMDB_HITS_CAP } from "$lib/library/tmdbRelatedHits";
   import { resolvePosterDisplayUrl } from "$lib/poster";

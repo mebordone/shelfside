@@ -1,6 +1,6 @@
 <script lang="ts">
   import { STATUSES, type Status } from "$lib/db/types";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
   import { persistDefaultAddStatus } from "$lib/stores/defaultAddStatus";
 
   interface Props {

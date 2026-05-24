@@ -1,11 +1,9 @@
-const messages: Record<string, string> = {
+export const esMessages: Record<string, string> = {
   "app.title": "Shelfside",
   "app.subtitle": "Tu biblioteca cultural local.",
   "theme.light": "Claro",
   "theme.dark": "Oscuro",
   "theme.toggle": "Tema",
-  "home.db_ready": "Base de datos lista.",
-  "home.schema_row": "Metadato en base",
   "home.loading": "Iniciando…",
   "home.intro": "Gestioná películas, series y libros con datos locales.",
   "home.media_filter": "Mostrar tipos",
@@ -16,6 +14,9 @@ const messages: Record<string, string> = {
   "nav.library": "Biblioteca",
   "nav.search": "Buscar",
   "nav.manual": "Añadir manual",
+  "nav.settings": "Configuración",
+  "nav.settings_aria": "Configuración",
+  "nav.stats": "Estadísticas",
   "nav.aria": "Navegación principal",
   "common.loading": "Cargando…",
   "common.back": "Volver",
@@ -134,8 +135,36 @@ const messages: Record<string, string> = {
   "manual.image_picked": "Imagen seleccionada",
   "manual.submit": "Guardar en biblioteca",
   "manual.saved": "Guardado.",
+  "settings.title": "Configuración",
+  "settings.appearance": "Apariencia",
+  "settings.language": "Idioma de la interfaz",
+  "settings.language.es": "Español",
+  "settings.language.en": "English",
+  "settings.data": "Datos",
+  "settings.db_path": "Base de datos",
+  "settings.db_size": "Tamaño",
+  "settings.db_unknown": "No disponible",
+  "settings.sync": "Sincronización",
+  "settings.sync_help":
+    "Añade y actualiza desde los archivos de la carpeta. No elimina entradas locales. Tras editar: exportá → Syncthing → importá en el otro dispositivo.",
+  "settings.sync_folder": "Carpeta de sincronización",
+  "settings.sync_choose_folder": "Elegir carpeta",
+  "settings.sync_no_folder": "Elegí una carpeta de sincronización primero.",
+  "settings.sync_export_md": "Exportar Markdown a carpeta sync",
+  "settings.sync_import": "Importar / combinar desde carpeta sync",
+  "settings.export_csv": "Exportar CSV…",
+  "settings.backup_db": "Copia de seguridad de la base…",
+  "settings.danger": "Zona de peligro",
+  "settings.reset": "Reiniciar base de datos",
+  "settings.reset_hint":
+    "Borra toda la biblioteca y los posters en este dispositivo. No modifica archivos en la carpeta sync.",
+  "settings.reset_confirm": "¿Reiniciar todos los datos locales? Esta acción no se puede deshacer.",
+  "settings.reset_type": "Escribí BORRAR para confirmar",
+  "settings.action_done": "Listo.",
+  "settings.action_failed": "La operación falló.",
+  "stats.title": "Estadísticas",
+  "stats.empty": "No hay entradas en la biblioteca todavía.",
+  "stats.by_status": "Por estado",
+  "stats.by_media": "Por tipo de medio",
+  "stats.count": "{n} entradas",
 };
-
-export function t(key: string): string {
-  return messages[key] ?? key;
-}

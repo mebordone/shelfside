@@ -17,7 +17,7 @@
   import { addOpenLibraryHitToLibraryFlow } from "$lib/library/openLibraryFlow";
   import { buildSearchSourceChipOptions } from "$lib/library/searchSourceOptions";
   import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
   import {
     clearSearchPagination,
     clearSearchResults,

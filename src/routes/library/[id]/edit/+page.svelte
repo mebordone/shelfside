@@ -7,7 +7,7 @@
   import { tmdbTvCatalogFromMetadata } from "$lib/library/tmdbCatalogMeta";
   import type { Status } from "$lib/db/types";
   import { STATUSES } from "$lib/db/types";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
 
   const SCORE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 

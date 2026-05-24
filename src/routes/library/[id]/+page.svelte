@@ -9,7 +9,7 @@
   import { refreshOpenLibraryCatalogFlow } from "$lib/library/openLibraryFlow";
   import { refreshTmdbCatalogFlow } from "$lib/library/tmdbFlow";
   import { tmdbTvCatalogFromMetadata } from "$lib/library/tmdbCatalogMeta";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
   import OpenLibraryRelatedSuggestionsBlock from "$lib/components/OpenLibraryRelatedSuggestionsBlock.svelte";
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import { resolvePosterDisplayUrl } from "$lib/poster";

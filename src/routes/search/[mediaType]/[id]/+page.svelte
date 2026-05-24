@@ -12,7 +12,7 @@
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
   import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { searchSession } from "$lib/stores/searchSession.svelte";

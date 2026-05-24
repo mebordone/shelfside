@@ -4,7 +4,7 @@
     canSearchPagePrev,
     formatSearchPageCounter,
   } from "$lib/library/searchPagination";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
 
   type Props = {
     page: number;

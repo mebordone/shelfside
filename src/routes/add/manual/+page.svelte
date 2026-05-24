@@ -8,7 +8,7 @@
   import { persistDefaultAddStatus, readDefaultAddStatus } from "$lib/stores/defaultAddStatus";
   import { buildManualBookMetadata } from "$lib/library/openLibraryCatalogMeta";
   import { guessImageExtFromPath, saveManualPosterCopy } from "$lib/poster";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
 
   let title = $state("");
   let mediaType = $state<"movie" | "tv" | "book">("movie");
