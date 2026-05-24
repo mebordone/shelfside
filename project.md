@@ -268,6 +268,7 @@ Resumen único para implementar sin reabrir discusiones. Todas las preguntas est
 
 - Selector **español** e **inglés** en Release 3 (`v0.3.0`); **traducción completa** (todas las claves `t()` en `en`); sin fallback parcial en esa release.
 - Persistencia de locale en `localStorage`.
+- **Idioma de catálogo** (`v0.3.1`): independiente de la UI (o «igual que la app»); afecta TMDB (`language`/`region`) y Open Library (`lang` + filtro opcional `language:spa|eng`). Títulos de búsqueda de libros priorizan la edición preferida.
 
 ### Estadísticas
 

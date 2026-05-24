@@ -4,6 +4,25 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-05-23
+
+### Añadido
+
+- Preferencias de **idioma de catálogo** en Ajustes (igual que la app / español / inglés) y filtro opcional «solo ediciones en ese idioma» para libros.
+- Chip de preferencia de catálogo en Buscar; vacío con botón para quitar filtro estricto en Open Library.
+- **Quitar de biblioteca** en el detalle de un ítem (con confirmación); borra entrada, catálogo local y poster en disco.
+
+### Cambiado
+
+- Búsqueda de libros: título mostrado prioriza la **edición** preferida; subtítulo con título de la obra si difiere.
+- Open Library: `lang` y consulta `language:spa|eng` según preferencias.
+- TMDB: parámetros `language` y `region` en búsqueda, detalle y relacionados.
+
+### Corregido
+
+- Portadas de libros en **Biblioteca** tras añadir desde Buscar: `assetProtocol` y CSP en Tauri; reutilizar URL `/b/id/` de la búsqueda; no guardar URLs `/b/olid/`; validación al descargar posters.
+- Listado de biblioteca: recarga al volver desde detalle o tras quitar un ítem (invalidación de `librarySession`).
+
 ## [0.3.0] — Release 3 — 2026-05-23
 
 ### Añadido

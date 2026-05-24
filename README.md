@@ -156,7 +156,7 @@ Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
 - **Catálogo:** TMDB para cine y TV; **Open Library** para libros (búsqueda, detalle por edición, refresco y sugerencias por tema/autor); entradas **manuales** para los tres tipos con imagen local opcional.
 - **UI:** `FilterChipBar` para filtros compactos (inicio, buscar, biblioteca); `SearchResultsPagination` compartido entre buscar y biblioteca.
 - **Datos:** tablas `catalog_item` y `library_entry` (migración `002_catalog_library.sql`); estado por defecto `planning`; puntuación 1–10; progreso TV (`current_season`, `last_episode_watched`); metadatos de libro en `metadata_json` cuando aplica.
-- **Posters:** se descargan a disco bajo el directorio de datos de la app (`BaseDirectory.AppLocalData`, carpeta `posters/`); en la UI se sirven con `convertFileSrc` cuando hay `poster_local_path`.
+- **Posters:** se descargan a disco bajo el directorio de datos de la app (`BaseDirectory.AppLocalData`, carpeta `posters/`); en la UI se sirven con `convertFileSrc` cuando hay `poster_local_path` (requiere `assetProtocol` habilitado en `tauri.conf.json`).
 - **Permisos Tauri:** plugins **sql**, **fs** y **dialog**; capabilities con `fs:default` + `fs:scope` (`$APPLOCALDATA`, `$APPDATA`, `$APPCACHE`, `$HOME`) y `remote.urls` para Vite en desarrollo (`http://localhost:1420`, etc.).
 
 ---
@@ -225,6 +225,7 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 ## Versión
 
+- **v0.3.1** — Idioma de catálogo (Ajustes + Buscar), títulos de edición en Open Library, TMDB con `language`/`region`, portadas OL en biblioteca, quitar ítem de biblioteca.
 - **v0.3.0** — Release 3: `/settings`, `/stats`, i18n es/en, export CSV, backup DB, sync Markdown (carpeta + merge manual), reinicio de fábrica (detalle en [CHANGELOG.md](./CHANGELOG.md)).
 - **v0.2.0** — Release 2: biblioteca, TMDB (película/TV), **libros (Open Library)**, manual (incl. libro), paginación, `FilterChipBar`, posters en caché, panel de inicio por estado.
 - **v0.1.0** — Release 1: fundación (scaffold, SQLite, migraciones, tema, i18n base).

@@ -9,6 +9,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | 1 — Fundación | `v0.1.0` | Entregado |
 | 2 — Biblioteca y catálogo MVP | `v0.2.0` | Entregado |
 | 3 — Configuración, exportaciones y estadísticas | `v0.3.0` | Entregado |
+| 3.1 — Idioma de catálogo | `v0.3.1` | Entregado |
 | 4 — Anime y juegos | `v0.4.0` | Planificado |
 | 5 — Android (Tauri) y sincronización | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
