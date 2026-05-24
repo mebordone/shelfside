@@ -4,6 +4,7 @@ export {
   guessImageExtFromPath,
   posterRelativePath,
   readFileAbsolute,
+  removePosterFile,
   saveManualPosterCopy,
   writeBytesUnderApp,
 } from "./storage";

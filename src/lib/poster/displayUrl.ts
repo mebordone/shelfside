@@ -1,5 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { appLocalDataDir, join } from "@tauri-apps/api/path";
+import { BaseDirectory, exists } from "@tauri-apps/plugin-fs";
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -12,11 +13,14 @@ export async function resolvePosterDisplayUrl(
 ): Promise<string | null> {
   if (posterLocalPath && isTauriRuntime()) {
     try {
-      const root = await appLocalDataDir();
-      const abs = await join(root, posterLocalPath);
-      return convertFileSrc(abs);
+      const hasLocal = await exists(posterLocalPath, { baseDir: BaseDirectory.AppLocalData });
+      if (hasLocal) {
+        const root = await appLocalDataDir();
+        const abs = await join(root, posterLocalPath);
+        return convertFileSrc(abs);
+      }
     } catch {
-      return imageUrl;
+      /* fallback a remota */
     }
   }
   return imageUrl;

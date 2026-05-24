@@ -1,4 +1,4 @@
-import { BaseDirectory, exists, mkdir, readFile, writeFile } from "@tauri-apps/plugin-fs";
+import { BaseDirectory, exists, mkdir, readFile, remove, writeFile } from "@tauri-apps/plugin-fs";
 
 const POSTERS_DIR = "posters";
 
@@ -29,7 +29,14 @@ export async function downloadPosterToApp(remoteUrl: string, relativeDest: strin
   if (!res.ok) {
     throw new Error(`Poster: HTTP ${res.status}`);
   }
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType && !contentType.startsWith("image/")) {
+    throw new Error(`Poster: tipo no imagen (${contentType})`);
+  }
   const buf = new Uint8Array(await res.arrayBuffer());
+  if (buf.byteLength < 64) {
+    throw new Error("Poster: respuesta demasiado pequeña");
+  }
   await writeBytesUnderApp(relativeDest, buf);
   return relativeDest;
 }
@@ -56,4 +63,16 @@ export async function saveManualPosterCopy(
   const bytes = await readFileAbsolute(sourceAbsolutePath);
   await writeBytesUnderApp(destRelative, bytes);
   return destRelative;
+}
+
+/** Elimina un poster bajo AppLocalData si existe (p. ej. al quitar un ítem de biblioteca). */
+export async function removePosterFile(relativePath: string | null | undefined): Promise<void> {
+  if (!relativePath?.trim()) return;
+  try {
+    if (await exists(relativePath, { baseDir: BaseDirectory.AppLocalData })) {
+      await remove(relativePath, { baseDir: BaseDirectory.AppLocalData });
+    }
+  } catch {
+    /* archivo ya ausente o FS no disponible (tests) */
+  }
 }

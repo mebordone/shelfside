@@ -1,4 +1,5 @@
 import type { OpenLibraryClient, OpenLibrarySearchHit } from "$lib/api/openlibrary/client";
+import { pickOpenLibraryCoverUrl } from "$lib/api/openlibrary/covers";
 import {
   addOpenLibraryToLibrary,
   getCatalogById,
@@ -56,8 +57,11 @@ export async function addOpenLibraryHitToLibraryFlow(
   hit: OpenLibrarySearchHit,
   initialStatus?: Status,
 ): Promise<{ catalogId: number; libraryId: number; alreadyInLibrary: boolean }> {
-  const detail = await client.getEditionDetail(hit.editionId);
-  const imageUrl = detail.coverUrl;
+  const detail = await client.getEditionDetail(hit.editionId, {
+    yearHint: hit.year,
+    coverUrlHint: hit.coverUrl,
+  });
+  const imageUrl = pickOpenLibraryCoverUrl(hit.coverUrl, detail.coverUrl);
 
   const r = await addOpenLibraryToLibrary(
     db,
@@ -90,8 +94,9 @@ export async function refreshOpenLibraryCatalogFlow(
     throw new Error("Solo se puede refrescar desde Open Library si la fuente es openlibrary.");
   }
 
-  const detail = await client.getEditionDetail(cat.external_id);
-  const imageUrl = detail.coverUrl;
+  const coverUrlHint = pickOpenLibraryCoverUrl(cat.image_url);
+  const detail = await client.getEditionDetail(cat.external_id, { coverUrlHint });
+  const imageUrl = pickOpenLibraryCoverUrl(detail.coverUrl, coverUrlHint);
 
   await updateCatalogItem(db, catalogItemId, {
     title: detail.title,
