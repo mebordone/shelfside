@@ -1,5 +1,4 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/svelte";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Page from "./+page.svelte";
 
@@ -22,12 +21,7 @@ afterEach(() => {
 describe("+page (inicio)", () => {
   beforeEach(() => {
     mockSelect.mockReset();
-    mockSelect.mockImplementation((sql: string) => {
-      if (sql.includes("app_meta")) return Promise.resolve([{ value: "ok" }]);
-      return Promise.resolve([]);
-    });
-    localStorage.removeItem("shelfside-theme");
-    document.documentElement.classList.remove("dark");
+    mockSelect.mockResolvedValue([]);
   });
 
   it("sin ítems en progreso/planeado muestra mensaje de enfoque", async () => {
@@ -37,20 +31,11 @@ describe("+page (inicio)", () => {
     });
   });
 
-  it("carga schema desde la base y muestra el valor", async () => {
+  it("no muestra controles técnicos de tema ni schema", async () => {
     render(Page);
     await waitFor(() => {
-      expect(mockSelect).toHaveBeenCalledWith("SELECT value FROM app_meta WHERE key = $1", ["schema_check"]);
+      expect(screen.queryByRole("button", { name: /Claro/i })).not.toBeInTheDocument();
     });
-    await waitFor(() => {
-      expect(screen.getByRole("code")).toHaveTextContent("ok");
-    });
-  });
-
-  it("permite alternar tema claro", async () => {
-    const user = userEvent.setup();
-    render(Page);
-    await user.click(screen.getByRole("button", { name: /Claro/i }));
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(screen.queryByText(/Metadato en base/i)).not.toBeInTheDocument();
   });
 });

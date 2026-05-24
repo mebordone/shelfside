@@ -4,7 +4,7 @@
   import { getDatabase } from "$lib/db/connection";
   import { listLibraryWithCatalog, type LibraryListRow } from "$lib/db";
   import FilterChipBar from "$lib/components/FilterChipBar.svelte";
-  import { t } from "$lib/i18n/es";
+  import { t } from "$lib/i18n";
   import { buildMediaFilterChipOptions } from "$lib/library/searchSourceOptions";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import {
@@ -12,13 +12,11 @@
     readHomeMediaFilter,
     type HomeMediaFilter,
   } from "$lib/stores/homeMediaFilter";
-  import { setTheme, theme } from "$lib/stores/theme.svelte";
 
   type Row = LibraryListRow & { displayUrl: string | null };
 
   let rows = $state<Row[]>([]);
   let loading = $state(true);
-  let schemaValue = $state<string | null>(null);
   let mediaFilter = $state<HomeMediaFilter>(readHomeMediaFilter());
 
   /** En progreso, pausa y cola en el inicio; orden fijo UX. */
@@ -88,14 +86,6 @@
 
   onMount(() => {
     void loadLibrary();
-    void (async () => {
-      const db = await getDatabase();
-      const meta = await db.select<{ value: string }[]>(
-        "SELECT value FROM app_meta WHERE key = $1",
-        ["schema_check"],
-      );
-      schemaValue = meta[0]?.value ?? null;
-    })();
   });
 </script>
 
@@ -177,38 +167,4 @@
       href={resolve("/library")}>{t("home.open_full_library")}</a
     >
   </p>
-
-  <footer class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-    <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-900/80">
-      <p class="font-medium text-emerald-800 dark:text-emerald-300">{t("home.db_ready")}</p>
-      {#if schemaValue}
-        <p class="mt-1 text-zinc-600 dark:text-zinc-400">
-          {t("home.schema_row")}: <code class="rounded bg-zinc-200 px-1 py-0.5 dark:bg-zinc-800">{schemaValue}</code>
-        </p>
-      {/if}
-    </div>
-    <div class="flex flex-wrap items-center gap-3">
-      <span class="text-xs text-zinc-500 dark:text-zinc-400">{t("theme.toggle")}</span>
-      <div class="flex gap-2">
-        <button
-          type="button"
-          class="rounded-md border px-2.5 py-1 text-xs transition-colors {theme.mode === 'light'
-            ? 'border-emerald-600 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100'
-            : 'border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800'}"
-          onclick={() => setTheme("light")}
-        >
-          {t("theme.light")}
-        </button>
-        <button
-          type="button"
-          class="rounded-md border px-2.5 py-1 text-xs transition-colors {theme.mode === 'dark'
-            ? 'border-emerald-600 bg-emerald-950 text-emerald-100'
-            : 'border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800'}"
-          onclick={() => setTheme("dark")}
-        >
-          {t("theme.dark")}
-        </button>
-      </div>
-    </div>
-  </footer>
 </main>
