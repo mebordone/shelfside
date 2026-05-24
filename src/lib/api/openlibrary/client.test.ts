@@ -1,8 +1,15 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { appLocale } from "$lib/i18n/locale.svelte";
+import { persistOlStrictLanguage } from "$lib/stores/catalogPrefs";
 import { createOpenLibraryClient } from "./client";
 import { OpenLibraryHttpError } from "./errors";
 
 describe("createOpenLibraryClient", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    appLocale.current = "es";
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -48,6 +55,20 @@ describe("createOpenLibraryClient", () => {
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("lang=es"));
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("limit=10"));
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("offset=0"));
+  });
+
+  it("searchBooks añade language:spa si filtro estricto en español", async () => {
+    persistOlStrictLanguage(true);
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ docs: [], numFound: 0 }),
+    });
+    const client = createOpenLibraryClient({ fetchImpl, lang: "es" });
+    await client.searchBooks("fundacion");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringMatching(/q=fundacion\+language%3Aspa|q=.*language%3Aspa/),
+    );
   });
 
   it("searchBooks respeta offset para paginación", async () => {

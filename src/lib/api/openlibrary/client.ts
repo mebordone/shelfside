@@ -1,4 +1,4 @@
-import { getOpenLibraryLangParam } from "$lib/i18n/locale";
+import { buildOpenLibrarySearchQuery, getOpenLibraryLangParam } from "$lib/i18n/catalogLocale";
 import { coverUrlFromCoverId, coverUrlFromEditionOlid } from "./covers";
 import {
   buildOpenLibraryDetail,
@@ -51,7 +51,7 @@ function subjectToSlug(subject: string): string {
 function resolveCoverUrl(editionOlid: string, edition: OlEditionJson, work: OlWorkJson): string | null {
   const coverId = edition.covers?.[0] ?? work.covers?.[0];
   if (typeof coverId === "number" && coverId > 0) return coverUrlFromCoverId(coverId);
-  return coverUrlFromEditionOlid(editionOlid);
+  return null;
 }
 
 export function createOpenLibraryClient(options: OpenLibraryClientOptions = {}): OpenLibraryClient {
@@ -68,12 +68,13 @@ export function createOpenLibraryClient(options: OpenLibraryClientOptions = {}):
   }
 
   async function searchBooks(query: string, options?: SearchBooksOptions): Promise<OpenLibrarySearchPage> {
-    const q = query.trim();
+    const rawQ = query.trim();
+    const q = buildOpenLibrarySearchQuery(rawQ);
     const pageSize = options?.limit ?? OPEN_LIBRARY_SEARCH_PAGE_SIZE;
     const offset = options?.offset ?? 0;
     const page = Math.floor(offset / pageSize);
 
-    if (!q) {
+    if (!rawQ) {
       return { hits: [], numFound: 0, page: 0, pageSize };
     }
 
@@ -119,7 +120,7 @@ export function createOpenLibraryClient(options: OpenLibraryClientOptions = {}):
     const workKey = await resolveWorkKeyFromEdition(olFetch, edition, olid);
     const work = await fetchWorkJson(workKey);
     const authorNames = await fetchAuthorNames(olFetch, work);
-    const coverUrl = resolveCoverUrl(olid, edition, work);
+    const coverUrl = resolveCoverUrl(olid, edition, work) ?? options?.coverUrlHint ?? null;
 
     let yearHint = options?.yearHint;
     if (resolvePublicationYear(work, edition, yearHint) == null) {

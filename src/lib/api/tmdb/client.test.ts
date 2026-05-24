@@ -1,8 +1,15 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { appLocale } from "$lib/i18n/locale.svelte";
+import { persistCatalogLang } from "$lib/stores/catalogPrefs";
 import { createTmdbClient } from "./client";
 import { TmdbConfigError } from "./errors";
 
 describe("createTmdbClient", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    appLocale.current = "es";
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -51,6 +58,10 @@ describe("createTmdbClient", () => {
       expect.anything(),
     );
     expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("page=1"), expect.anything());
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringMatching(/language=es-ES/),
+      expect.anything(),
+    );
     expect(page.hits[0]?.mediaType).toBe("movie");
     expect(page.hits[0]?.yearLabel).toBe("2020");
     expect(page.hits[1]?.mediaType).toBe("tv");
@@ -81,6 +92,22 @@ describe("createTmdbClient", () => {
     );
   });
 
+  it("usa language=en-US cuando catálogo en inglés", async () => {
+    persistCatalogLang("en");
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () => JSON.stringify({ results: [] }),
+    });
+    const client = createTmdbClient({ apiKey: "k", fetchImpl });
+    await client.searchMulti("matrix");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringMatching(/language=en-US.*region=US/),
+      expect.anything(),
+    );
+  });
+
   it("con JWT (eyJ...) usa Bearer y no api_key en la URL", async () => {
     const jwt = "eyJhbGci.test.signature";
     const fetchImpl = vi.fn().mockResolvedValue({
@@ -92,7 +119,9 @@ describe("createTmdbClient", () => {
     const client = createTmdbClient({ apiKey: jwt, fetchImpl });
     await client.searchMulti("matrix");
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.themoviedb.org/3/search/multi?query=matrix&page=1",
+      expect.stringMatching(
+        /^https:\/\/api\.themoviedb\.org\/3\/search\/multi\?query=matrix&page=1&language=es-ES&region=ES$/,
+      ),
       expect.objectContaining({
         headers: { Authorization: `Bearer ${jwt}` },
       }),

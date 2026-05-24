@@ -17,7 +17,9 @@
   import { addOpenLibraryHitToLibraryFlow } from "$lib/library/openLibraryFlow";
   import { buildSearchSourceChipOptions } from "$lib/library/searchSourceOptions";
   import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
+  import { resolveCatalogLang } from "$lib/i18n/catalogLocale";
   import { t } from "$lib/i18n";
+  import { persistOlStrictLanguage, readOlStrictLanguage } from "$lib/stores/catalogPrefs";
   import {
     clearSearchPagination,
     clearSearchResults,
@@ -35,6 +37,11 @@
   );
 
   const searchSourceChips = $derived(buildSearchSourceChipOptions(t));
+  const catalogLangResolved = $derived(resolveCatalogLang());
+  const catalogChipLabel = $derived(
+    catalogLangResolved === "es" ? t("search.catalog_chip_es") : t("search.catalog_chip_en"),
+  );
+  const olStrictActive = $derived(readOlStrictLanguage());
 
   function hitKey(h: SearchHitRow): string {
     return h.kind === "tmdb" ? `tmdb-${h.mediaType}-${h.id}` : `ol-${h.editionId}`;
@@ -100,6 +107,12 @@
     }
   }
 
+  async function clearStrictAndSearch() {
+    persistOlStrictLanguage(false);
+    clearSearchPagination();
+    await loadPage(0);
+  }
+
   async function addHit(hit: SearchHitRow, status: Status) {
     if (!canSearch) return;
     const key = hitKey(hit);
@@ -145,6 +158,16 @@
     <p class="text-sm text-amber-700 dark:text-amber-400">{t("search.need_key")}</p>
   {/if}
 
+  <p class="text-xs text-zinc-600 dark:text-zinc-400">
+    <a
+      class="inline-flex items-center gap-1 rounded-full border border-zinc-300 px-2.5 py-0.5 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+      href={resolve("/settings")}
+      title={t("search.catalog_chip_settings")}
+    >
+      {catalogChipLabel}
+    </a>
+  </p>
+
   <form
     class="flex flex-wrap gap-2"
     onsubmit={(e) => {
@@ -178,7 +201,18 @@
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
   {:else if searchSession.hits.length === 0 && searchSession.query.trim() && canSearch}
-    <p class="text-sm text-zinc-600">{t("search.empty")}</p>
+    {#if searchSession.source === "openlibrary" && olStrictActive}
+      <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("search.ol_strict_empty")}</p>
+      <button
+        type="button"
+        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        onclick={() => void clearStrictAndSearch()}
+      >
+        {t("search.ol_strict_clear")}
+      </button>
+    {:else}
+      <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("search.empty")}</p>
+    {/if}
   {:else if searchSession.hits.length > 0}
     <h2 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("search.results")}</h2>
     <SearchResultsPagination
@@ -209,6 +243,9 @@
             {/if}
             <div class="min-w-0 flex-1">
               <p class="font-medium group-hover:underline">{h.title}</p>
+              {#if h.kind === "openlibrary" && h.workTitle}
+                <p class="text-xs text-zinc-500 italic">{h.workTitle}</p>
+              {/if}
               {#if h.kind === "tmdb"}
                 <p class="text-xs text-zinc-500">
                   {t(`media.${h.mediaType}`)}{#if h.yearLabel} · {h.yearLabel}{/if}

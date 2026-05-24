@@ -1,4 +1,4 @@
-import { coverUrlFromCoverId, coverUrlFromEditionOlid } from "./covers";
+import { coverUrlFromCoverId } from "./covers";
 import type { OpenLibrarySearchHit } from "./types";
 
 export type OlSearchDoc = {
@@ -31,9 +31,8 @@ function pickYear(workYear: number | undefined, editionYear: number | undefined)
   return null;
 }
 
-function resolveCoverUrl(editionOlid: string | null, coverId: number | undefined): string | null {
+function resolveCoverUrl(_editionOlid: string | null, coverId: number | undefined): string | null {
   if (typeof coverId === "number" && coverId > 0) return coverUrlFromCoverId(coverId);
-  if (editionOlid) return coverUrlFromEditionOlid(editionOlid);
   return null;
 }
 
@@ -45,10 +44,44 @@ function searchDocIds(doc: OlSearchDoc): { editionOlid: string; workOlid: string
   return { editionOlid, workOlid, edition };
 }
 
+export function resolveSearchDisplayTitle(
+  workTitle: string,
+  editionTitle: string | undefined,
+): { title: string; workTitle?: string } {
+  const work = workTitle.trim();
+  const edition = editionTitle?.trim();
+  if (edition && edition !== work) {
+    return { title: edition, workTitle: work };
+  }
+  return { title: work };
+}
+
+function hitFromSearchDoc(
+  doc: OlSearchDoc,
+  ids: { editionOlid: string; workOlid: string; edition: OlEditionDoc | undefined },
+  authors: string[],
+  year: number,
+): OpenLibrarySearchHit {
+  const workTitle = doc.title!.trim();
+  const { title, workTitle: altWorkTitle } = resolveSearchDisplayTitle(
+    workTitle,
+    ids.edition?.title,
+  );
+  return {
+    editionId: ids.editionOlid,
+    workKey: ids.workOlid,
+    title,
+    ...(altWorkTitle ? { workTitle: altWorkTitle } : {}),
+    authors,
+    year,
+    coverUrl: resolveCoverUrl(ids.editionOlid, ids.edition?.cover_i ?? doc.cover_i),
+  };
+}
+
 export function mapSearchDocToHit(doc: OlSearchDoc): OpenLibrarySearchHit | null {
-  const title = doc.title?.trim();
+  const workTitle = doc.title?.trim();
   const authors = (doc.author_name ?? []).filter((a) => typeof a === "string" && a.trim());
-  if (!title || authors.length === 0) return null;
+  if (!workTitle || authors.length === 0) return null;
 
   const ids = searchDocIds(doc);
   if (!ids) return null;
@@ -56,12 +89,5 @@ export function mapSearchDocToHit(doc: OlSearchDoc): OpenLibrarySearchHit | null
   const year = pickYear(doc.first_publish_year, ids.edition?.publish_year);
   if (year == null) return null;
 
-  return {
-    editionId: ids.editionOlid,
-    workKey: ids.workOlid,
-    title,
-    authors,
-    year,
-    coverUrl: resolveCoverUrl(ids.editionOlid, ids.edition?.cover_i ?? doc.cover_i),
-  };
+  return hitFromSearchDoc(doc, ids, authors, year);
 }

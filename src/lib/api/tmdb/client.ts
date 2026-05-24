@@ -1,3 +1,4 @@
+import { withTmdbLocaleParams } from "$lib/i18n/catalogLocale";
 import { TmdbConfigError, TmdbHttpError } from "./errors";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
@@ -187,7 +188,7 @@ export function createTmdbClient(opts: TmdbClientOptions) {
   const useBearer = tmdbAuthIsBearerToken(key);
 
   async function request<T>(pathWithQuery: string, attempt = 0): Promise<T> {
-    const url = tmdbRequestUrl(pathWithQuery, key, useBearer);
+    const url = tmdbRequestUrl(withTmdbLocaleParams(pathWithQuery), key, useBearer);
     const init = tmdbRequestInit(key, useBearer);
     let res: Response;
     try {

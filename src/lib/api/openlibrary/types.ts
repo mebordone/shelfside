@@ -6,6 +6,8 @@ export type OpenLibraryClientOptions = {
 export type GetEditionDetailOptions = {
   /** Año ya mostrado en búsqueda (p. ej. first_publish_year del listado). */
   yearHint?: number;
+  /** Portada del listado de búsqueda si el JSON de edición no trae `covers`. */
+  coverUrlHint?: string | null;
 };
 
 /** Resultados por página en búsqueda (10 ítems; una petición por página nueva). */
@@ -35,6 +37,8 @@ export type OpenLibrarySearchHit = {
   editionId: string;
   workKey: string;
   title: string;
+  /** Título de la obra si difiere del mostrado (p. ej. edición local vs. canónico en inglés). */
+  workTitle?: string;
   authors: string[];
   year: number;
   coverUrl: string | null;
