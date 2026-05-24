@@ -1,0 +1,138 @@
+import { join } from "@tauri-apps/api/path";
+import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
+import { findCatalogBySource, insertCatalogItem, type SqlDb } from "$lib/db/catalog";
+import { getLibraryEntryById } from "$lib/db/library";
+import { isStatus, type Status } from "$lib/db/types";
+import { mergeStatusTimestamps, normalizeScore } from "$lib/db/libraryRules";
+import { parseMarkdownEntry, type ParsedMarkdownEntry } from "./parseMarkdown";
+
+export type MergeResult = {
+  imported: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+};
+
+function compareUpdatedAt(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+async function applyRemoteEntry(db: SqlDb, remote: ParsedMarkdownEntry): Promise<"inserted" | "updated"> {
+  const existing = await getLibraryEntryById(db, remote.shelfside_id);
+
+  if (existing) {
+    const status: Status = isStatus(remote.status) ? remote.status : (existing.status as Status);
+    const { started_at, completed_at } = mergeStatusTimestamps(
+      existing.status as Status,
+      status,
+      { started_at: existing.started_at, completed_at: existing.completed_at },
+      remote.updated_at,
+    );
+    await db.execute(
+      `UPDATE catalog_item SET title = $1, image_url = $2, updated_at = $3 WHERE id = $4`,
+      [remote.title, remote.image_url, remote.catalog_updated_at ?? remote.updated_at, existing.catalog_item_id],
+    );
+    await db.execute(
+      `UPDATE library_entry SET
+         status = $1, score = $2, notes = $3, current_season = $4, last_episode_watched = $5,
+         started_at = $6, completed_at = $7, updated_at = $8
+       WHERE id = $9`,
+      [
+        status,
+        normalizeScore(remote.score),
+        remote.notes || null,
+        remote.current_season,
+        remote.last_episode_watched,
+        started_at,
+        completed_at,
+        remote.updated_at,
+        remote.shelfside_id,
+      ],
+    );
+    return "updated";
+  }
+
+  const catalog = await findCatalogBySource(db, remote.source, remote.external_id, remote.media_type);
+  let catalogId: number;
+  if (catalog) {
+    catalogId = catalog.id;
+    await db.execute(
+      `UPDATE catalog_item SET title = $1, image_url = $2, updated_at = $3 WHERE id = $4`,
+      [remote.title, remote.image_url, remote.catalog_updated_at ?? remote.updated_at, catalogId],
+    );
+  } else {
+    catalogId = await insertCatalogItem(db, {
+      media_type: remote.media_type,
+      source: remote.source,
+      external_id: remote.external_id,
+      title: remote.title,
+      image_url: remote.image_url,
+    });
+  }
+
+  const status = isStatus(remote.status) ? remote.status : "planning";
+  const { started_at, completed_at } = mergeStatusTimestamps(
+    "planning",
+    status,
+    { started_at: null, completed_at: null },
+    remote.updated_at,
+  );
+
+  await db.execute(
+    `INSERT INTO library_entry (
+       id, catalog_item_id, status, score, notes, current_season, last_episode_watched,
+       started_at, completed_at, updated_at
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      remote.shelfside_id,
+      catalogId,
+      status,
+      normalizeScore(remote.score),
+      remote.notes || null,
+      remote.current_season,
+      remote.last_episode_watched,
+      started_at,
+      completed_at,
+      remote.updated_at,
+    ],
+  );
+  return "inserted";
+}
+
+async function mergeOneFile(db: SqlDb, filePath: string, result: MergeResult): Promise<void> {
+  const text = await readTextFile(filePath);
+  const parsed = parseMarkdownEntry(text);
+  const local = await getLibraryEntryById(db, parsed.shelfside_id);
+  if (local && compareUpdatedAt(parsed.updated_at, local.updated_at) <= 0) {
+    result.skipped += 1;
+    return;
+  }
+  const outcome = await applyRemoteEntry(db, parsed);
+  if (outcome === "inserted") result.imported += 1;
+  else result.updated += 1;
+}
+
+export async function mergeFromSyncFolder(db: SqlDb, syncDir: string): Promise<MergeResult> {
+  const result: MergeResult = { imported: 0, updated: 0, skipped: 0, errors: [] };
+  const libraryDir = await join(syncDir, "library");
+
+  let entries;
+  try {
+    entries = await readDir(libraryDir);
+  } catch (e) {
+    result.errors.push(e instanceof Error ? e.message : String(e));
+    return result;
+  }
+
+  for (const ent of entries) {
+    if (!ent.name?.endsWith(".md")) continue;
+    const filePath = await join(libraryDir, ent.name);
+    try {
+      await mergeOneFile(db, filePath, result);
+    } catch (e) {
+      result.errors.push(`${ent.name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  return result;
+}
