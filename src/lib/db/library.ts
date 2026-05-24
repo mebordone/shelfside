@@ -1,5 +1,6 @@
 import { findCatalogBySource, insertCatalogItem, type InsertCatalogInput, type SqlDb } from "./catalog";
 import { mergeStatusTimestamps, normalizeScore } from "./libraryRules";
+import { removePosterFile } from "$lib/poster";
 import type { LibraryListRow, Status } from "./types";
 import { isStatus } from "./types";
 
@@ -311,6 +312,22 @@ export type UpdateLibraryInput = {
   current_season?: number | null;
   last_episode_watched?: number | null;
 };
+
+/**
+ * Quita un ítem de la biblioteca y su fila de catálogo local (1:1).
+ * Borra el poster en disco si existía.
+ */
+export async function deleteLibraryEntry(db: SqlDb, libraryId: number): Promise<void> {
+  const row = await getLibraryEntryById(db, libraryId);
+  if (!row) throw new Error("Entrada de biblioteca no encontrada.");
+
+  const catalogId = row.catalog_item_id;
+  const posterPath = row.poster_local_path;
+
+  await db.execute("DELETE FROM library_entry WHERE id = $1", [libraryId]);
+  await db.execute("DELETE FROM catalog_item WHERE id = $1", [catalogId]);
+  await removePosterFile(posterPath);
+}
 
 export async function updateLibraryEntry(db: SqlDb, libraryId: number, patch: UpdateLibraryInput): Promise<void> {
   const row = await getLibraryEntryById(db, libraryId);

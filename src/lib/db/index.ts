@@ -21,6 +21,7 @@ export {
   addTmdbToLibrary,
   addOpenLibraryToLibrary,
   updateLibraryEntry,
+  deleteLibraryEntry,
   getLibraryIdForCatalog,
   getTmdbHitsLibraryPresence,
   getOpenLibraryHitsLibraryPresence,

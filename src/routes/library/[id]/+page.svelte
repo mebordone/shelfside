@@ -4,7 +4,7 @@
   import { page } from "$app/state";
   import { createOpenLibraryClient, createTmdbClient, getTmdbApiKeyFromEnv } from "$lib/api";
   import { getDatabase } from "$lib/db/connection";
-  import { getLibraryEntryById, type LibraryListRow } from "$lib/db";
+  import { deleteLibraryEntry, getLibraryEntryById, type LibraryListRow } from "$lib/db";
   import { bookCatalogFromMetadata } from "$lib/library/openLibraryCatalogMeta";
   import { refreshOpenLibraryCatalogFlow } from "$lib/library/openLibraryFlow";
   import { refreshTmdbCatalogFlow } from "$lib/library/tmdbFlow";
@@ -13,11 +13,13 @@
   import OpenLibraryRelatedSuggestionsBlock from "$lib/components/OpenLibraryRelatedSuggestionsBlock.svelte";
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import { resolvePosterDisplayUrl } from "$lib/poster";
+  import { invalidateLibrarySession } from "$lib/stores/librarySession.svelte";
 
   let row = $state<LibraryListRow | null>(null);
   let posterUrl = $state<string | null>(null);
   let loading = $state(true);
   let busy = $state(false);
+  let deleteConfirmOpen = $state(false);
   let err = $state<string | null>(null);
 
   const libraryId = $derived(Number(page.params.id));
@@ -93,6 +95,21 @@
     } catch (e) {
       err = e instanceof Error ? e.message : String(e);
     } finally {
+      busy = false;
+    }
+  }
+
+  async function confirmDelete() {
+    if (!row) return;
+    busy = true;
+    err = null;
+    try {
+      const db = await getDatabase();
+      await deleteLibraryEntry(db, libraryId);
+      invalidateLibrarySession();
+      await goto(resolve("/library"));
+    } catch (e) {
+      err = e instanceof Error ? e.message : String(e);
       busy = false;
     }
   }
@@ -239,10 +256,51 @@
       <button
         type="button"
         class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700"
+        disabled={busy}
         onclick={() => void goto(resolve("/library/[id]/edit", { id: String(libraryId) }))}
       >
         {t("detail.edit")}
       </button>
+      <button
+        type="button"
+        class="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+        disabled={busy}
+        onclick={() => {
+          deleteConfirmOpen = true;
+        }}
+      >
+        {t("detail.delete")}
+      </button>
     </div>
+
+    {#if deleteConfirmOpen}
+      <section
+        class="rounded-md border border-red-200 bg-red-50/80 p-4 text-sm dark:border-red-900 dark:bg-red-950/30"
+        role="alertdialog"
+        aria-labelledby="delete-confirm-title"
+      >
+        <p id="delete-confirm-title" class="text-zinc-800 dark:text-zinc-200">{t("detail.delete_confirm")}</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+            disabled={busy}
+            onclick={() => void confirmDelete()}
+          >
+            {busy ? t("detail.deleting") : t("detail.delete_confirm_action")}
+          </button>
+          <button
+            type="button"
+            class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
+            disabled={busy}
+            onclick={() => {
+              deleteConfirmOpen = false;
+            }}
+          >
+            {t("common.cancel")}
+          </button>
+        </div>
+      </section>
+    {/if}
   {/if}
 </div>

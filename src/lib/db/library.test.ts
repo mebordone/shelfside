@@ -4,12 +4,17 @@ import {
   addManualToLibrary,
   addOpenLibraryToLibrary,
   addTmdbToLibrary,
+  deleteLibraryEntry,
   getLibraryEntryById,
   getOpenLibraryHitsLibraryPresence,
   getTmdbHitsLibraryPresence,
   listLibraryWithCatalog,
   updateLibraryEntry,
 } from "./library";
+
+vi.mock("$lib/poster", () => ({
+  removePosterFile: vi.fn().mockResolvedValue(undefined),
+}));
 
 function mockDb(): { db: SqlDb; execute: ReturnType<typeof vi.fn>; select: ReturnType<typeof vi.fn> } {
   const execute = vi.fn().mockResolvedValue({ rowsAffected: 0 });
@@ -390,5 +395,49 @@ describe("getLibraryEntryById", () => {
     const { db, select } = mockDb();
     select.mockResolvedValueOnce([]);
     expect(await getLibraryEntryById(db, 3)).toBeNull();
+  });
+});
+
+describe("deleteLibraryEntry", () => {
+  it("lanza si no existe la fila", async () => {
+    const { db, select } = mockDb();
+    select.mockResolvedValueOnce([]);
+
+    await expect(deleteLibraryEntry(db, 1)).rejects.toThrow("no encontrada");
+  });
+
+  it("borra library_entry, catalog_item y el poster local", async () => {
+    const { removePosterFile } = await import("$lib/poster");
+    const { db, execute, select } = mockDb();
+    select.mockResolvedValueOnce([
+      {
+        id: 5,
+        catalog_item_id: 9,
+        status: "completed",
+        score: null,
+        current_season: null,
+        last_episode_watched: null,
+        progress_current: null,
+        progress_total: null,
+        owned: null,
+        started_at: null,
+        completed_at: null,
+        notes: null,
+        updated_at: "",
+        media_type: "book",
+        source: "openlibrary",
+        external_id: "OL1M",
+        title: "Fundación",
+        image_url: "https://example.com/cover.jpg",
+        poster_local_path: "posters/book_OL1M.jpg",
+        metadata_json: null,
+      },
+    ]);
+
+    await deleteLibraryEntry(db, 5);
+
+    expect(execute).toHaveBeenCalledWith("DELETE FROM library_entry WHERE id = $1", [5]);
+    expect(execute).toHaveBeenCalledWith("DELETE FROM catalog_item WHERE id = $1", [9]);
+    expect(removePosterFile).toHaveBeenCalledWith("posters/book_OL1M.jpg");
   });
 });

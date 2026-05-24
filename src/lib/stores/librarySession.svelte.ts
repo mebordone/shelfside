@@ -22,3 +22,9 @@ export function clearLibraryPagination(): void {
   librarySession.pageCache = {};
   librarySession.rows = [];
 }
+
+/** Tras borrar o cambios fuera de esta pantalla: forzar recarga al volver a Biblioteca. */
+export function invalidateLibrarySession(): void {
+  clearLibraryPagination();
+  librarySession.hydrated = false;
+}

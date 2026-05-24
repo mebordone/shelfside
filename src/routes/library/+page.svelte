@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { afterNavigate } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { onMount } from "svelte";
   import { getDatabase } from "$lib/db/connection";
@@ -41,12 +42,14 @@
     );
   }
 
-  async function loadPage(targetPage: number) {
-    const cached = applyPageFromCache(librarySession.pageCache, targetPage);
-    if (cached) {
+  async function loadPage(targetPage: number, force = false) {
+    if (!force) {
+      const cached = applyPageFromCache(librarySession.pageCache, targetPage);
+      if (cached) {
       librarySession.page = targetPage;
-      librarySession.rows = cached;
-      return;
+        librarySession.rows = cached;
+        return;
+      }
     }
 
     loading = true;
@@ -84,10 +87,18 @@
   const mediaChipOptions = $derived(buildMediaFilterChipOptions(t, mediaLabel));
   const statusChipOptions = $derived(buildStatusFilterChipOptions(t, statusLabel));
 
+  const libraryPath = resolve("/library");
+
   onMount(() => {
     if (!librarySession.hydrated) {
       void loadPage(0);
     }
+  });
+
+  afterNavigate(({ to, from }) => {
+    if (to?.url.pathname !== libraryPath) return;
+    if (from?.url.pathname === libraryPath) return;
+    void loadPage(librarySession.hydrated ? librarySession.page : 0, true);
   });
 </script>
 

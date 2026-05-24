@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clearLibraryPagination, librarySession } from "./librarySession.svelte";
+import { clearLibraryPagination, invalidateLibrarySession, librarySession } from "./librarySession.svelte";
 
 describe("librarySession", () => {
   it("clearLibraryPagination reinicia lista y caché", () => {
@@ -14,5 +14,14 @@ describe("librarySession", () => {
     expect(librarySession.total).toBe(0);
     expect(librarySession.rows).toEqual([]);
     expect(librarySession.pageCache).toEqual({});
+  });
+
+  it("invalidateLibrarySession limpia paginación y hydrated", () => {
+    librarySession.hydrated = true;
+    librarySession.page = 2;
+    invalidateLibrarySession();
+    expect(librarySession.hydrated).toBe(false);
+    expect(librarySession.page).toBe(0);
+    expect(librarySession.rows).toEqual([]);
   });
 });
