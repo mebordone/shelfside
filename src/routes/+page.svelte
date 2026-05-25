@@ -1,25 +1,29 @@
 <script lang="ts">
+  import { afterNavigate } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { onMount } from "svelte";
   import { getDatabase } from "$lib/db/connection";
   import { listLibraryWithCatalog, type LibraryListRow } from "$lib/db";
   import FilterChipBar from "$lib/components/FilterChipBar.svelte";
   import { t } from "$lib/i18n";
+  import { labelForMedia, labelForStatus } from "$lib/i18n/labels";
   import { buildMediaFilterChipOptions } from "$lib/library/searchSourceOptions";
-  import { resolvePosterDisplayUrl } from "$lib/poster";
+  import { clearHomeRefreshPending, homeRefreshPending } from "$lib/library/mutations";
+  import { mapLibraryRowsWithPosters, type WithDisplayUrl } from "$lib/poster";
   import {
     persistHomeMediaFilter,
     readHomeMediaFilter,
     type HomeMediaFilter,
   } from "$lib/stores/homeMediaFilter";
 
-  type Row = LibraryListRow & { displayUrl: string | null };
+  const HOME_MAX_PER_SECTION = 24;
+
+  type Row = WithDisplayUrl<LibraryListRow>;
 
   let rows = $state<Row[]>([]);
   let loading = $state(true);
   let mediaFilter = $state<HomeMediaFilter>(readHomeMediaFilter());
 
-  /** En progreso, pausa y cola en el inicio; orden fijo UX. */
   const HOME_SECTION_ORDER = ["in_progress", "paused", "planning"] as const;
 
   const filteredRows = $derived(
@@ -36,28 +40,27 @@
     return o;
   });
 
-  const homeEntriesTotal = $derived(
-    HOME_SECTION_ORDER.reduce((n, st) => n + (grouped[st]?.length ?? 0), 0),
-  );
+  const groupedLimited = $derived.by(() => {
+    const o: Record<string, Row[]> = {};
+    let totalShown = 0;
+    for (const st of HOME_SECTION_ORDER) {
+      const full = grouped[st] ?? [];
+      o[st] = full.slice(0, HOME_MAX_PER_SECTION);
+      totalShown += o[st].length;
+    }
+    return { sections: o, totalShown };
+  });
 
-  const mediaChipOptions = $derived(buildMediaFilterChipOptions(t, mediaLabel));
+  const showMoreLink = $derived(filteredRows.length > groupedLimited.totalShown);
+
+  const mediaChipOptions = $derived(buildMediaFilterChipOptions(t, labelForMedia));
+
+  const homePath = resolve("/");
 
   function onHomeMediaFilterChange(value: string) {
     mediaFilter = value as HomeMediaFilter;
     persistHomeMediaFilter(mediaFilter);
     void loadLibrary();
-  }
-
-  function statusLabel(s: string): string {
-    const k = `status.${s}`;
-    const v = t(k);
-    return v === k ? s : v;
-  }
-
-  function mediaLabel(m: string): string {
-    const k = `media.${m}`;
-    const v = t(k);
-    return v === k ? m : v;
   }
 
   function tvProgressLine(r: Row): string | null {
@@ -73,18 +76,20 @@
     try {
       const db = await getDatabase();
       const base = await listLibraryWithCatalog(db, mediaFilter ? { mediaType: mediaFilter } : {});
-      rows = await Promise.all(
-        base.map(async (r) => ({
-          ...r,
-          displayUrl: await resolvePosterDisplayUrl(r.poster_local_path, r.image_url),
-        })),
-      );
+      rows = await mapLibraryRowsWithPosters(base);
     } finally {
       loading = false;
     }
   }
 
   onMount(() => {
+    void loadLibrary();
+  });
+
+  afterNavigate(({ to, from }) => {
+    if (to?.url.pathname !== homePath) return;
+    if (from?.url.pathname === homePath && !homeRefreshPending()) return;
+    clearHomeRefreshPending();
     void loadLibrary();
   });
 </script>
@@ -101,7 +106,7 @@
       ariaLabel={t("home.media_filter")}
       onchange={onHomeMediaFilterChange}
     />
-    {#if homeEntriesTotal === 0}
+    {#if groupedLimited.totalShown === 0}
     <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("home.empty_focus")}</p>
     <p class="pt-4">
       <a
@@ -116,12 +121,12 @@
     </p>
     {:else}
     {#each HOME_SECTION_ORDER as st (st)}
-      {@const list = grouped[st] ?? []}
+      {@const list = groupedLimited.sections[st] ?? []}
       {#if list.length > 0}
         <section class="space-y-3">
           <div class="flex items-baseline justify-between gap-2 border-b border-zinc-200 pb-1 dark:border-zinc-800">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
-              {statusLabel(st)}
+              {labelForStatus(st)}
             </h2>
             <span class="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">{list.length}</span>
           </div>
@@ -150,7 +155,7 @@
                     {tvProgressLine(r)}
                   </p>
                 {:else}
-                  <p class="text-center text-[10px] text-zinc-500 dark:text-zinc-400">{mediaLabel(r.media_type)}</p>
+                  <p class="text-center text-[10px] text-zinc-500 dark:text-zinc-400">{labelForMedia(r.media_type)}</p>
                 {/if}
               </a>
             {/each}
@@ -158,6 +163,14 @@
         </section>
       {/if}
     {/each}
+    {#if showMoreLink}
+      <p class="text-sm text-zinc-500">
+        {t("home.more_in_library")}
+        <a class="ml-1 text-emerald-700 hover:underline dark:text-emerald-400" href={resolve("/library")}
+          >{t("home.open_full_library")}</a
+        >
+      </p>
+    {/if}
     {/if}
   {/if}
 

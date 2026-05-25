@@ -13,7 +13,7 @@
   import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
   import { t } from "$lib/i18n";
-  import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
+  import { addTmdbSearchHitToLibrary } from "$lib/library/sources/registry";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { searchSession } from "$lib/stores/searchSession.svelte";
 
@@ -99,8 +99,7 @@
     err = null;
     try {
       const db = await getDatabase();
-      const client = createTmdbClient({ apiKey: getTmdbApiKeyFromEnv() });
-      const r = await addTmdbHitToLibraryFlow(db, client, hitFromDetail(detail), status);
+      const r = await addTmdbSearchHitToLibrary(db, hitFromDetail(detail), status);
       if (r.alreadyInLibrary) {
         searchSession.msg = t("search.already");
         await goto(resolve("/search"));

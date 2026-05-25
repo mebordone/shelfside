@@ -8,6 +8,8 @@
   import type { Status } from "$lib/db/types";
   import { STATUSES } from "$lib/db/types";
   import { t } from "$lib/i18n";
+  import { labelForStatus } from "$lib/i18n/labels";
+  import { afterLibraryChanged } from "$lib/library/mutations";
 
   const SCORE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
@@ -64,12 +66,6 @@
       }
     })();
   });
-
-  function statusLabel(s: string): string {
-    const k = `status.${s}`;
-    const v = t(k);
-    return v === k ? s : v;
-  }
 
   function parseIntOrNull(v: unknown): number | null {
     if (typeof v === "number") {
@@ -145,6 +141,7 @@
         current_season: parsed.data.current_season,
         last_episode_watched: parsed.data.last_episode_watched,
       });
+      afterLibraryChanged();
       await goto(resolve("/library/[id]", { id: String(libraryId) }));
     } catch (e) {
       err = e instanceof Error ? e.message : String(e);
@@ -190,7 +187,7 @@
         <span class="text-zinc-600 dark:text-zinc-400">{t("edit.status")}</span>
         <select class="shelf-field mt-1" bind:value={status}>
           {#each STATUSES as st (st)}
-            <option value={st}>{statusLabel(st)}</option>
+            <option value={st}>{labelForStatus(st)}</option>
           {/each}
         </select>
       </label>

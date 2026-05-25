@@ -164,7 +164,7 @@ Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
 ## Release 3 — Configuración, export y estadísticas (`v0.3.0`)
 
 - **Rutas:** `/settings` (tema, idioma es/en, datos, sync, export CSV, backup DB, reinicio de fábrica), `/stats` (conteos por estado y tipo).
-- **Sync Markdown:** carpeta de sincronización persistida (`library/*.md`); botones **Exportar** e **Importar / combinar** (solo altas y ediciones; no elimina entradas locales). Pensado para **Syncthing** / **Nextcloud** entre PC y (futuro) Android.
+- **Sync Markdown (Syncthing):** en Ajustes, definí la carpeta de sincronización. **Exportar** escribe `library/{slug}-{id}.md` en esa carpeta; copiala con Syncthing o Nextcloud al otro dispositivo. **Importar / combinar** lee los `.md` y fusiona por `shelfside_id` y `updated_at` (last-write-wins); no borra entradas locales ni sincroniza el `.sqlite`. No versiones la base SQLite en la carpeta sync.
 - **CSV y backup:** diálogo «Guardar como…» cada vez (`library.csv`, `shelfside-YYYY-MM-DD-HHmm.db`).
 - **CSV columnas:** `shelfside_id`, `title`, `media_type`, `source`, `external_id`, `status`, `score`, `current_season`, `last_episode_watched`, `started_at`, `completed_at`, `notes`, `image_url`, `catalog_updated_at`, `library_updated_at`.
 
@@ -225,6 +225,7 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 ## Versión
 
+- **v0.3.2** — Consolidación pre-v0.4: registro de fuentes, componentes relacionados unificados, i18n/mutaciones/delete flow, settings y detalle modularizados, reparar portada OL, límite en inicio, paginación OL y mensajes sync MD.
 - **v0.3.1** — Idioma de catálogo (Ajustes + Buscar), títulos de edición en Open Library, TMDB con `language`/`region`, portadas OL en biblioteca, quitar ítem de biblioteca.
 - **v0.3.0** — Release 3: `/settings`, `/stats`, i18n es/en, export CSV, backup DB, sync Markdown (carpeta + merge manual), reinicio de fábrica (detalle en [CHANGELOG.md](./CHANGELOG.md)).
 - **v0.2.0** — Release 2: biblioteca, TMDB (película/TV), **libros (Open Library)**, manual (incl. libro), paginación, `FilterChipBar`, posters en caché, panel de inicio por estado.

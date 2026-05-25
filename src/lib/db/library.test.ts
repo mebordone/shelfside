@@ -406,8 +406,7 @@ describe("deleteLibraryEntry", () => {
     await expect(deleteLibraryEntry(db, 1)).rejects.toThrow("no encontrada");
   });
 
-  it("borra library_entry, catalog_item y el poster local", async () => {
-    const { removePosterFile } = await import("$lib/poster");
+  it("borra library_entry y catalog_item", async () => {
     const { db, execute, select } = mockDb();
     select.mockResolvedValueOnce([
       {
@@ -438,6 +437,5 @@ describe("deleteLibraryEntry", () => {
 
     expect(execute).toHaveBeenCalledWith("DELETE FROM library_entry WHERE id = $1", [5]);
     expect(execute).toHaveBeenCalledWith("DELETE FROM catalog_item WHERE id = $1", [9]);
-    expect(removePosterFile).toHaveBeenCalledWith("posters/book_OL1M.jpg");
   });
 });

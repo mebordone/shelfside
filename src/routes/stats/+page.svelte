@@ -3,6 +3,7 @@
   import { getDatabase } from "$lib/db/connection";
   import { countByMediaType, countByStatus, countLibraryEntries } from "$lib/db/stats";
   import { t } from "$lib/i18n";
+  import { labelForMedia, labelForStatus } from "$lib/i18n/labels";
 
   type Row = { label: string; n: number };
 
@@ -10,18 +11,6 @@
   let total = $state(0);
   let byStatus = $state<Row[]>([]);
   let byMedia = $state<Row[]>([]);
-
-  function statusLabel(s: string): string {
-    const k = `status.${s}`;
-    const v = t(k);
-    return v === k ? s : v;
-  }
-
-  function mediaLabel(m: string): string {
-    const k = `media.${m}`;
-    const v = t(k);
-    return v === k ? m : v;
-  }
 
   function barWidth(n: number, max: number): string {
     if (max <= 0) return "0%";
@@ -35,8 +24,8 @@
         total = await countLibraryEntries(db);
         const statusRows = await countByStatus(db);
         const mediaRows = await countByMediaType(db);
-        byStatus = statusRows.map((r) => ({ label: statusLabel(r.status), n: r.n }));
-        byMedia = mediaRows.map((r) => ({ label: mediaLabel(r.media_type), n: r.n }));
+        byStatus = statusRows.map((r) => ({ label: labelForStatus(r.status), n: r.n }));
+        byMedia = mediaRows.map((r) => ({ label: labelForMedia(r.media_type), n: r.n }));
       } finally {
         loading = false;
       }

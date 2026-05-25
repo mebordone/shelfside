@@ -3,11 +3,7 @@
   import { resolve } from "$app/paths";
   import { onMount } from "svelte";
   import { getDatabase } from "$lib/db/connection";
-  import {
-    LIBRARY_LIST_PAGE_SIZE,
-    listLibraryWithCatalogPage,
-    type LibraryListRow,
-  } from "$lib/db";
+  import { LIBRARY_LIST_PAGE_SIZE, listLibraryWithCatalogPage } from "$lib/db";
   import FilterChipBar from "$lib/components/FilterChipBar.svelte";
   import SearchResultsPagination from "$lib/components/SearchResultsPagination.svelte";
   import { applyPageFromCache, commitSearchPage } from "$lib/library/catalogSearchPage";
@@ -16,12 +12,9 @@
     buildMediaFilterChipOptions,
     buildStatusFilterChipOptions,
   } from "$lib/library/searchSourceOptions";
-  import { resolvePosterDisplayUrl } from "$lib/poster";
-  import {
-    clearLibraryPagination,
-    librarySession,
-    type LibraryListRowWithPoster,
-  } from "$lib/stores/librarySession.svelte";
+  import { labelForMedia, labelForStatus } from "$lib/i18n/labels";
+  import { mapLibraryRowsWithPosters } from "$lib/poster";
+  import { clearLibraryPagination, librarySession } from "$lib/stores/librarySession.svelte";
 
   let loading = $state(false);
 
@@ -33,20 +26,11 @@
     return f;
   }
 
-  async function mapRowsWithPosters(base: LibraryListRow[]): Promise<LibraryListRowWithPoster[]> {
-    return Promise.all(
-      base.map(async (r) => ({
-        ...r,
-        displayUrl: await resolvePosterDisplayUrl(r.poster_local_path, r.image_url),
-      })),
-    );
-  }
-
   async function loadPage(targetPage: number, force = false) {
     if (!force) {
       const cached = applyPageFromCache(librarySession.pageCache, targetPage);
       if (cached) {
-      librarySession.page = targetPage;
+        librarySession.page = targetPage;
         librarySession.rows = cached;
         return;
       }
@@ -56,7 +40,7 @@
     try {
       const db = await getDatabase();
       const result = await listLibraryWithCatalogPage(db, currentFilters(), targetPage);
-      const mapped = await mapRowsWithPosters(result.rows);
+      const mapped = await mapLibraryRowsWithPosters(result.rows);
       librarySession.pageCache = commitSearchPage(librarySession.pageCache, targetPage, mapped);
       librarySession.page = result.page;
       librarySession.total = result.total;
@@ -72,20 +56,8 @@
     void loadPage(0);
   }
 
-  function statusLabel(s: string): string {
-    const k = `status.${s}`;
-    const v = t(k);
-    return v === k ? s : v;
-  }
-
-  function mediaLabel(m: string): string {
-    const k = `media.${m}`;
-    const v = t(k);
-    return v === k ? m : v;
-  }
-
-  const mediaChipOptions = $derived(buildMediaFilterChipOptions(t, mediaLabel));
-  const statusChipOptions = $derived(buildStatusFilterChipOptions(t, statusLabel));
+  const mediaChipOptions = $derived(buildMediaFilterChipOptions(t, labelForMedia));
+  const statusChipOptions = $derived(buildStatusFilterChipOptions(t, labelForStatus));
 
   const libraryPath = resolve("/library");
 
@@ -174,7 +146,7 @@
               >{r.title}</a
             >
             <p class="text-xs text-zinc-500">
-              {mediaLabel(r.media_type)} · {statusLabel(r.status)}
+              {labelForMedia(r.media_type)} · {labelForStatus(r.status)}
             </p>
           </div>
         </li>

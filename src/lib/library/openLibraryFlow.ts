@@ -1,5 +1,5 @@
 import type { OpenLibraryClient, OpenLibrarySearchHit } from "$lib/api/openlibrary/client";
-import { pickOpenLibraryCoverUrl } from "$lib/api/openlibrary/covers";
+import { isReliableOpenLibraryCoverUrl, pickOpenLibraryCoverUrl } from "$lib/api/openlibrary/covers";
 import {
   addOpenLibraryToLibrary,
   getCatalogById,
@@ -7,7 +7,11 @@ import {
   type SqlDb,
   type Status,
 } from "$lib/db";
-import { downloadPosterToApp, posterRelativePath } from "$lib/poster";
+import { downloadPosterToApp, posterRelativePath, removePosterFile } from "$lib/poster";
+
+export function needsOpenLibraryCoverRepair(imageUrl: string | null): boolean {
+  return Boolean(imageUrl?.includes("/b/olid/"));
+}
 
 function catalogMetadataFromDetail(detail: {
   authors: string[];
@@ -105,4 +109,27 @@ export async function refreshOpenLibraryCatalogFlow(
   });
 
   await cachePoster(db, catalogItemId, imageUrl, detail.editionId);
+}
+
+/** Limpia URL/poster OLID inválidos y vuelve a refrescar desde Open Library. */
+export async function repairOpenLibraryCoverFlow(
+  db: SqlDb,
+  client: OpenLibraryClient,
+  catalogItemId: number,
+): Promise<void> {
+  const cat = await getCatalogById(db, catalogItemId);
+  if (!cat) throw new Error("Ítem de catálogo no encontrado.");
+  if (cat.source !== "openlibrary") {
+    throw new Error("Solo se puede reparar portada Open Library para libros de openlibrary.");
+  }
+
+  if (cat.poster_local_path) {
+    await removePosterFile(cat.poster_local_path);
+    await updateCatalogItem(db, catalogItemId, { poster_local_path: null });
+  }
+  if (needsOpenLibraryCoverRepair(cat.image_url) || !isReliableOpenLibraryCoverUrl(cat.image_url)) {
+    await updateCatalogItem(db, catalogItemId, { image_url: null });
+  }
+
+  await refreshOpenLibraryCatalogFlow(db, client, catalogItemId);
 }

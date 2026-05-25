@@ -9,3 +9,4 @@ export {
   writeBytesUnderApp,
 } from "./storage";
 export { resolvePosterDisplayUrl } from "./displayUrl";
+export { mapLibraryRowsWithPosters, type WithDisplayUrl } from "./mapWithDisplayUrl";

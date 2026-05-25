@@ -12,6 +12,7 @@ vi.mock("$lib/db/connection", () => ({
 
 vi.mock("$lib/poster", () => ({
   resolvePosterDisplayUrl: vi.fn().mockResolvedValue(null),
+  mapLibraryRowsWithPosters: vi.fn(async (rows: unknown[]) => rows),
 }));
 
 afterEach(() => {

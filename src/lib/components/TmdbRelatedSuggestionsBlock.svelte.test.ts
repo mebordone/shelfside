@@ -28,8 +28,8 @@ vi.mock("$lib/db", () => ({
   getTmdbHitsLibraryPresence: vi.fn().mockResolvedValue(new Map()),
 }));
 
-vi.mock("$lib/library/tmdbFlow", () => ({
-  addTmdbHitToLibraryFlow: vi.fn(),
+vi.mock("$lib/library/sources/registry", () => ({
+  addTmdbSearchHitToLibrary: vi.fn(),
 }));
 
 vi.mock("$lib/poster", () => ({

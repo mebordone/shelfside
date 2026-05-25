@@ -70,11 +70,12 @@ export async function fetchOlSearchPage(query: string, page: number): Promise<Fe
     limit: pageSize,
   });
   const rows = await mapOlHits(result.hits);
+  const totalPages = Math.max(1, Math.ceil(result.numFound / pageSize));
   return {
     rows,
     meta: {
       total: result.numFound,
-      totalPages: 0,
+      totalPages,
       pageSize: result.pageSize,
     },
   };

@@ -1,9 +1,8 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
-  import { createOpenLibraryClient, createTmdbClient, getTmdbApiKeyFromEnv } from "$lib/api";
+  import { getTmdbApiKeyFromEnv } from "$lib/api";
   import type { OpenLibrarySearchHit } from "$lib/api/openlibrary/types";
-  import type { TmdbSearchHit } from "$lib/api/tmdb/client";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
   import FilterChipBar from "$lib/components/FilterChipBar.svelte";
   import SearchResultsPagination from "$lib/components/SearchResultsPagination.svelte";
@@ -14,9 +13,8 @@
     commitSearchPage,
     fetchSearchPage,
   } from "$lib/library/catalogSearchPage";
-  import { addOpenLibraryHitToLibraryFlow } from "$lib/library/openLibraryFlow";
   import { buildSearchSourceChipOptions } from "$lib/library/searchSourceOptions";
-  import { addTmdbHitToLibraryFlow } from "$lib/library/tmdbFlow";
+  import { addSearchHitToLibrary } from "$lib/library/sources/registry";
   import { resolveCatalogLang } from "$lib/i18n/catalogLocale";
   import { t } from "$lib/i18n";
   import { persistOlStrictLanguage, readOlStrictLanguage } from "$lib/stores/catalogPrefs";
@@ -121,14 +119,7 @@
     searchSession.msg = null;
     try {
       const db = await getDatabase();
-      let r: { libraryId: number; alreadyInLibrary: boolean };
-      if (hit.kind === "tmdb") {
-        const client = createTmdbClient({ apiKey: getTmdbApiKeyFromEnv() });
-        r = await addTmdbHitToLibraryFlow(db, client, hit as TmdbSearchHit, status);
-      } else {
-        const client = createOpenLibraryClient();
-        r = await addOpenLibraryHitToLibraryFlow(db, client, hit, status);
-      }
+      const r = await addSearchHitToLibrary(db, hit, status);
       if (r.alreadyInLibrary) {
         searchSession.msg = t("search.already");
       } else {

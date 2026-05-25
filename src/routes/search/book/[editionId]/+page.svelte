@@ -8,7 +8,7 @@
   import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
   import { t } from "$lib/i18n";
-  import { addOpenLibraryHitToLibraryFlow } from "$lib/library/openLibraryFlow";
+  import { addOpenLibrarySearchHitToLibrary } from "$lib/library/sources/registry";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { searchSession } from "$lib/stores/searchSession.svelte";
 
@@ -84,8 +84,7 @@
     err = null;
     try {
       const db = await getDatabase();
-      const client = createOpenLibraryClient();
-      const r = await addOpenLibraryHitToLibraryFlow(db, client, hit, status);
+      const r = await addOpenLibrarySearchHitToLibrary(db, hit, status);
       if (r.alreadyInLibrary) {
         searchSession.msg = t("search.already");
       } else {

@@ -2,18 +2,26 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
-  import { createOpenLibraryClient, createTmdbClient, getTmdbApiKeyFromEnv } from "$lib/api";
-  import { getDatabase } from "$lib/db/connection";
-  import { deleteLibraryEntry, getLibraryEntryById, type LibraryListRow } from "$lib/db";
-  import { bookCatalogFromMetadata } from "$lib/library/openLibraryCatalogMeta";
-  import { refreshOpenLibraryCatalogFlow } from "$lib/library/openLibraryFlow";
-  import { refreshTmdbCatalogFlow } from "$lib/library/tmdbFlow";
-  import { tmdbTvCatalogFromMetadata } from "$lib/library/tmdbCatalogMeta";
-  import { t } from "$lib/i18n";
+  import { createOpenLibraryClient, getTmdbApiKeyFromEnv } from "$lib/api";
+  import BookDetailPanel from "$lib/components/library/BookDetailPanel.svelte";
+  import LibraryDetailActions from "$lib/components/library/LibraryDetailActions.svelte";
+  import TvProgressPanel from "$lib/components/library/TvProgressPanel.svelte";
   import OpenLibraryRelatedSuggestionsBlock from "$lib/components/OpenLibraryRelatedSuggestionsBlock.svelte";
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
+  import { getDatabase } from "$lib/db/connection";
+  import { getLibraryEntryById, type LibraryListRow } from "$lib/db";
+  import { labelForMedia, labelForStatus } from "$lib/i18n/labels";
+  import { t } from "$lib/i18n";
+  import { deleteLibraryEntryWithAssets } from "$lib/library/deleteEntryFlow";
+  import { bookCatalogFromMetadata } from "$lib/library/openLibraryCatalogMeta";
+  import {
+    needsOpenLibraryCoverRepair,
+    repairOpenLibraryCoverFlow,
+  } from "$lib/library/openLibraryFlow";
+  import { afterLibraryChanged } from "$lib/library/mutations";
+  import { refreshCatalogItem } from "$lib/library/sources/registry";
+  import { tmdbTvCatalogFromMetadata } from "$lib/library/tmdbCatalogMeta";
   import { resolvePosterDisplayUrl } from "$lib/poster";
-  import { invalidateLibrarySession } from "$lib/stores/librarySession.svelte";
 
   let row = $state<LibraryListRow | null>(null);
   let posterUrl = $state<string | null>(null);
@@ -34,6 +42,12 @@
 
   const hasTmdbKey = $derived(Boolean(getTmdbApiKeyFromEnv().trim()));
 
+  const showRepairCover = $derived(
+    row?.source === "openlibrary" &&
+      row.media_type === "book" &&
+      (needsOpenLibraryCoverRepair(row.image_url) || !posterUrl),
+  );
+
   $effect(() => {
     const id = libraryId;
     if (!Number.isFinite(id)) return;
@@ -52,29 +66,20 @@
     })();
   });
 
-  function statusLabel(s: string): string {
-    const k = `status.${s}`;
-    const v = t(k);
-    return v === k ? s : v;
+  async function reloadRow() {
+    const db = await getDatabase();
+    row = await getLibraryEntryById(db, libraryId);
+    posterUrl = row ? await resolvePosterDisplayUrl(row.poster_local_path, row.image_url) : null;
   }
 
-  function mediaLabel(m: string): string {
-    const k = `media.${m}`;
-    const v = t(k);
-    return v === k ? m : v;
-  }
-
-  async function refreshTmdb() {
-    if (!row || row.source !== "tmdb") return;
+  async function refreshCatalog() {
+    if (!row) return;
     busy = true;
     err = null;
     try {
-      const key = getTmdbApiKeyFromEnv();
-      const client = createTmdbClient({ apiKey: key });
       const db = await getDatabase();
-      await refreshTmdbCatalogFlow(db, client, row.catalog_item_id);
-      row = await getLibraryEntryById(db, libraryId);
-      posterUrl = row ? await resolvePosterDisplayUrl(row.poster_local_path, row.image_url) : null;
+      await refreshCatalogItem(db, row.source, row.catalog_item_id);
+      await reloadRow();
     } catch (e) {
       err = e instanceof Error ? e.message : String(e);
     } finally {
@@ -82,16 +87,16 @@
     }
   }
 
-  async function refreshOpenLibrary() {
+  async function repairCover() {
     if (!row || row.source !== "openlibrary") return;
     busy = true;
     err = null;
     try {
-      const client = createOpenLibraryClient();
       const db = await getDatabase();
-      await refreshOpenLibraryCatalogFlow(db, client, row.catalog_item_id);
-      row = await getLibraryEntryById(db, libraryId);
-      posterUrl = row ? await resolvePosterDisplayUrl(row.poster_local_path, row.image_url) : null;
+      const client = createOpenLibraryClient();
+      await repairOpenLibraryCoverFlow(db, client, row.catalog_item_id);
+      await reloadRow();
+      afterLibraryChanged();
     } catch (e) {
       err = e instanceof Error ? e.message : String(e);
     } finally {
@@ -105,8 +110,8 @@
     err = null;
     try {
       const db = await getDatabase();
-      await deleteLibraryEntry(db, libraryId);
-      invalidateLibrarySession();
+      await deleteLibraryEntryWithAssets(db, libraryId);
+      afterLibraryChanged();
       await goto(resolve("/library"));
     } catch (e) {
       err = e instanceof Error ? e.message : String(e);
@@ -135,7 +140,7 @@
       {/if}
       <div class="min-w-0">
         <h1 class="text-xl font-semibold">{row.title}</h1>
-        <p class="text-sm text-zinc-500">{mediaLabel(row.media_type)} · {statusLabel(row.status)}</p>
+        <p class="text-sm text-zinc-500">{labelForMedia(row.media_type)} · {labelForStatus(row.status)}</p>
         {#if row.score != null}
           <p class="mt-1 text-sm">{t("detail.score")}: {row.score}/10</p>
         {/if}
@@ -147,70 +152,11 @@
     {/if}
 
     {#if row.media_type === "book" && bookCatalog}
-      <section class="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800">
-        {#if bookCatalog.authors.length > 0}
-          <p>
-            <span class="font-medium">{t("detail.book_authors")}:</span>
-            {bookCatalog.authors.join(", ")}
-          </p>
-        {/if}
-        {#if bookCatalog.year != null}
-          <p class="mt-1">
-            <span class="font-medium">{t("detail.book_year")}:</span>
-            {bookCatalog.year}
-          </p>
-        {/if}
-        {#if bookCatalog.isbn}
-          <p class="mt-1">
-            <span class="font-medium">{t("detail.book_isbn")}:</span>
-            {bookCatalog.isbn}
-          </p>
-        {/if}
-        {#if bookCatalog.languages.length > 0}
-          <p class="mt-1">
-            <span class="font-medium">{t("detail.book_languages")}:</span>
-            {bookCatalog.languages.join(", ")}
-          </p>
-        {/if}
-        {#if bookCatalog.openLibraryUrl}
-          <p class="mt-2">
-            <button
-              type="button"
-              class="text-left text-emerald-700 hover:underline dark:text-emerald-400"
-              onclick={() => window.open(bookCatalog.openLibraryUrl!, "_blank", "noopener,noreferrer")}
-            >
-              {t("detail.book_open_library")}
-            </button>
-          </p>
-        {/if}
-        {#if bookCatalog.overview}
-          <p class="mt-3 whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">{bookCatalog.overview}</p>
-        {/if}
-      </section>
+      <BookDetailPanel {bookCatalog} />
     {/if}
 
     {#if row.media_type === "tv"}
-      <section class="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800">
-        <p class="font-medium">{t("detail.progress_tv")}</p>
-        <p>{t("detail.season")}: {row.current_season ?? "—"}</p>
-        <p>{t("detail.episode")}: {row.last_episode_watched ?? "—"}</p>
-        {#if tvCatalog}
-          <div class="mt-3 border-t border-zinc-200 pt-2 dark:border-zinc-700">
-            <p class="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t("detail.catalog_tmdb")}</p>
-            {#if tvCatalog.numberOfSeasons != null}
-              <p class="mt-1">{t("detail.seasons_total")}: {tvCatalog.numberOfSeasons}</p>
-            {/if}
-            {#if tvCatalog.numberOfEpisodes != null}
-              <p>{t("detail.episodes_total")}: {tvCatalog.numberOfEpisodes}</p>
-            {/if}
-            {#if tvCatalog.showStatus}
-              <p>{t("detail.show_status")}: {tvCatalog.showStatus}</p>
-            {/if}
-          </div>
-        {:else if row.source === "tmdb"}
-          <p class="mt-2 text-xs text-zinc-500">{t("detail.refresh_for_seasons")}</p>
-        {/if}
-      </section>
+      <TvProgressPanel {row} {tvCatalog} />
     {/if}
 
     {#if row.source === "tmdb" && hasTmdbKey && (row.media_type === "movie" || row.media_type === "tv")}
@@ -232,75 +178,22 @@
       {t("detail.source")}: {row.source} · {t("detail.external_id")}: {row.external_id}
     </p>
 
-    <div class="flex flex-wrap gap-2">
-      {#if row.source === "tmdb"}
-        <button
-          type="button"
-          class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
-          disabled={busy}
-          onclick={() => void refreshTmdb()}
-        >
-          {t("detail.refresh_tmdb")}
-        </button>
-      {/if}
-      {#if row.source === "openlibrary"}
-        <button
-          type="button"
-          class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
-          disabled={busy}
-          onclick={() => void refreshOpenLibrary()}
-        >
-          {t("detail.refresh_openlibrary")}
-        </button>
-      {/if}
-      <button
-        type="button"
-        class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700"
-        disabled={busy}
-        onclick={() => void goto(resolve("/library/[id]/edit", { id: String(libraryId) }))}
-      >
-        {t("detail.edit")}
-      </button>
-      <button
-        type="button"
-        class="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
-        disabled={busy}
-        onclick={() => {
-          deleteConfirmOpen = true;
-        }}
-      >
-        {t("detail.delete")}
-      </button>
-    </div>
-
-    {#if deleteConfirmOpen}
-      <section
-        class="rounded-md border border-red-200 bg-red-50/80 p-4 text-sm dark:border-red-900 dark:bg-red-950/30"
-        role="alertdialog"
-        aria-labelledby="delete-confirm-title"
-      >
-        <p id="delete-confirm-title" class="text-zinc-800 dark:text-zinc-200">{t("detail.delete_confirm")}</p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-            disabled={busy}
-            onclick={() => void confirmDelete()}
-          >
-            {busy ? t("detail.deleting") : t("detail.delete_confirm_action")}
-          </button>
-          <button
-            type="button"
-            class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
-            disabled={busy}
-            onclick={() => {
-              deleteConfirmOpen = false;
-            }}
-          >
-            {t("common.cancel")}
-          </button>
-        </div>
-      </section>
-    {/if}
+    <LibraryDetailActions
+      {row}
+      {libraryId}
+      {busy}
+      {deleteConfirmOpen}
+      {showRepairCover}
+      onRefreshTmdb={() => void refreshCatalog()}
+      onRefreshOpenLibrary={() => void refreshCatalog()}
+      onRepairCover={() => void repairCover()}
+      onDeleteConfirm={() => void confirmDelete()}
+      onDeleteCancel={() => {
+        deleteConfirmOpen = false;
+      }}
+      onDeleteOpen={() => {
+        deleteConfirmOpen = true;
+      }}
+    />
   {/if}
 </div>

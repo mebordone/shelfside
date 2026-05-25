@@ -4,6 +4,29 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-05-23
+
+### Añadido
+
+- Registro de fuentes de catálogo (`sources/registry`) para alta y refresco TMDB / Open Library desde Buscar y detalle.
+- `RelatedSuggestionsBlock` unificado; wrappers TMDB y Open Library.
+- Helpers i18n compartidos (`labelForStatus`, `labelForMedia`); invalidación central `afterLibraryChanged`.
+- `deleteLibraryEntryWithAssets` (SQL en `db`, poster en flow).
+- `mapLibraryRowsWithPosters`; secciones de Ajustes y paneles de detalle biblioteca troceados.
+- Botón **Reparar portada** para ítems Open Library con URL `/b/olid/` o sin poster.
+- Límite blando en inicio (24 ítems por sección) con enlace a biblioteca completa.
+- Mensajes i18n para export/import Markdown en Ajustes.
+
+### Cambiado
+
+- Rutas de búsqueda y biblioteca usan el registro de fuentes y poster mapping centralizado.
+- Paginación Open Library: `totalPages` desde `numFound` y tamaño de página.
+- Inicio recarga al volver desde otra ruta cuando la biblioteca cambió (`homeRefreshPending`).
+
+### Documentación
+
+- README: subsección Sync Markdown (Syncthing); versión v0.3.2 en roadmap.
+
 ## [0.3.1] — 2026-05-23
 
 ### Añadido
