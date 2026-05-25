@@ -11,6 +11,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | 3 — Configuración, exportaciones y estadísticas | `v0.3.0` | Entregado |
 | 3.1 — Idioma de catálogo | `v0.3.1` | Entregado |
 | 3.2 — Consolidación pre-4.0 | `v0.3.2` | Entregado |
+| 3.3 — Sync Markdown entre escritorios | `v0.3.3` | Entregado |
 | 4 — Anime y juegos | `v0.4.0` | Planificado |
 | 5 — Android (Tauri) y sincronización | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
@@ -81,6 +82,57 @@ Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri):
 
 **Criterio de cierre:** el usuario configura tema e idioma (es/en completos), ve dónde están sus datos, exporta CSV y MD a carpetas elegidas, importa/merge desde carpeta de sync en desktop, hace backup de la DB, reinicia datos por completo si lo confirma, consulta `/stats` y el Inicio quedó limpio de controles técnicos.
 
+> El contrato Markdown/CSV de R3 evoluciona en **Release 3.3** (campos de progreso, merge por contenido, identidad por catálogo). Ver sección siguiente.
+
+---
+
+## Release 3.3 — Sync Markdown entre escritorios · `v0.3.3`
+
+**Objetivo:** usar **dos instancias desktop** (y luego Android en R5) con la misma carpeta Syncthing/Nextcloud, sin duplicar obras de catálogo ni depender de recordar export/import por separado.
+
+**Transporte:** Syncthing (o copia manual de carpeta); Shelfside **no** replica `shelfside.db` vivo. Protocolo: `library/{slug}-{id}.md` + frontmatter YAML.
+
+### Base ya cubierta (`v0.3.2` y trabajo en curso)
+
+| Tema | Estado |
+|------|--------|
+| Permisos Tauri `fs` (mkdir, escritura, rutas canónicas p. ej. `/mnt/datos` si `Descargas` es symlink) | Hecho |
+| Export reexporta `.md` existentes; import tolera carpeta `library/` ya creada | Hecho |
+| Frontmatter + CSV: `progress_current`, `progress_total`, `owned` | Hecho |
+| Merge: LWW por `updated_at`; si empata timestamp pero cambia contenido (p. ej. notas en el `.md`) → actualizar | Hecho |
+| Logs de ejecución copiables desde Ajustes | Hecho |
+
+### Fase A — Sync confiable entre dos PCs (**ahora**, bloqueante para uso real)
+
+| Id | Entregable | Notas |
+|----|------------|--------|
+| A1 | **Merge por catálogo** | Resolver obra por `(source, external_id, media_type)`; si ya hay `library_entry` para ese catálogo, **actualizar esa fila** aunque el `shelfside_id` del `.md` difiera. Evita duplicados TMDB/Open Library entre PCs. Mantener compatibilidad con `.md` viejos. |
+| A2 | Botón **«Sincronizar carpeta»** | Un paso: importar/merge desde `library/*.md` + exportar lo local (orden y política documentados en UI). Reemplaza el ritual export → esperar Syncthing → import para el día a día. |
+| A3 | **UX y mensajes** | Texto breve en Ajustes (flujo recomendado, sin borrados automáticos, manuales como caso especial). Resumen legible tras sync (actualizados / nuevos / sin cambios / errores), no solo `(+0 ~0 ⊘61)`. |
+
+**Criterio de cierre Fase A:** la misma película/serie/libro de catálogo añadida en dos PCs converge en **una** entrada tras sincronizar; editar notas en app o en el `.md` se refleja en el otro PC con un solo botón; Syncthing solo mueve archivos.
+
+### Fase B — Completitud sync desktop
+
+#### B — **Ahora** (después de A estable; no bloquea R4)
+
+| Id | Entregable | Notas |
+|----|------------|--------|
+| B1 | **`external_id` estable para manuales nuevos** | Al crear entrada manual, generar UUID **una vez** y persistirlo en catálogo + export; permite alinear manuales entre dispositivos si el `.md` llega por sync. Entradas manuales ya creadas en cada PC siguen siendo caso especial hasta reexportar/alinear. |
+| B2 | **Tests de regresión** | Merge por catálogo; roundtrip export → import con TMDB/OL y manual; `.md` sin campos nuevos de progreso/owned. |
+
+#### B — **Después** (issue aparte; no mezclar en el mismo PR que A1)
+
+| Id | Entregable | Notas |
+|----|------------|--------|
+| B3 | **Tombstones / borrados** | Propagar baja de ítem en sync (campo en frontmatter o convención de archivo); hoy el export **no** elimina `.md` ni filas remotas. Cambia semántica; documentar. |
+| B4 | Aviso **`*.sync-conflict`** | Detectar archivos de conflicto Syncthing en la carpeta sync y mostrar aviso (no merge automático). |
+| B5 | Renombrar archivos por clave de catálogo (opcional) | p. ej. incluir `external_id` en el nombre; solo si A1 no alcanza para evitar dos `.md` de la misma obra en disco. **Pospuesto** mientras import dedupe por catálogo. |
+
+**Fuera de alcance en 3.3:** sync en tiempo real; import bidireccional desde CSV; replicar SQLite por la carpeta sync.
+
+**Criterio de cierre Release 3.3:** Fase A cerrada; B1–B2 hechos o explícitamente pospuestos con issue; B3–B5 en backlog documentado (tabla «Después» arriba o Release 7).
+
 ---
 
 ## Release 4 — Anime y juegos · `v0.4.0`
@@ -104,21 +156,25 @@ Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri):
 
 **Objetivo:** mismo producto en el celular (uso personal, **software libre**, **sin Play Store**) y biblioteca alineada con el escritorio vía **carpeta compartida** (Syncthing / Nextcloud), sin servidor propio.
 
+**Dependencia:** motor de sync y contrato `.md` cerrados en **Release 3.3** (Fase A mínimo; idealmente B1 manuales). No reimplementar merge en Android: reutilizar `src/lib/sync/` y `src/lib/export/markdown.ts`.
+
+### Fase C — Misma carpeta, otra plataforma (**después** de 3.3 estable en Linux)
+
 | Entregable | Notas |
 |------------|--------|
 | **Tauri Android** | `tauri android init`, targets en CI o doc de build; APK instalable por sideload (`adb` / archivo) |
 | **UI responsive** | Layout usable en pantalla táctil; navegación y formularios adaptados a móvil (mismo Svelte que desktop) |
-| **Plugins en Android** | Validar `tauri-plugin-sql`, `fs`, `dialog` en dispositivo; permisos de almacenamiento para carpeta sync |
-| **Sync al iniciar** | Al abrir la app: leer `library/*.md` de la carpeta configurada, merge en SQLite local, exportar filas locales más nuevas. Opcional: botón «Sincronizar ahora» y sync al cerrar |
-| **Carpeta sync** | Misma semántica que en desktop (R3); ruta típica = carpeta que Syncthing Android ya replica; **no** sincronizar el `.sqlite` vivo entre dispositivos |
-| **Documentación** | Prerrequisitos Android SDK/NDK, build APK, flujo PC ↔ Syncthing ↔ celu, disciplina de uso (no editar en dos sitios a la vez) |
+| **Plugins en Android** | Validar `tauri-plugin-sql`, `fs`, `dialog` en dispositivo; permisos de almacenamiento para carpeta sync (incl. rutas reales del dispositivo) |
+| **Sync al iniciar** | Al abrir la app: merge desde `library/*.md` + exportar filas locales más nuevas. Reutilizar botón **«Sincronizar carpeta»** de 3.3 (A2); opcional sync al cerrar |
+| **Carpeta sync** | Misma semántica que desktop (3.3); ruta = carpeta que Syncthing Android replica; **no** sincronizar el `.sqlite` vivo |
+| **Documentación** | Prerrequisitos Android SDK/NDK, build APK, flujo PC ↔ Syncthing ↔ celu |
 | **Pulido UX móvil** | Listas largas, errores de API visibles; estados vacíos |
 
 **Fuera de alcance en esta release:** publicación en Play Store; sync en tiempo real; copiar `shelfside.db` por Syncthing como mecanismo principal.
 
-**Opcional:** detección de archivos `*.sync-conflict`; `activity_log`; etiquetas/listas.
+**Opcional en R5 (si no entró en 3.3 B-después):** `*.sync-conflict` (B4); `activity_log`; etiquetas/listas.
 
-**Criterio de cierre:** APK instala y abre; flujo feliz biblioteca (TMDB / Open Library / manual según releases previos); tras editar en Linux y sincronizar la carpeta, al abrir en Android los cambios aparecen (y viceversa) con merge predecible.
+**Criterio de cierre:** APK instala y abre; flujo feliz biblioteca (TMDB / Open Library / manual según releases previos); tras editar en Linux y sincronizar la carpeta, al abrir en Android los cambios aparecen (y viceversa) con el **mismo** merge que en desktop.
 
 ---
 
@@ -148,7 +204,7 @@ Temas candidatos (no orden estricto; cada uno puede ser su propia versión `v0.7
 - Importaciones masivas (p. ej. Trakt), OAuth, notificaciones
 - Import/export JSON más formal si CSV/MD quedan cortos
 - Sync bidireccional con vault Obsidian (campo `external_note_path`)
-- Sync al iniciar en segundo plano / resolución avanzada de conflictos
+- Sync al iniciar en segundo plano / resolución avanzada de conflictos (tombstones B3, conflictos Syncthing B4 si no salieron en 3.3)
 - Empaquetado / releases GitHub ampliado (artefactos Windows, etc.)
 
 ---
@@ -160,8 +216,9 @@ Temas candidatos (no orden estricto; cada uno puede ser su propia versión `v0.7
 | 1 | `v0.1.0` | Fase 0 |
 | 2 | `v0.2.0` | Fase 1 |
 | 3 | `v0.3.0` | Fase 2 |
+| 3.3 | `v0.3.3` | Fase 2b (sync desktop: A + B-ahora) |
 | 4 | `v0.4.0` | Fase 3 |
-| 5 | `v0.5.0` | Fase 4 (Android + sync) |
+| 5 | `v0.5.0` | Fase 4 (Android — Fase C sync) |
 | 6 | `v0.6.0` | Fase 5 |
 | 7 | `v0.7.0+` | Fase 6 |
 

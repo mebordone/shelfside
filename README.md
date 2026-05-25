@@ -164,9 +164,9 @@ Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
 ## Release 3 — Configuración, export y estadísticas (`v0.3.0`)
 
 - **Rutas:** `/settings` (tema, idioma es/en, datos, sync, export CSV, backup DB, reinicio de fábrica), `/stats` (conteos por estado y tipo).
-- **Sync Markdown (Syncthing):** en Ajustes, definí la carpeta de sincronización. **Exportar** escribe `library/{slug}-{id}.md` en esa carpeta; copiala con Syncthing o Nextcloud al otro dispositivo. **Importar / combinar** lee los `.md` y fusiona por `shelfside_id` y `updated_at` (last-write-wins); no borra entradas locales ni sincroniza el `.sqlite`. No versiones la base SQLite en la carpeta sync.
+- **Sync Markdown (Syncthing):** en Ajustes, definí la carpeta de sincronización y usá **Sincronizar carpeta**: primero fusiona los `.md` que Syncthing/Nextcloud replicaron, luego reescribe los archivos con el estado local (ids y campos de este dispositivo). La misma obra (TMDB, Open Library o manual con el mismo `external_id`) se alinea por catálogo aunque el `shelfside_id` difiera entre PCs. No borra entradas locales ni sincroniza el `.sqlite`. Exportar/Importar por separado siguen disponibles para depuración.
 - **CSV y backup:** diálogo «Guardar como…» cada vez (`library.csv`, `shelfside-YYYY-MM-DD-HHmm.db`).
-- **CSV columnas:** `shelfside_id`, `title`, `media_type`, `source`, `external_id`, `status`, `score`, `current_season`, `last_episode_watched`, `started_at`, `completed_at`, `notes`, `image_url`, `catalog_updated_at`, `library_updated_at`.
+- **CSV columnas:** `shelfside_id`, `title`, `media_type`, `source`, `external_id`, `status`, `score`, `current_season`, `last_episode_watched`, `progress_current`, `progress_total`, `owned`, `started_at`, `completed_at`, `notes`, `image_url`, `catalog_updated_at`, `library_updated_at`.
 
 ---
 
@@ -225,6 +225,7 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 ## Versión
 
+- **v0.3.3** — Sync Markdown entre escritorios: botón Sincronizar carpeta, merge por `source`+`external_id`, resumen i18n, campos `progress_*`/`owned`, logs de ejecución (detalle en [CHANGELOG.md](./CHANGELOG.md)).
 - **v0.3.2** — Consolidación pre-v0.4: registro de fuentes, componentes relacionados unificados, i18n/mutaciones/delete flow, settings y detalle modularizados, reparar portada OL, límite en inicio, paginación OL y mensajes sync MD.
 - **v0.3.1** — Idioma de catálogo (Ajustes + Buscar), títulos de edición en Open Library, TMDB con `language`/`region`, portadas OL en biblioteca, quitar ítem de biblioteca.
 - **v0.3.0** — Release 3: `/settings`, `/stats`, i18n es/en, export CSV, backup DB, sync Markdown (carpeta + merge manual), reinicio de fábrica (detalle en [CHANGELOG.md](./CHANGELOG.md)).

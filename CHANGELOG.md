@@ -4,6 +4,26 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.3.3] — 2026-05-24
+
+### Añadido
+
+- Botón **Sincronizar carpeta** en Ajustes: importa `.md` de la carpeta sync y reexporta el estado local (`syncSyncFolder`).
+- Resumen legible de sync (`formatSyncSummary`) e i18n (`settings.sync_now`, `settings.sync_summary`, `settings.sync_help` actualizado).
+- Merge por identidad de catálogo (`source` + `external_id` + `media_type`) cuando el `shelfside_id` del `.md` no coincide con el id local.
+- Tests: merge catálogo/manual, `syncSyncFolder` (orden import→export), `formatSyncSummary`.
+
+### Cambiado
+
+- Import/merge actualiza la fila local existente por catálogo en lugar de intentar `INSERT` con el id del otro dispositivo.
+- Export/import Markdown incluyen `progress_current`, `progress_total` y `owned` en frontmatter y merge.
+
+### Corregido
+
+- Import de `.md` editados a mano con el mismo `updated_at` (comparación de contenido).
+- Permisos Tauri `fs` ampliados (`$HOME`, `$DOWNLOAD`, rutas bajo `/mnt/datos`) y `mkdir` tolerante en export.
+- Logs de ejecución en Ajustes (copiar logs de runtime).
+
 ## [0.3.2] — 2026-05-23
 
 ### Añadido
