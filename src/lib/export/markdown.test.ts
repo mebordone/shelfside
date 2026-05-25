@@ -17,6 +17,28 @@ vi.mock("@tauri-apps/api/path", () => ({
 }));
 
 describe("exportAllMarkdownToFolder", () => {
+  it("ignora mkdir si library/ ya existe", async () => {
+    const { mkdir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(mkdir).mockRejectedValueOnce(new Error("failed to create directory: File exists (os error 17)"));
+    vi.spyOn(library, "listLibraryWithCatalog").mockResolvedValueOnce([]);
+
+    const db = { select: vi.fn().mockResolvedValue([]) };
+    await expect(exportAllMarkdownToFolder(db as never, "/vault/sync")).resolves.toBe(0);
+  });
+
+  it("ignora mkdir si Tauri bloquea allow-mkdir en carpeta ya existente", async () => {
+    const { mkdir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(mkdir).mockRejectedValueOnce(
+      new Error(
+        "forbidden path: /home/mebordone/Descargas/shelfside-library/library, maybe it is not allowed on the scope for `allow-mkdir` permission in your capability file",
+      ),
+    );
+    vi.spyOn(library, "listLibraryWithCatalog").mockResolvedValueOnce([]);
+
+    const db = { select: vi.fn().mockResolvedValue([]) };
+    await expect(exportAllMarkdownToFolder(db as never, "/home/mebordone/Descargas/shelfside-library")).resolves.toBe(0);
+  });
+
   it("escribe .md con frontmatter que parseMarkdown acepta (export → import)", async () => {
     written.clear();
     vi.spyOn(library, "listLibraryWithCatalog").mockResolvedValue([
