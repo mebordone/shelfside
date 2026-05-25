@@ -179,6 +179,9 @@ export const enMessages: Record<string, string> = {
   "settings.import_md_errors": "Import finished with errors",
   "settings.export_csv": "Export CSV…",
   "settings.backup_db": "Back up database…",
+  "settings.logs_copy": "Copy runtime logs",
+  "settings.logs_copy_ok": "Logs copied to clipboard.",
+  "settings.logs_copy_failed": "Could not copy logs",
   "settings.danger": "Danger zone",
   "settings.reset": "Reset database",
   "settings.reset_hint":

@@ -14,6 +14,7 @@
     onImportMerge: () => void;
     onExportCsv: () => void;
     onBackup: () => void;
+    onCopyLogs: () => void;
     onResetOpen: () => void;
     onResetCancel: () => void;
     onResetConfirm: () => void;
@@ -33,6 +34,7 @@
     onImportMerge,
     onExportCsv,
     onBackup,
+    onCopyLogs,
     onResetOpen,
     onResetCancel,
     onResetConfirm,
@@ -106,6 +108,14 @@
     onclick={() => onBackup()}
   >
     {busy === "backup" ? t("common.loading") : t("settings.backup_db")}
+  </button>
+  <button
+    type="button"
+    class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+    disabled={busy !== null}
+    onclick={() => onCopyLogs()}
+  >
+    {busy === "copyLogs" ? t("common.loading") : t("settings.logs_copy")}
   </button>
 </section>
 

@@ -180,6 +180,9 @@ export const esMessages: Record<string, string> = {
   "settings.import_md_errors": "Importación con errores",
   "settings.export_csv": "Exportar CSV…",
   "settings.backup_db": "Copia de seguridad de la base…",
+  "settings.logs_copy": "Copiar logs de ejecución",
+  "settings.logs_copy_ok": "Logs copiados al portapapeles.",
+  "settings.logs_copy_failed": "No se pudieron copiar los logs",
   "settings.danger": "Zona de peligro",
   "settings.reset": "Reiniciar base de datos",
   "settings.reset_hint":

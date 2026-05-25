@@ -23,6 +23,7 @@
   import { persistSyncFolder, readSyncFolder } from "$lib/stores/syncFolder";
   import { exportToSyncFolder } from "$lib/sync/exportToSyncFolder";
   import { mergeFromSyncFolder } from "$lib/sync/mergeFromFolder";
+  import { copyRuntimeLogsToClipboard, logError, logInfo, logWarn } from "$lib/logs/runtimeLogs";
 
   let dbPath = $state("");
   let dbSize = $state<string>("—");
@@ -68,26 +69,32 @@
   }
 
   async function chooseSyncFolder() {
-    const selected = await open({ directory: true, multiple: false });
+    logInfo("settings.sync.choose_folder.open");
+    const selected = await open({ directory: true, multiple: false, recursive: true });
     if (typeof selected === "string" && selected) {
       syncFolder = selected;
       persistSyncFolder(selected);
+      logInfo("settings.sync.choose_folder.selected", { syncFolder: selected });
       setMessage("ok", t("settings.action_done"));
     }
   }
 
   async function runExportMd() {
     if (!syncFolder) {
+      logError("settings.sync.export_md.no_folder");
       setMessage("err", t("settings.sync_no_folder"));
       return;
     }
     busy = "md";
     message = null;
+    logInfo("settings.sync.export_md.start", { syncFolder });
     try {
       const db = await getDatabase();
       const n = await exportToSyncFolder(db, syncFolder);
+      logInfo("settings.sync.export_md.ok", { count: n, syncFolder });
       setMessage("ok", `${t("settings.export_md_ok")} (${n})`);
     } catch (e) {
+      logError("settings.sync.export_md.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
     } finally {
       busy = null;
@@ -96,16 +103,20 @@
 
   async function runImportMerge() {
     if (!syncFolder) {
+      logError("settings.sync.import.no_folder");
       setMessage("err", t("settings.sync_no_folder"));
       return;
     }
     busy = "import";
     message = null;
+    logInfo("settings.sync.import.start", { syncFolder });
     try {
       const db = await getDatabase();
       const r = await mergeFromSyncFolder(db, syncFolder);
+      logInfo("settings.sync.import.ok", { ...r, syncFolder });
       afterLibraryChanged();
       if (r.errors.length) {
+        logWarn("settings.sync.import.partial_errors", { first: r.errors[0], count: r.errors.length });
         setMessage(
           "err",
           `${t("settings.import_md_errors")}: ${r.errors[0]} — ${t("settings.import_md_ok")} (+${r.imported} ~${r.updated} ⊘${r.skipped})`,
@@ -117,6 +128,7 @@
         );
       }
     } catch (e) {
+      logError("settings.sync.import.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
     } finally {
       busy = null;
@@ -126,6 +138,7 @@
   async function runExportCsv() {
     busy = "csv";
     message = null;
+    logInfo("settings.export_csv.start");
     try {
       const dest = await save({
         defaultPath: "library.csv",
@@ -135,8 +148,10 @@
       const db = await getDatabase();
       const csv = await buildLibraryCsv(db);
       await writeTextFile(dest, csv);
+      logInfo("settings.export_csv.ok", { destination: dest, bytes: csv.length });
       setMessage("ok", t("settings.action_done"));
     } catch (e) {
+      logError("settings.export_csv.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
     } finally {
       busy = null;
@@ -146,6 +161,7 @@
   async function runBackup() {
     busy = "backup";
     message = null;
+    logInfo("settings.backup.start");
     try {
       const dest = await save({
         defaultPath: backupFilenameSuggestion(),
@@ -153,9 +169,26 @@
       });
       if (!dest) return;
       await writeDatabaseBackup(dest);
+      logInfo("settings.backup.ok", { destination: dest });
       setMessage("ok", t("settings.action_done"));
     } catch (e) {
+      logError("settings.backup.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function runCopyLogs() {
+    busy = "copyLogs";
+    message = null;
+    try {
+      await copyRuntimeLogsToClipboard();
+      logInfo("settings.logs.copy.ok");
+      setMessage("ok", t("settings.logs_copy_ok"));
+    } catch (e) {
+      logError("settings.logs.copy.error", e);
+      setMessage("err", `${t("settings.logs_copy_failed")}: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       busy = null;
     }
@@ -165,6 +198,7 @@
     if (resetTyped !== resetWord) return;
     busy = "reset";
     message = null;
+    logWarn("settings.reset.start");
     try {
       const db = await getDatabase();
       await resetAllUserData(db);
@@ -172,8 +206,10 @@
       resetTyped = "";
       afterLibraryChanged();
       await loadDbInfo();
+      logWarn("settings.reset.ok");
       setMessage("ok", t("settings.action_done"));
     } catch (e) {
+      logError("settings.reset.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
     } finally {
       busy = null;
@@ -217,6 +253,7 @@
     onImportMerge={() => void runImportMerge()}
     onExportCsv={() => void runExportCsv()}
     onBackup={() => void runBackup()}
+    onCopyLogs={() => void runCopyLogs()}
     onResetOpen={() => {
       resetConfirmOpen = true;
     }}

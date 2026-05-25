@@ -7,6 +7,7 @@
   import { runMigrations } from "$lib/db";
   import { initTheme } from "$lib/stores/theme.svelte";
   import { appLocale, initAppLocale, t } from "$lib/i18n";
+  import { initRuntimeLogs, logError, logInfo } from "$lib/logs/runtimeLogs";
 
   interface Props {
     children: Snippet;
@@ -56,13 +57,17 @@
   }
 
   onMount(() => {
+    initRuntimeLogs();
     initAppLocale();
     initTheme();
     void (async () => {
       try {
+        logInfo("db.migrations.start");
         await runMigrations();
+        logInfo("db.migrations.ok");
         ready = true;
       } catch (e) {
+        logError("db.migrations.error", e);
         bootError = e instanceof Error ? e.message : String(e);
       }
     })();
