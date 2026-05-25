@@ -32,4 +32,14 @@ describe("i18n", () => {
     expect(t("detail.related_subtitle")).toMatch(/TMDB/i);
     expect(t("search.source_tmdb_short")).toBe("Pelis y series");
   });
+
+  it("incluye claves de sync 3.3 en es y en", () => {
+    setAppLocale("es");
+    expect(t("settings.sync_now")).toBe("Sincronizar carpeta");
+    expect(t("settings.sync_summary")).toContain("{imported}");
+    expect(t("settings.sync_help")).toMatch(/external_id/i);
+    setAppLocale("en");
+    expect(t("settings.sync_now")).toBe("Sync folder");
+    expect(t("settings.sync_help")).toMatch(/external_id/i);
+  });
 });

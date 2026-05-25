@@ -46,6 +46,9 @@ describe("parseMarkdown", () => {
       score: null,
       current_season: null,
       last_episode_watched: null,
+      progress_current: 120,
+      progress_total: 400,
+      owned: 1,
       started_at: null,
       completed_at: null,
       image_url: null,
@@ -55,6 +58,16 @@ describe("parseMarkdown", () => {
     const e = parseMarkdownEntry(md);
     expect(e.shelfside_id).toBe(5);
     expect(e.notes).toBe("hola");
+    expect(e.progress_current).toBe(120);
+    expect(e.progress_total).toBe(400);
+    expect(e.owned).toBe(1);
+  });
+
+  it("archivos viejos sin progress/owned parsean como null", () => {
+    const e = parseMarkdownEntry(SAMPLE);
+    expect(e.progress_current).toBeNull();
+    expect(e.progress_total).toBeNull();
+    expect(e.owned).toBeNull();
   });
 
   it("falla sin shelfside_id", () => {

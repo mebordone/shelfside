@@ -53,9 +53,9 @@ describe("exportAllMarkdownToFolder", () => {
         score: null,
         current_season: null,
         last_episode_watched: null,
-        progress_current: null,
-        progress_total: null,
-        owned: null,
+        progress_current: 45,
+        progress_total: 300,
+        owned: 1,
         started_at: null,
         completed_at: "2026-05-20T00:00:00.000Z",
         notes: "Relectura",
@@ -82,5 +82,8 @@ describe("exportAllMarkdownToFolder", () => {
     expect(parsed.status).toBe("completed");
     expect(parsed.external_id).toBe("OL1M");
     expect(parsed.catalog_updated_at).toBe("2026-05-22T00:00:00.000Z");
+    expect(parsed.progress_current).toBe(45);
+    expect(parsed.progress_total).toBe(300);
+    expect(parsed.owned).toBe(1);
   });
 });

@@ -120,4 +120,205 @@ Nota editada en el archivo sync
     expect(result.skipped).toBe(0);
     expect(execute).toHaveBeenCalled();
   });
+
+  it("actualiza progress y owned desde el .md", async () => {
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readTextFile).mockResolvedValueOnce(`---
+shelfside_id: 42
+updated_at: "2026-06-01T00:00:00.000Z"
+title: "Dune"
+media_type: movie
+source: tmdb
+external_id: "1"
+status: in_progress
+score: 9
+current_season: null
+last_episode_watched: null
+progress_current: 50
+progress_total: 200
+owned: 1
+started_at: null
+completed_at: null
+image_url: null
+catalog_updated_at: null
+---
+`);
+    vi.spyOn(library, "getLibraryEntryById").mockResolvedValue({
+      id: 42,
+      catalog_item_id: 10,
+      status: "in_progress",
+      score: 9,
+      current_season: null,
+      last_episode_watched: null,
+      progress_current: 10,
+      progress_total: 200,
+      owned: null,
+      started_at: null,
+      completed_at: null,
+      notes: null,
+      updated_at: "2026-06-01T00:00:00.000Z",
+      media_type: "movie",
+      source: "tmdb",
+      external_id: "1",
+      title: "Dune",
+      image_url: null,
+      poster_local_path: null,
+      metadata_json: null,
+    });
+    const execute = vi.fn().mockResolvedValue({});
+
+    const result = await mergeFromSyncFolder({ select: vi.fn(), execute } as never, "/sync");
+    expect(result.updated).toBe(1);
+    const libUpdate = execute.mock.calls.find((c) => String(c[0]).includes("UPDATE library_entry"));
+    expect(libUpdate?.[1]).toEqual(
+      expect.arrayContaining([50, 200, 1]),
+    );
+  });
+
+  it("actualiza por catálogo si shelfside_id del .md difiere del id local", async () => {
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readTextFile).mockResolvedValueOnce(`---
+shelfside_id: 65
+updated_at: "2026-07-01T00:00:00.000Z"
+title: "Inception"
+media_type: movie
+source: tmdb
+external_id: "27205"
+status: completed
+score: 9
+current_season: null
+last_episode_watched: null
+progress_current: null
+progress_total: null
+owned: null
+started_at: null
+completed_at: null
+image_url: null
+catalog_updated_at: null
+---
+`);
+    const localRow = {
+      id: 87,
+      catalog_item_id: 10,
+      status: "planning",
+      score: null,
+      current_season: null,
+      last_episode_watched: null,
+      progress_current: null,
+      progress_total: null,
+      owned: null,
+      started_at: null,
+      completed_at: null,
+      notes: null,
+      updated_at: "2026-06-01T00:00:00.000Z",
+      media_type: "movie",
+      source: "tmdb",
+      external_id: "27205",
+      title: "Inception",
+      image_url: null,
+      poster_local_path: null,
+      metadata_json: null,
+    };
+    vi.spyOn(library, "getLibraryEntryById").mockImplementation(async (_db, id) => {
+      if (id === 65) return null;
+      if (id === 87) return localRow;
+      return null;
+    });
+    vi.spyOn(catalog, "findCatalogBySource").mockResolvedValue({
+      id: 10,
+      media_type: "movie",
+      source: "tmdb",
+      external_id: "27205",
+      title: "Inception",
+      image_url: null,
+      poster_local_path: null,
+      season_number: null,
+      episode_number: null,
+      parent_catalog_id: null,
+      metadata_json: null,
+      created_at: "",
+      updated_at: "",
+    });
+    vi.spyOn(library, "getLibraryIdForCatalog").mockResolvedValue(87);
+    const execute = vi.fn().mockResolvedValue({});
+
+    const result = await mergeFromSyncFolder({ select: vi.fn(), execute } as never, "/sync");
+    expect(result.updated).toBe(1);
+    expect(result.imported).toBe(0);
+    const libUpdate = execute.mock.calls.find((c) => String(c[0]).includes("UPDATE library_entry"));
+    expect(libUpdate?.[1]?.[11]).toBe(87);
+  });
+
+  it("actualiza manual por external_id aunque shelfside_id difiera", async () => {
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readTextFile).mockResolvedValueOnce(`---
+shelfside_id: 100
+updated_at: "2026-07-02T00:00:00.000Z"
+title: "Cuaderno"
+media_type: book
+source: manual
+external_id: "550e8400-e29b-41d4-a716-446655440000"
+status: in_progress
+score: null
+current_season: null
+last_episode_watched: null
+progress_current: 30
+progress_total: 100
+owned: 1
+started_at: null
+completed_at: null
+image_url: null
+catalog_updated_at: null
+---
+Notas sync
+`);
+    const localRow = {
+      id: 200,
+      catalog_item_id: 50,
+      status: "planning",
+      score: null,
+      current_season: null,
+      last_episode_watched: null,
+      progress_current: null,
+      progress_total: null,
+      owned: null,
+      started_at: null,
+      completed_at: null,
+      notes: null,
+      updated_at: "2026-06-01T00:00:00.000Z",
+      media_type: "book",
+      source: "manual",
+      external_id: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Cuaderno",
+      image_url: null,
+      poster_local_path: null,
+      metadata_json: null,
+    };
+    vi.spyOn(library, "getLibraryEntryById").mockImplementation(async (_db, id) => {
+      if (id === 100) return null;
+      if (id === 200) return localRow;
+      return null;
+    });
+    vi.spyOn(catalog, "findCatalogBySource").mockResolvedValue({
+      id: 50,
+      media_type: "book",
+      source: "manual",
+      external_id: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Cuaderno",
+      image_url: null,
+      poster_local_path: null,
+      season_number: null,
+      episode_number: null,
+      parent_catalog_id: null,
+      metadata_json: null,
+      created_at: "",
+      updated_at: "",
+    });
+    vi.spyOn(library, "getLibraryIdForCatalog").mockResolvedValue(200);
+    const execute = vi.fn().mockResolvedValue({});
+
+    const result = await mergeFromSyncFolder({ select: vi.fn(), execute } as never, "/sync");
+    expect(result.updated).toBe(1);
+    expect(result.imported).toBe(0);
+  });
 });
