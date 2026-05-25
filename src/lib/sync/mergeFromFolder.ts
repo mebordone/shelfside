@@ -2,7 +2,7 @@ import { join } from "@tauri-apps/api/path";
 import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import { findCatalogBySource, insertCatalogItem, type SqlDb } from "$lib/db/catalog";
 import { getLibraryEntryById } from "$lib/db/library";
-import { isStatus, type Status } from "$lib/db/types";
+import { isStatus, type LibraryListRow, type Status } from "$lib/db/types";
 import { mergeStatusTimestamps, normalizeScore } from "$lib/db/libraryRules";
 import { parseMarkdownEntry, type ParsedMarkdownEntry } from "./parseMarkdown";
 
@@ -15,6 +15,34 @@ export type MergeResult = {
 
 function compareUpdatedAt(a: string, b: string): number {
   return a.localeCompare(b);
+}
+
+function normalizeNotes(notes: string | null | undefined): string {
+  return (notes ?? "").trim();
+}
+
+/** True si el .md en disco difiere de lo guardado en SQLite (p. ej. notas editadas a mano). */
+function remoteEntryDiffersFromLocal(local: LibraryListRow, remote: ParsedMarkdownEntry): boolean {
+  const remoteStatus: string = isStatus(remote.status) ? remote.status : local.status;
+
+  if (remoteStatus !== local.status) return true;
+  if (normalizeScore(remote.score) !== normalizeScore(local.score)) return true;
+  if (remote.current_season !== local.current_season) return true;
+  if (remote.last_episode_watched !== local.last_episode_watched) return true;
+  if ((remote.started_at ?? null) !== (local.started_at ?? null)) return true;
+  if ((remote.completed_at ?? null) !== (local.completed_at ?? null)) return true;
+  if (normalizeNotes(remote.notes) !== normalizeNotes(local.notes)) return true;
+  if (remote.title !== local.title) return true;
+  if ((remote.image_url ?? null) !== (local.image_url ?? null)) return true;
+
+  return false;
+}
+
+function shouldApplyRemote(local: LibraryListRow | null, remote: ParsedMarkdownEntry): boolean {
+  if (!local) return true;
+  if (compareUpdatedAt(remote.updated_at, local.updated_at) > 0) return true;
+  if (compareUpdatedAt(remote.updated_at, local.updated_at) < 0) return false;
+  return remoteEntryDiffersFromLocal(local, remote);
 }
 
 async function applyRemoteEntry(db: SqlDb, remote: ParsedMarkdownEntry): Promise<"inserted" | "updated"> {
@@ -103,7 +131,7 @@ async function mergeOneFile(db: SqlDb, filePath: string, result: MergeResult): P
   const text = await readTextFile(filePath);
   const parsed = parseMarkdownEntry(text);
   const local = await getLibraryEntryById(db, parsed.shelfside_id);
-  if (local && compareUpdatedAt(parsed.updated_at, local.updated_at) <= 0) {
+  if (!shouldApplyRemote(local, parsed)) {
     result.skipped += 1;
     return;
   }

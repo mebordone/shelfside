@@ -42,7 +42,7 @@ describe("mergeFromSyncFolder", () => {
     expect(execute).toHaveBeenCalled();
   });
 
-  it("omite si local es más reciente", async () => {
+  it("omite si local es más reciente y el contenido coincide", async () => {
     vi.spyOn(library, "getLibraryEntryById").mockResolvedValue({
       id: 42,
       catalog_item_id: 10,
@@ -69,5 +69,55 @@ describe("mergeFromSyncFolder", () => {
     const result = await mergeFromSyncFolder({ select: vi.fn(), execute: vi.fn() } as never, "/sync");
     expect(result.skipped).toBe(1);
     expect(result.imported).toBe(0);
+  });
+
+  it("actualiza si las notas cambiaron con el mismo updated_at", async () => {
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readTextFile).mockResolvedValueOnce(`---
+shelfside_id: 42
+updated_at: "2026-06-01T00:00:00.000Z"
+title: "Dune"
+media_type: movie
+source: tmdb
+external_id: "1"
+status: planning
+score: null
+current_season: null
+last_episode_watched: null
+started_at: null
+completed_at: null
+image_url: null
+catalog_updated_at: null
+---
+Nota editada en el archivo sync
+`);
+    vi.spyOn(library, "getLibraryEntryById").mockResolvedValue({
+      id: 42,
+      catalog_item_id: 10,
+      status: "planning",
+      score: null,
+      current_season: null,
+      last_episode_watched: null,
+      progress_current: null,
+      progress_total: null,
+      owned: null,
+      started_at: null,
+      completed_at: null,
+      notes: "Nota original",
+      updated_at: "2026-06-01T00:00:00.000Z",
+      media_type: "movie",
+      source: "tmdb",
+      external_id: "1",
+      title: "Dune",
+      image_url: null,
+      poster_local_path: null,
+      metadata_json: null,
+    });
+    const execute = vi.fn().mockResolvedValue({});
+
+    const result = await mergeFromSyncFolder({ select: vi.fn(), execute } as never, "/sync");
+    expect(result.updated).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(execute).toHaveBeenCalled();
   });
 });
