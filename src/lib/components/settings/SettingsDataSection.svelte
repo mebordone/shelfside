@@ -10,6 +10,7 @@
     resetTyped: string;
     resetWord: string;
     onChooseSyncFolder: () => void;
+    onSyncFolder: () => void;
     onExportMd: () => void;
     onImportMerge: () => void;
     onExportCsv: () => void;
@@ -30,6 +31,7 @@
     resetTyped,
     resetWord,
     onChooseSyncFolder,
+    onSyncFolder,
     onExportMd,
     onImportMerge,
     onExportCsv,
@@ -75,7 +77,15 @@
     </button>
     <button
       type="button"
-      class="rounded-md bg-emerald-700 px-3 py-1.5 text-sm text-white hover:bg-emerald-800 disabled:opacity-50"
+      class="rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+      disabled={busy !== null}
+      onclick={() => onSyncFolder()}
+    >
+      {busy === "sync" ? t("common.loading") : t("settings.sync_now")}
+    </button>
+    <button
+      type="button"
+      class="rounded-md border border-emerald-700 px-3 py-1.5 text-sm text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
       disabled={busy !== null}
       onclick={() => onExportMd()}
     >
@@ -83,7 +93,7 @@
     </button>
     <button
       type="button"
-      class="rounded-md border border-emerald-700 px-3 py-1.5 text-sm text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+      class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
       disabled={busy !== null}
       onclick={() => onImportMerge()}
     >

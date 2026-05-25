@@ -21,8 +21,10 @@
   } from "$lib/stores/catalogPrefs";
   import { clearSearchResults, searchSession } from "$lib/stores/searchSession.svelte";
   import { persistSyncFolder, readSyncFolder } from "$lib/stores/syncFolder";
+  import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
   import { exportToSyncFolder } from "$lib/sync/exportToSyncFolder";
   import { mergeFromSyncFolder } from "$lib/sync/mergeFromFolder";
+  import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
   import { copyRuntimeLogsToClipboard, logError, logInfo, logWarn } from "$lib/logs/runtimeLogs";
 
   let dbPath = $state("");
@@ -79,6 +81,29 @@
     }
   }
 
+  async function runSyncFolder() {
+    if (!syncFolder) {
+      logError("settings.sync.run.no_folder");
+      setMessage("err", t("settings.sync_no_folder"));
+      return;
+    }
+    busy = "sync";
+    message = null;
+    logInfo("settings.sync.run.start", { syncFolder });
+    try {
+      const db = await getDatabase();
+      const { merge, exported } = await syncSyncFolder(db, syncFolder);
+      logInfo("settings.sync.run.ok", { ...merge, exported, syncFolder });
+      afterLibraryChanged();
+      setMessage(merge.errors.length ? "err" : "ok", formatSyncSummary(merge, exported));
+    } catch (e) {
+      logError("settings.sync.run.error", e);
+      setMessage("err", e instanceof Error ? e.message : String(e));
+    } finally {
+      busy = null;
+    }
+  }
+
   async function runExportMd() {
     if (!syncFolder) {
       logError("settings.sync.export_md.no_folder");
@@ -115,18 +140,7 @@
       const r = await mergeFromSyncFolder(db, syncFolder);
       logInfo("settings.sync.import.ok", { ...r, syncFolder });
       afterLibraryChanged();
-      if (r.errors.length) {
-        logWarn("settings.sync.import.partial_errors", { first: r.errors[0], count: r.errors.length });
-        setMessage(
-          "err",
-          `${t("settings.import_md_errors")}: ${r.errors[0]} — ${t("settings.import_md_ok")} (+${r.imported} ~${r.updated} ⊘${r.skipped})`,
-        );
-      } else {
-        setMessage(
-          "ok",
-          `${t("settings.import_md_ok")} (+${r.imported} ~${r.updated} ⊘${r.skipped})`,
-        );
-      }
+      setMessage(r.errors.length ? "err" : "ok", formatSyncSummary(r, 0));
     } catch (e) {
       logError("settings.sync.import.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
@@ -249,6 +263,7 @@
     {resetTyped}
     {resetWord}
     onChooseSyncFolder={() => void chooseSyncFolder()}
+    onSyncFolder={() => void runSyncFolder()}
     onExportMd={() => void runExportMd()}
     onImportMerge={() => void runImportMerge()}
     onExportCsv={() => void runExportCsv()}
