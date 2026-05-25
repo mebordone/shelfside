@@ -168,10 +168,14 @@ export const enMessages: Record<string, string> = {
   "settings.db_unknown": "Unavailable",
   "settings.sync": "Synchronization",
   "settings.sync_help":
-    "Adds and updates from folder files. Does not remove local entries. After editing: export → Syncthing → import on the other device.",
+    "Syncthing (or similar) replicates the folder; «Sync folder» imports .md files then exports your local library. Does not delete entries. Catalog items match by source and external_id; manuals by frontmatter external_id (create on one PC or import before duplicating).",
   "settings.sync_folder": "Sync folder",
   "settings.sync_choose_folder": "Choose folder",
   "settings.sync_no_folder": "Choose a sync folder first.",
+  "settings.sync_now": "Sync folder",
+  "settings.sync_summary":
+    "Imported: {imported} · Updated: {updated} · Unchanged: {skipped} · Exported: {exported} files",
+  "settings.sync_errors_prefix": "{count} error(s)",
   "settings.sync_export_md": "Export Markdown to sync folder",
   "settings.sync_import": "Import / merge from sync folder",
   "settings.export_md_ok": "Exported Markdown files to library/",

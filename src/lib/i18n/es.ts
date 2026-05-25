@@ -169,10 +169,14 @@ export const esMessages: Record<string, string> = {
   "settings.db_unknown": "No disponible",
   "settings.sync": "Sincronización",
   "settings.sync_help":
-    "Añade y actualiza desde los archivos de la carpeta. No elimina entradas locales. Tras editar: exportá → Syncthing → importá en el otro dispositivo.",
+    "Syncthing (u otro) replica la carpeta; «Sincronizar carpeta» importa los .md y luego exporta tu biblioteca local. No borra entradas. Obras de catálogo (TMDB, Open Library, etc.) se reconocen por source y external_id; manuales por el external_id del frontmatter (creá el manual en un solo PC o importá antes de duplicar).",
   "settings.sync_folder": "Carpeta de sincronización",
   "settings.sync_choose_folder": "Elegir carpeta",
   "settings.sync_no_folder": "Elegí una carpeta de sincronización primero.",
+  "settings.sync_now": "Sincronizar carpeta",
+  "settings.sync_summary":
+    "Importados: {imported} · Actualizados: {updated} · Sin cambios: {skipped} · Exportados: {exported} archivos",
+  "settings.sync_errors_prefix": "{count} error(es)",
   "settings.sync_export_md": "Exportar Markdown a carpeta sync",
   "settings.sync_import": "Importar / combinar desde carpeta sync",
   "settings.export_md_ok": "Exportados archivos Markdown en library/",
