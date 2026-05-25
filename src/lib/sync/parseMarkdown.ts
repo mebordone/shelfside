@@ -9,6 +9,9 @@ export type ParsedMarkdownEntry = {
   score: number | null;
   current_season: number | null;
   last_episode_watched: number | null;
+  progress_current: number | null;
+  progress_total: number | null;
+  owned: number | null;
   started_at: string | null;
   completed_at: string | null;
   image_url: string | null;
@@ -86,6 +89,9 @@ export function parseMarkdownEntry(content: string): ParsedMarkdownEntry {
     score: parseOptionalInt(fm.score),
     current_season: parseOptionalInt(fm.current_season),
     last_episode_watched: parseOptionalInt(fm.last_episode_watched),
+    progress_current: parseOptionalInt(fm.progress_current),
+    progress_total: parseOptionalInt(fm.progress_total),
+    owned: parseOptionalInt(fm.owned),
     started_at: parseOptionalString(fm.started_at),
     completed_at: parseOptionalString(fm.completed_at),
     image_url: parseOptionalString(fm.image_url),
@@ -112,6 +118,9 @@ export function serializeMarkdownEntry(row: {
   score: number | null;
   current_season: number | null;
   last_episode_watched: number | null;
+  progress_current: number | null;
+  progress_total: number | null;
+  owned: number | null;
   started_at: string | null;
   completed_at: string | null;
   image_url: string | null;
@@ -129,6 +138,9 @@ export function serializeMarkdownEntry(row: {
     yamlLine("score", row.score),
     yamlLine("current_season", row.current_season),
     yamlLine("last_episode_watched", row.last_episode_watched),
+    yamlLine("progress_current", row.progress_current),
+    yamlLine("progress_total", row.progress_total),
+    yamlLine("owned", row.owned),
     yamlLine("started_at", row.started_at),
     yamlLine("completed_at", row.completed_at),
     yamlLine("image_url", row.image_url),
