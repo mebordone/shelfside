@@ -66,7 +66,10 @@ describe("getOpenLibraryHitsLibraryPresence", () => {
 });
 
 describe("addManualToLibrary", () => {
-  it("inserta catálogo y biblioteca", async () => {
+  const UUID_V4 =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  function mockInsertDb() {
     const { db, execute } = mockDb();
     let insertSeq = 0;
     execute.mockImplementation(async (q: string) => {
@@ -80,6 +83,11 @@ describe("addManualToLibrary", () => {
       }
       return { rowsAffected: 0 };
     });
+    return { db, execute };
+  }
+
+  it("inserta catálogo y biblioteca", async () => {
+    const { db, execute } = mockInsertDb();
 
     const r = await addManualToLibrary(db, { title: "Mi obra", notes: "n" });
 
@@ -91,20 +99,18 @@ describe("addManualToLibrary", () => {
     );
   });
 
+  it("asigna external_id UUID v4 al catálogo manual", async () => {
+    const { db, execute } = mockInsertDb();
+
+    await addManualToLibrary(db, { title: "Manual sync" });
+
+    const insertCat = execute.mock.calls.find((c) => String(c[0]).includes("INSERT INTO catalog_item"));
+    const externalId = insertCat?.[1]?.[2] as string;
+    expect(externalId).toMatch(UUID_V4);
+  });
+
   it("inserta libro manual con metadata_json", async () => {
-    const { db, execute } = mockDb();
-    let insertSeq = 0;
-    execute.mockImplementation(async (q: string) => {
-      if (String(q).includes("INSERT INTO catalog_item")) {
-        insertSeq += 1;
-        return { lastInsertId: insertSeq, rowsAffected: 1 };
-      }
-      if (String(q).includes("INSERT INTO library_entry")) {
-        insertSeq += 1;
-        return { lastInsertId: insertSeq, rowsAffected: 1 };
-      }
-      return { rowsAffected: 0 };
-    });
+    const { db, execute } = mockInsertDb();
 
     await addManualToLibrary(db, {
       title: "Mi libro",
