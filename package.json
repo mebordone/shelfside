@@ -16,7 +16,10 @@
     "lint:fix": "eslint src --fix",
     "verify": "npm run lint && npm run test:coverage && npm run check && npm run build",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev"
+    "tauri:dev": "tauri dev",
+    "tauri:android:init": "tauri android init",
+    "tauri:android:dev": "tauri android dev",
+    "tauri:android:build": "tauri android build"
   },
   "license": "MIT",
   "dependencies": {
