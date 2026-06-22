@@ -4,6 +4,33 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-05-25
+
+### Añadido
+
+- **Android (Tauri):** `tauri android init`, proyecto Gradle en `src-tauri/gen/android/`, scripts npm `tauri:android:*`.
+- Capability **`mobile`** (`platforms: android`) con permisos base `sql`, `fs` (app local), `dialog`.
+- **B1:** tests explícitos UUID v4 en `addManualToLibrary` y roundtrip export Markdown para manuales.
+- README: checklist toolchain Android desde cero en Linux (JDK, SDK, NDK, `rustup`, `adb`, primer build e instalación APK).
+
+### Cambiado
+
+- Capability **`default`** limitada a desktop (`linux`, `windows`, `macOS`).
+- Versión semver `0.4.0` en `package.json`, `tauri.conf.json` y `Cargo.toml`.
+
+### Notas
+
+- Manuales creados **antes** de v0.4.0 pueden tener `external_id` no-UUID; reexportar desde Ajustes para alinear sync multi-dispositivo.
+- Sync de carpeta en Android y scopes `fs` ampliados: **`v0.4.1`**. UI móvil (bottom bar): **`v0.4.3`**.
+
+### Conocido en Android (validación SM-G525F)
+
+- Inicio/Biblioteca cargan; primera navegación puede demorar (arranque en frío).
+- Selector de carpeta sync: no implementado en móvil → usar ruta escrita en **v0.4.1**.
+- Posters TMDB en Buscar: error CORS en WebView; workaround futuro: guardar poster local al añadir.
+- Export CSV: mensaje «tab inactive» en devtools; el flujo en el dispositivo puede completarse igual.
+- Alta manual sin notas: reportado en QA; el código admite `notes: null` — revisar reproducción en **v0.4.1**.
+
 ## [0.3.3] — 2026-05-24
 
 ### Añadido
