@@ -13,6 +13,7 @@ export function formatSyncSummary(merge: MergeResult, exported: number): string 
   const summary = applyParams(t("settings.sync_summary"), {
     imported: String(merge.imported),
     updated: String(merge.updated),
+    deleted: String(merge.deleted),
     skipped: String(merge.skipped),
     exported: String(exported),
   });

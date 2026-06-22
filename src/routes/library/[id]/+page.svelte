@@ -13,6 +13,7 @@
   import { labelForMedia, labelForStatus } from "$lib/i18n/labels";
   import { t } from "$lib/i18n";
   import { deleteLibraryEntryWithAssets } from "$lib/library/deleteEntryFlow";
+  import { readSyncFolder } from "$lib/stores/syncFolder";
   import { bookCatalogFromMetadata } from "$lib/library/openLibraryCatalogMeta";
   import {
     needsOpenLibraryCoverRepair,
@@ -110,7 +111,7 @@
     err = null;
     try {
       const db = await getDatabase();
-      await deleteLibraryEntryWithAssets(db, libraryId);
+      await deleteLibraryEntryWithAssets(db, libraryId, { syncDir: readSyncFolder() });
       afterLibraryChanged();
       await goto(resolve("/library"));
     } catch (e) {

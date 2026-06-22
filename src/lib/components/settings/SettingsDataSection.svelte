@@ -13,6 +13,11 @@
     onSyncFolder: () => void;
     onExportMd: () => void;
     onImportMerge: () => void;
+    onCleanRecycleOpen: () => void;
+    onCleanRecycleCancel: () => void;
+    onCleanRecycleConfirm: () => void;
+    cleanRecycleConfirmOpen: boolean;
+    cleanRecyclePreview: string | null;
     onExportCsv: () => void;
     onBackup: () => void;
     onCopyLogs: () => void;
@@ -34,6 +39,11 @@
     onSyncFolder,
     onExportMd,
     onImportMerge,
+    onCleanRecycleOpen,
+    onCleanRecycleCancel,
+    onCleanRecycleConfirm,
+    cleanRecycleConfirmOpen,
+    cleanRecyclePreview,
     onExportCsv,
     onBackup,
     onCopyLogs,
@@ -99,7 +109,36 @@
     >
       {busy === "import" ? t("common.loading") : t("settings.sync_import")}
     </button>
+    <button
+      type="button"
+      class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+      disabled={busy !== null || !syncFolder}
+      onclick={() => onCleanRecycleOpen()}
+    >
+      {busy === "cleanRecycle" ? t("common.loading") : t("settings.sync_clean_recycle")}
+    </button>
   </div>
+  {#if cleanRecycleConfirmOpen && cleanRecyclePreview}
+    <div
+      class="space-y-2 rounded-md border border-amber-300 bg-amber-50/80 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/30"
+    >
+      <p class="text-amber-950 dark:text-amber-100">{t("settings.sync_clean_recycle_confirm")}</p>
+      <p class="text-xs text-amber-900 dark:text-amber-200">{cleanRecyclePreview}</p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="rounded-md bg-amber-800 px-3 py-1.5 text-sm text-white hover:bg-amber-900 disabled:opacity-50"
+          disabled={busy !== null}
+          onclick={() => onCleanRecycleConfirm()}
+        >
+          {busy === "cleanRecycle" ? t("common.loading") : t("settings.sync_clean_recycle")}
+        </button>
+        <button type="button" class="rounded-md border px-3 py-1.5 text-sm" onclick={() => onCleanRecycleCancel()}>
+          {t("common.cancel")}
+        </button>
+      </div>
+    </div>
+  {/if}
 </section>
 
 <section class="flex flex-wrap gap-2">

@@ -58,7 +58,7 @@ export const esMessages: Record<string, string> = {
   "detail.edit": "Editar",
   "detail.delete": "Quitar de biblioteca",
   "detail.delete_confirm":
-    "¿Quitar este ítem de la biblioteca? Se borran tus notas, estado y la copia local del catálogo. Podés volver a añadirlo desde Buscar.",
+    "¿Quitar este ítem de la biblioteca? Se borran tus notas, estado y la copia local del catálogo. Podés volver a añadirlo desde Buscar. Si tenés carpeta de sync configurada, el .md queda como papelera (deleted: true) hasta que la limpies en Ajustes.",
   "detail.delete_confirm_action": "Sí, quitar",
   "detail.deleting": "Quitando…",
   "detail.repair_cover": "Reparar portada",
@@ -169,16 +169,23 @@ export const esMessages: Record<string, string> = {
   "settings.db_unknown": "No disponible",
   "settings.sync": "Sincronización",
   "settings.sync_help":
-    "Syncthing (u otro) replica la carpeta; «Sincronizar carpeta» importa los .md y luego exporta tu biblioteca local. No borra entradas. Obras de catálogo (TMDB, Open Library, etc.) se reconocen por source y external_id; manuales por el external_id del frontmatter (creá el manual en un solo PC o importá antes de duplicar).",
+    "Syncthing (u otro) replica la carpeta; «Sincronizar carpeta» importa los .md y luego exporta tu biblioteca local. Quitar de biblioteca escribe un tombstone (deleted: true) en la carpeta sync; el otro dispositivo lo aplica al sincronizar si el borrado es más reciente que tus ediciones locales. «Limpiar papelera» elimina esos .md solo si ya no están en tu biblioteca (hacelo cuando todos los dispositivos sincronizaron). Obras de catálogo se reconocen por source y external_id; manuales por external_id del frontmatter.",
   "settings.sync_folder": "Carpeta de sincronización",
   "settings.sync_choose_folder": "Elegir carpeta",
   "settings.sync_no_folder": "Elegí una carpeta de sincronización primero.",
   "settings.sync_now": "Sincronizar carpeta",
   "settings.sync_summary":
-    "Importados: {imported} · Actualizados: {updated} · Sin cambios: {skipped} · Exportados: {exported} archivos",
+    "Importados: {imported} · Actualizados: {updated} · Borrados: {deleted} · Sin cambios: {skipped} · Exportados: {exported} archivos",
   "settings.sync_errors_prefix": "{count} error(es)",
   "settings.sync_export_md": "Exportar Markdown a carpeta sync",
   "settings.sync_import": "Importar / combinar desde carpeta sync",
+  "settings.sync_clean_recycle": "Limpiar papelera de sync",
+  "settings.sync_clean_recycle_confirm":
+    "¿Eliminar del disco los .md marcados como borrados (deleted: true) que ya no están en tu biblioteca? Solo hacelo cuando todos tus dispositivos ya sincronizaron esos borrados.",
+  "settings.sync_clean_recycle_preview":
+    "Se eliminarán {eligible} archivo(s). {skipped} se omiten porque aún hay entrada local.",
+  "settings.sync_clean_recycle_summary":
+    "Eliminados: {removed} · Omitidos: {skipped}",
   "settings.export_md_ok": "Exportados archivos Markdown en library/",
   "settings.import_md_ok": "Importación completada",
   "settings.import_md_errors": "Importación con errores",

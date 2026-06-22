@@ -1,6 +1,8 @@
 export type ParsedMarkdownEntry = {
   shelfside_id: number;
   updated_at: string;
+  deleted: boolean;
+  deleted_at: string | null;
   title: string;
   media_type: string;
   source: string;
@@ -37,6 +39,18 @@ function parseOptionalInt(raw: string | undefined): number | null {
 function parseOptionalString(raw: string | undefined): string | null {
   if (raw === undefined || raw === "" || raw === "null") return null;
   return parseYamlValue(raw);
+}
+
+function parseOptionalBool(raw: string | undefined): boolean {
+  if (raw === undefined || raw === "") return false;
+  const v = parseYamlValue(raw).toLowerCase();
+  return v === "true" || v === "yes" || v === "1";
+}
+
+/** Timestamp LWW para tombstones (`deleted_at` o `updated_at`). */
+export function effectiveRemoteTime(remote: ParsedMarkdownEntry): string {
+  if (remote.deleted) return remote.deleted_at ?? remote.updated_at;
+  return remote.updated_at;
 }
 
 function requireYamlField(fm: Record<string, string>, key: string): string {
@@ -78,9 +92,14 @@ export function parseMarkdownEntry(content: string): ParsedMarkdownEntry {
   const updatedAt = parseOptionalString(fm.updated_at);
   if (!updatedAt) throw new Error("updated_at obligatorio.");
 
+  const deleted = parseOptionalBool(fm.deleted);
+  const deletedAt = parseOptionalString(fm.deleted_at);
+
   return {
     shelfside_id: shelfsideId,
     updated_at: updatedAt,
+    deleted,
+    deleted_at: deleted && !deletedAt ? updatedAt : deletedAt,
     title: requireYamlField(fm, "title"),
     media_type: requireYamlField(fm, "media_type"),
     source: requireYamlField(fm, "source"),
@@ -100,8 +119,9 @@ export function parseMarkdownEntry(content: string): ParsedMarkdownEntry {
   };
 }
 
-function yamlLine(key: string, value: string | number | null | undefined): string {
+function yamlLine(key: string, value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return `${key}: null`;
+  if (typeof value === "boolean") return `${key}: ${value}`;
   if (typeof value === "number") return `${key}: ${value}`;
   const escaped = String(value).replace(/"/g, '\\"');
   return `${key}: "${escaped}"`;
@@ -150,4 +170,50 @@ export function serializeMarkdownEntry(row: {
   const body = row.notes?.trim() ?? "";
   const tail = body.length > 0 ? `${body}\n` : "";
   return `---\n${fm}\n---\n${tail}`;
+}
+
+export type TombstoneRow = {
+  id: number;
+  updated_at: string;
+  title: string;
+  media_type: string;
+  source: string;
+  external_id: string;
+  status: string;
+  score: number | null;
+  current_season: number | null;
+  last_episode_watched: number | null;
+  progress_current: number | null;
+  progress_total: number | null;
+  owned: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  image_url: string | null;
+  catalog_updated_at: string | null;
+};
+
+export function serializeTombstoneEntry(row: TombstoneRow, deletedAt: string): string {
+  const fm = [
+    yamlLine("shelfside_id", row.id),
+    yamlLine("deleted", true),
+    yamlLine("deleted_at", deletedAt),
+    yamlLine("updated_at", deletedAt),
+    yamlLine("title", row.title),
+    yamlLine("media_type", row.media_type),
+    yamlLine("source", row.source),
+    yamlLine("external_id", row.external_id),
+    yamlLine("status", row.status),
+    yamlLine("score", row.score),
+    yamlLine("current_season", row.current_season),
+    yamlLine("last_episode_watched", row.last_episode_watched),
+    yamlLine("progress_current", row.progress_current),
+    yamlLine("progress_total", row.progress_total),
+    yamlLine("owned", row.owned),
+    yamlLine("started_at", row.started_at),
+    yamlLine("completed_at", row.completed_at),
+    yamlLine("image_url", row.image_url),
+    yamlLine("catalog_updated_at", row.catalog_updated_at),
+  ].join("\n");
+
+  return `---\n${fm}\n---\n# removed from library\n`;
 }

@@ -57,7 +57,7 @@ export const enMessages: Record<string, string> = {
   "detail.edit": "Edit",
   "detail.delete": "Remove from library",
   "detail.delete_confirm":
-    "Remove this item from your library? Your notes, status, and local catalog copy will be deleted. You can add it again from Search.",
+    "Remove this item from your library? Your notes, status, and local catalog copy will be deleted. You can add it again from Search. If a sync folder is configured, the .md stays as a recycle-bin tombstone (deleted: true) until you clean it in Settings.",
   "detail.delete_confirm_action": "Yes, remove",
   "detail.deleting": "Removing…",
   "detail.repair_cover": "Repair cover",
@@ -168,16 +168,23 @@ export const enMessages: Record<string, string> = {
   "settings.db_unknown": "Unavailable",
   "settings.sync": "Synchronization",
   "settings.sync_help":
-    "Syncthing (or similar) replicates the folder; «Sync folder» imports .md files then exports your local library. Does not delete entries. Catalog items match by source and external_id; manuals by frontmatter external_id (create on one PC or import before duplicating).",
+    "Syncthing (or similar) replicates the folder; «Sync folder» imports .md files then exports your local library. Removing from library writes a tombstone (deleted: true) to the sync folder; the other device applies it on sync if the deletion is newer than local edits. «Clean recycle bin» deletes those .md files only when they are no longer in your library (do this after all devices have synced). Catalog items match by source and external_id; manuals by frontmatter external_id.",
   "settings.sync_folder": "Sync folder",
   "settings.sync_choose_folder": "Choose folder",
   "settings.sync_no_folder": "Choose a sync folder first.",
   "settings.sync_now": "Sync folder",
   "settings.sync_summary":
-    "Imported: {imported} · Updated: {updated} · Unchanged: {skipped} · Exported: {exported} files",
+    "Imported: {imported} · Updated: {updated} · Removed: {deleted} · Unchanged: {skipped} · Exported: {exported} files",
   "settings.sync_errors_prefix": "{count} error(s)",
   "settings.sync_export_md": "Export Markdown to sync folder",
   "settings.sync_import": "Import / merge from sync folder",
+  "settings.sync_clean_recycle": "Clean sync recycle bin",
+  "settings.sync_clean_recycle_confirm":
+    "Delete from disk the .md files marked as deleted (deleted: true) that are no longer in your library? Only do this after all your devices have synced those deletions.",
+  "settings.sync_clean_recycle_preview":
+    "{eligible} file(s) will be removed. {skipped} skipped because a local library entry still exists.",
+  "settings.sync_clean_recycle_summary":
+    "Removed: {removed} · Skipped: {skipped}",
   "settings.export_md_ok": "Exported Markdown files to library/",
   "settings.import_md_ok": "Import completed",
   "settings.import_md_errors": "Import finished with errors",

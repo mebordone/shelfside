@@ -1,14 +1,17 @@
 import { join } from "@tauri-apps/api/path";
 import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import { findCatalogBySource, insertCatalogItem, type SqlDb } from "$lib/db/catalog";
-import { getLibraryEntryById, getLibraryIdForCatalog } from "$lib/db/library";
+import { deleteLibraryEntry } from "$lib/db/library";
 import { isStatus, type LibraryListRow, type Status } from "$lib/db/types";
 import { mergeStatusTimestamps, normalizeScore } from "$lib/db/libraryRules";
-import { parseMarkdownEntry, type ParsedMarkdownEntry } from "./parseMarkdown";
+import { removePosterFile } from "$lib/poster";
+import { effectiveRemoteTime, parseMarkdownEntry, type ParsedMarkdownEntry } from "./parseMarkdown";
+import { resolveLocalEntry } from "./resolveLocalEntry";
 
 export type MergeResult = {
   imported: number;
   updated: number;
+  deleted: number;
   skipped: number;
   errors: string[];
 };
@@ -42,24 +45,15 @@ function remoteEntryDiffersFromLocal(local: LibraryListRow, remote: ParsedMarkdo
 }
 
 function shouldApplyRemote(local: LibraryListRow | null, remote: ParsedMarkdownEntry): boolean {
+  if (remote.deleted) {
+    if (!local) return false;
+    const remoteTime = effectiveRemoteTime(remote);
+    return compareUpdatedAt(remoteTime, local.updated_at) > 0;
+  }
   if (!local) return true;
   if (compareUpdatedAt(remote.updated_at, local.updated_at) > 0) return true;
   if (compareUpdatedAt(remote.updated_at, local.updated_at) < 0) return false;
   return remoteEntryDiffersFromLocal(local, remote);
-}
-
-/** Entrada local por shelfside_id del .md o por (source, external_id, media_type). */
-async function resolveLocalEntry(db: SqlDb, remote: ParsedMarkdownEntry): Promise<LibraryListRow | null> {
-  const byId = await getLibraryEntryById(db, remote.shelfside_id);
-  if (byId) return byId;
-
-  const catalog = await findCatalogBySource(db, remote.source, remote.external_id, remote.media_type);
-  if (!catalog) return null;
-
-  const libraryId = await getLibraryIdForCatalog(db, catalog.id);
-  if (libraryId === null) return null;
-
-  return getLibraryEntryById(db, libraryId);
 }
 
 async function updateLocalFromRemote(
@@ -161,10 +155,31 @@ async function applyRemoteEntry(
   return "inserted";
 }
 
+async function applyRemoteTombstone(db: SqlDb, local: LibraryListRow): Promise<void> {
+  const posterPath = local.poster_local_path;
+  await deleteLibraryEntry(db, local.id);
+  await removePosterFile(posterPath);
+}
+
 async function mergeOneFile(db: SqlDb, filePath: string, result: MergeResult): Promise<void> {
   const text = await readTextFile(filePath);
   const parsed = parseMarkdownEntry(text);
   const local = await resolveLocalEntry(db, parsed);
+
+  if (parsed.deleted) {
+    if (!local) {
+      result.skipped += 1;
+      return;
+    }
+    if (!shouldApplyRemote(local, parsed)) {
+      result.skipped += 1;
+      return;
+    }
+    await applyRemoteTombstone(db, local);
+    result.deleted += 1;
+    return;
+  }
+
   if (!shouldApplyRemote(local, parsed)) {
     result.skipped += 1;
     return;
@@ -175,7 +190,7 @@ async function mergeOneFile(db: SqlDb, filePath: string, result: MergeResult): P
 }
 
 export async function mergeFromSyncFolder(db: SqlDb, syncDir: string): Promise<MergeResult> {
-  const result: MergeResult = { imported: 0, updated: 0, skipped: 0, errors: [] };
+  const result: MergeResult = { imported: 0, updated: 0, deleted: 0, skipped: 0, errors: [] };
   const libraryDir = await join(syncDir, "library");
 
   let entries;

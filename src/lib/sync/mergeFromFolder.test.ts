@@ -28,6 +28,10 @@ vi.mock("@tauri-apps/api/path", () => ({
   join: vi.fn(async (...parts: string[]) => parts.join("/")),
 }));
 
+vi.mock("$lib/poster", () => ({
+  removePosterFile: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe("mergeFromSyncFolder", () => {
   it("importa entrada nueva", async () => {
     vi.spyOn(library, "getLibraryEntryById").mockResolvedValue(null);
@@ -320,5 +324,149 @@ Notas sync
     const result = await mergeFromSyncFolder({ select: vi.fn(), execute } as never, "/sync");
     expect(result.updated).toBe(1);
     expect(result.imported).toBe(0);
+  });
+
+  it("aplica tombstone y borra entrada local si deleted_at es más reciente", async () => {
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readTextFile).mockResolvedValueOnce(`---
+shelfside_id: 42
+deleted: true
+deleted_at: "2026-12-01T00:00:00.000Z"
+updated_at: "2026-12-01T00:00:00.000Z"
+title: "Dune"
+media_type: movie
+source: tmdb
+external_id: "1"
+status: planning
+score: null
+current_season: null
+last_episode_watched: null
+progress_current: null
+progress_total: null
+owned: null
+started_at: null
+completed_at: null
+image_url: null
+catalog_updated_at: null
+---
+# removed from library
+`);
+    vi.spyOn(library, "getLibraryEntryById").mockResolvedValue({
+      id: 42,
+      catalog_item_id: 10,
+      status: "planning",
+      score: null,
+      current_season: null,
+      last_episode_watched: null,
+      progress_current: null,
+      progress_total: null,
+      owned: null,
+      started_at: null,
+      completed_at: null,
+      notes: null,
+      updated_at: "2026-06-01T00:00:00.000Z",
+      media_type: "movie",
+      source: "tmdb",
+      external_id: "1",
+      title: "Dune",
+      image_url: null,
+      poster_local_path: "posters/x.jpg",
+      metadata_json: null,
+    });
+    const deleteSpy = vi.spyOn(library, "deleteLibraryEntry").mockResolvedValue(undefined);
+    const { removePosterFile } = await import("$lib/poster");
+    const posterSpy = vi.mocked(removePosterFile);
+
+    const result = await mergeFromSyncFolder({ select: vi.fn(), execute: vi.fn() } as never, "/sync");
+    expect(result.deleted).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(deleteSpy).toHaveBeenCalledWith(expect.anything(), 42);
+    expect(posterSpy).toHaveBeenCalledWith("posters/x.jpg");
+  });
+
+  it("omite tombstone si local es más reciente", async () => {
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readTextFile).mockResolvedValueOnce(`---
+shelfside_id: 42
+deleted: true
+deleted_at: "2026-06-01T00:00:00.000Z"
+updated_at: "2026-06-01T00:00:00.000Z"
+title: "Dune"
+media_type: movie
+source: tmdb
+external_id: "1"
+status: planning
+score: null
+current_season: null
+last_episode_watched: null
+progress_current: null
+progress_total: null
+owned: null
+started_at: null
+completed_at: null
+image_url: null
+catalog_updated_at: null
+---
+`);
+    vi.spyOn(library, "getLibraryEntryById").mockResolvedValue({
+      id: 42,
+      catalog_item_id: 10,
+      status: "planning",
+      score: null,
+      current_season: null,
+      last_episode_watched: null,
+      progress_current: null,
+      progress_total: null,
+      owned: null,
+      started_at: null,
+      completed_at: null,
+      notes: "editada",
+      updated_at: "2026-12-01T00:00:00.000Z",
+      media_type: "movie",
+      source: "tmdb",
+      external_id: "1",
+      title: "Dune",
+      image_url: null,
+      poster_local_path: null,
+      metadata_json: null,
+    });
+    const deleteSpy = vi.spyOn(library, "deleteLibraryEntry");
+
+    const result = await mergeFromSyncFolder({ select: vi.fn(), execute: vi.fn() } as never, "/sync");
+    expect(result.deleted).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it("omite tombstone si ya no hay entrada local", async () => {
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readTextFile).mockResolvedValueOnce(`---
+shelfside_id: 42
+deleted: true
+deleted_at: "2026-12-01T00:00:00.000Z"
+updated_at: "2026-12-01T00:00:00.000Z"
+title: "Dune"
+media_type: movie
+source: tmdb
+external_id: "1"
+status: planning
+score: null
+current_season: null
+last_episode_watched: null
+progress_current: null
+progress_total: null
+owned: null
+started_at: null
+completed_at: null
+image_url: null
+catalog_updated_at: null
+---
+`);
+    vi.spyOn(library, "getLibraryEntryById").mockResolvedValue(null);
+    vi.spyOn(catalog, "findCatalogBySource").mockResolvedValue(null);
+
+    const result = await mergeFromSyncFolder({ select: vi.fn(), execute: vi.fn() } as never, "/sync");
+    expect(result.deleted).toBe(0);
+    expect(result.skipped).toBe(1);
   });
 });

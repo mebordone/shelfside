@@ -14,6 +14,10 @@ vi.mock("$lib/poster", () => ({
   removePosterFile: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("$lib/sync/writeTombstone", () => ({
+  writeTombstoneToSyncFolder: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe("deleteLibraryEntryWithAssets", () => {
   it("borra SQL y elimina poster local", async () => {
     const { getLibraryEntryById, deleteLibraryEntry } = await import("$lib/db");
@@ -29,5 +33,39 @@ describe("deleteLibraryEntryWithAssets", () => {
 
     expect(deleteLibraryEntry).toHaveBeenCalledWith(db, 5);
     expect(removePosterFile).toHaveBeenCalledWith("posters/book_OL1M.jpg");
+  });
+
+  it("escribe tombstone si hay carpeta sync", async () => {
+    const { getLibraryEntryById, deleteLibraryEntry } = await import("$lib/db");
+    const { writeTombstoneToSyncFolder } = await import("$lib/sync/writeTombstone");
+    const row = {
+      id: 5,
+      catalog_item_id: 9,
+      poster_local_path: null,
+      title: "Test",
+      media_type: "movie",
+      source: "tmdb",
+      external_id: "1",
+      status: "planning",
+      score: null,
+      current_season: null,
+      last_episode_watched: null,
+      progress_current: null,
+      progress_total: null,
+      owned: null,
+      started_at: null,
+      completed_at: null,
+      notes: null,
+      updated_at: "2026-01-01T00:00:00.000Z",
+      image_url: null,
+      metadata_json: null,
+    };
+    vi.mocked(getLibraryEntryById).mockResolvedValueOnce(row as never);
+
+    const db = {} as never;
+    await deleteLibraryEntryWithAssets(db, 5, { syncDir: "/sync" });
+
+    expect(writeTombstoneToSyncFolder).toHaveBeenCalledWith("/sync", row);
+    expect(deleteLibraryEntry).toHaveBeenCalledWith(db, 5);
   });
 });

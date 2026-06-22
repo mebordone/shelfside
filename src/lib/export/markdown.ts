@@ -1,29 +1,10 @@
 import { join } from "@tauri-apps/api/path";
-import { mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { SqlDb } from "$lib/db/catalog";
 import { listLibraryWithCatalog } from "$lib/db/library";
 import { serializeMarkdownEntry } from "$lib/sync/parseMarkdown";
+import { ensureLibraryDir } from "$lib/sync/libraryDir";
 import { libraryMarkdownFilename } from "./slug";
-
-function isDirAlreadyExists(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /already exists|EEXIST|os error 17|File exists/i.test(msg);
-}
-
-function isMkdirScopeForbidden(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /forbidden path|allow-mkdir/i.test(msg);
-}
-
-async function ensureLibraryDir(syncDir: string): Promise<string> {
-  const libraryDir = await join(syncDir, "library");
-  try {
-    await mkdir(libraryDir, { recursive: true });
-  } catch (e) {
-    if (!isDirAlreadyExists(e) && !isMkdirScopeForbidden(e)) throw e;
-  }
-  return libraryDir;
-}
 
 export async function exportAllMarkdownToFolder(db: SqlDb, syncDir: string): Promise<number> {
   const rows = await listLibraryWithCatalog(db, {});

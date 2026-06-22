@@ -22,6 +22,8 @@
   import { clearSearchResults, searchSession } from "$lib/stores/searchSession.svelte";
   import { persistSyncFolder, readSyncFolder } from "$lib/stores/syncFolder";
   import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
+  import { formatCleanRecycleSummary } from "$lib/sync/formatCleanRecycleSummary";
+  import { previewCleanSyncRecycleBin, cleanSyncRecycleBin } from "$lib/sync/cleanSyncRecycleBin";
   import { exportToSyncFolder } from "$lib/sync/exportToSyncFolder";
   import { mergeFromSyncFolder } from "$lib/sync/mergeFromFolder";
   import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
@@ -34,6 +36,8 @@
   let message = $state<{ kind: "ok" | "err"; text: string } | null>(null);
   let resetConfirmOpen = $state(false);
   let resetTyped = $state("");
+  let cleanRecycleConfirmOpen = $state(false);
+  let cleanRecyclePreview = $state<string | null>(null);
   let catalogLang = $state<CatalogLangPreference>(readCatalogLang());
   let olStrict = $state(readOlStrictLanguage());
   const resetWord = $derived(appLocale.current === "en" ? "DELETE" : "BORRAR");
@@ -143,6 +147,51 @@
       setMessage(r.errors.length ? "err" : "ok", formatSyncSummary(r, 0));
     } catch (e) {
       logError("settings.sync.import.error", e);
+      setMessage("err", e instanceof Error ? e.message : String(e));
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function runCleanRecycleOpen() {
+    if (!syncFolder) {
+      setMessage("err", t("settings.sync_no_folder"));
+      return;
+    }
+    busy = "cleanRecycle";
+    message = null;
+    try {
+      const db = await getDatabase();
+      const preview = await previewCleanSyncRecycleBin(db, syncFolder);
+      const previewText = t("settings.sync_clean_recycle_preview")
+        .replace("{eligible}", String(preview.eligible))
+        .replace("{skipped}", String(preview.skipped));
+      cleanRecyclePreview = previewText;
+      cleanRecycleConfirmOpen = true;
+      if (preview.errors.length) {
+        setMessage("err", preview.errors[0]);
+      }
+    } catch (e) {
+      setMessage("err", e instanceof Error ? e.message : String(e));
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function runCleanRecycleConfirm() {
+    if (!syncFolder) return;
+    busy = "cleanRecycle";
+    message = null;
+    logInfo("settings.sync.clean_recycle.start", { syncFolder });
+    try {
+      const db = await getDatabase();
+      const result = await cleanSyncRecycleBin(db, syncFolder);
+      cleanRecycleConfirmOpen = false;
+      cleanRecyclePreview = null;
+      logInfo("settings.sync.clean_recycle.ok", { ...result, syncFolder });
+      setMessage(result.errors.length ? "err" : "ok", formatCleanRecycleSummary(result));
+    } catch (e) {
+      logError("settings.sync.clean_recycle.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
     } finally {
       busy = null;
@@ -266,6 +315,14 @@
     onSyncFolder={() => void runSyncFolder()}
     onExportMd={() => void runExportMd()}
     onImportMerge={() => void runImportMerge()}
+    onCleanRecycleOpen={() => void runCleanRecycleOpen()}
+    onCleanRecycleCancel={() => {
+      cleanRecycleConfirmOpen = false;
+      cleanRecyclePreview = null;
+    }}
+    onCleanRecycleConfirm={() => void runCleanRecycleConfirm()}
+    {cleanRecycleConfirmOpen}
+    {cleanRecyclePreview}
     onExportCsv={() => void runExportCsv()}
     onBackup={() => void runBackup()}
     onCopyLogs={() => void runCopyLogs()}

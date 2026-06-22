@@ -8,7 +8,7 @@ describe("syncSyncFolder", () => {
     const order: string[] = [];
     vi.spyOn(mergeMod, "mergeFromSyncFolder").mockImplementation(async () => {
       order.push("merge");
-      return { imported: 1, updated: 2, skipped: 3, errors: [] };
+      return { imported: 1, updated: 2, deleted: 0, skipped: 3, errors: [] };
     });
     vi.spyOn(exportSync, "exportToSyncFolder").mockImplementation(async () => {
       order.push("export");
