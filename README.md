@@ -6,7 +6,7 @@ Aplicación minimalista para seguimiento de consumos culturales con soberanía d
 - Roadmap: [roadmap.md](./roadmap.md)
 - Cambios por versión: [CHANGELOG.md](./CHANGELOG.md)
 
-**Plataformas (roadmap):** desarrollo y uso diario en **Linux**; **Android** (Tauri, APK sideload) en Release 5 (`v0.5.0`), antes que **Windows** (backlog Release 7+). Biblioteca compartida PC ↔ celu vía carpeta **Syncthing / Nextcloud** y archivos Markdown (no servidor propio). Ver [roadmap.md](./roadmap.md) y `project.md` §8.
+**Plataformas (roadmap):** desarrollo y uso diario en **Linux**; **Android** (Tauri, APK sideload) en Release 4 (`v0.4.0`), antes que **Windows** (backlog Release 7+). Biblioteca compartida PC ↔ celu vía carpeta **Syncthing / Nextcloud** y archivos Markdown (no servidor propio). Ver [roadmap.md](./roadmap.md) y `project.md` §8.
 
 ---
 
@@ -121,9 +121,62 @@ sudo apt install -y \
 
 **Otras distribuciones** (Arch, Fedora, openSUSE, etc.): listas de paquetes equivalentes en la misma [página de prerequisitos de Tauri](https://tauri.app/start/prerequisites/#linux).
 
-### Android (Release 5 — planificado)
+### Android (Release 4 — `v0.4.0`–`v0.4.6`)
 
-Cuando se implemente el cliente móvil: [prerrequisitos Android de Tauri](https://tauri.app/start/prerequisites/#android) (SDK, NDK, etc.), build con `tauri android build`, instalación por **sideload** (sin Play Store). La carpeta de sync suele ser la que **Syncthing** replica en el dispositivo.
+Micro-releases en [roadmap.md](./roadmap.md) § Release 4. Guía oficial: [prerrequisitos Tauri Android](https://v2.tauri.app/start/prerequisites/#android).
+
+#### Checklist toolchain (Linux, desde cero)
+
+1. **Dependencias desktop** (sección Linux de este README) + **JDK completo** (no alcanza con solo JRE): `sudo apt install openjdk-21-jdk`. Si usás Android Studio Flatpak y no tenés `javac` en el PATH, apuntá `JAVA_HOME` al JBR embebido (ruta típica bajo `~/.local/share/flatpak/app/com.google.AndroidStudio/.../files/extra/jbr`).
+2. **Android Studio** (recomendado) vía [developer.android.com/studio](https://developer.android.com/studio) o Flatpak: `flatpak install flathub com.google.AndroidStudio`. En **Settings → Android SDK**, apuntá el SDK a `$HOME/Android/Sdk` si usás el SDK del host.
+3. **SDK** (Studio → SDK Manager o `sdkmanager`): Platform (API 35), Platform-Tools, Build-Tools, **NDK (Side by side)**, Command-line Tools.
+4. **Variables** en `~/.bashrc` (ajustá la versión del NDK si difiere):
+
+```bash
+export JAVA_HOME="${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v javac 2>/dev/null || command -v java)")")")}"
+export ANDROID_HOME="$HOME/Android/Sdk"
+export NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
+```
+
+5. **Targets Rust** (celular físico arm64):
+
+```bash
+rustup target add aarch64-linux-android
+```
+
+6. **Verificación:**
+
+```bash
+source ~/.bashrc
+adb version
+npm run tauri -- info
+```
+
+7. **Dispositivo físico:** activar depuración USB; conectar **antes** de `npm run tauri:android:dev`; comprobar con `adb devices`.
+
+#### Primer build en el repo (`v0.4.0`)
+
+```bash
+npm install
+npm run tauri:android:init    # una vez, genera src-tauri/gen/android/
+npm run tauri:android:dev     # desarrollo en el celu/emulador
+npm run tauri:android:build   # APK debug/release
+```
+
+Instalar APK en el teléfono (ruta exacta la imprime el build; debug firmado listo para sideload):
+
+```bash
+adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+```
+
+APK release sin firmar (requiere keystore propio para sideload):
+
+```bash
+# src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+```
+
+**Manuales y sync:** entradas manuales nuevas llevan `external_id` UUID (v0.4.0). Manuales viejos: reexportá Markdown desde Ajustes para alinear. La carpeta Syncthing en el celu se configura en `v0.4.1`.
 
 ### Windows y macOS (backlog)
 
@@ -164,7 +217,7 @@ Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
 ## Release 3 — Configuración, export y estadísticas (`v0.3.0`)
 
 - **Rutas:** `/settings` (tema, idioma es/en, datos, sync, export CSV, backup DB, reinicio de fábrica), `/stats` (conteos por estado y tipo).
-- **Sync Markdown (Syncthing):** en Ajustes, definí la carpeta de sincronización y usá **Sincronizar carpeta**: primero fusiona los `.md` que Syncthing/Nextcloud replicaron, luego reescribe los archivos con el estado local (ids y campos de este dispositivo). La misma obra (TMDB, Open Library o manual con el mismo `external_id`) se alinea por catálogo aunque el `shelfside_id` difiera entre PCs. No borra entradas locales ni sincroniza el `.sqlite`. Exportar/Importar por separado siguen disponibles para depuración.
+- **Sync Markdown (Syncthing):** en Ajustes, definí la carpeta de sincronización y usá **Sincronizar carpeta**: primero fusiona los `.md` que Syncthing/Nextcloud replicaron, luego reescribe los archivos con el estado local. Quitar de biblioteca escribe un tombstone (`deleted: true`) en la carpeta sync; el otro PC lo aplica al sincronizar si el borrado es más reciente (LWW). **Limpiar papelera de sync** elimina esos `.md` del disco solo cuando ya no están en tu biblioteca local (hacelo cuando todos los dispositivos sincronizaron). La misma obra se alinea por catálogo aunque el `shelfside_id` difiera entre PCs. No sincroniza el `.sqlite`. Exportar/Importar por separado siguen disponibles para depuración.
 - **CSV y backup:** diálogo «Guardar como…» cada vez (`library.csv`, `shelfside-YYYY-MM-DD-HHmm.db`).
 - **CSV columnas:** `shelfside_id`, `title`, `media_type`, `source`, `external_id`, `status`, `score`, `current_season`, `last_episode_watched`, `progress_current`, `progress_total`, `owned`, `started_at`, `completed_at`, `notes`, `image_url`, `catalog_updated_at`, `library_updated_at`.
 
