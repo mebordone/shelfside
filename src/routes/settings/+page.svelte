@@ -27,11 +27,15 @@
   import { exportToSyncFolder } from "$lib/sync/exportToSyncFolder";
   import { mergeFromSyncFolder } from "$lib/sync/mergeFromFolder";
   import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
+  import { validateSyncFolderPath } from "$lib/sync/validateSyncFolder";
+  import { hasAllFilesAccess, requestAllFilesAccess } from "$lib/sync/androidStorageAccess";
+  import { ANDROID_DEFAULT_SYNC_DIR, isAndroidPlatform } from "$lib/platform";
   import { copyRuntimeLogsToClipboard, logError, logInfo, logWarn } from "$lib/logs/runtimeLogs";
 
   let dbPath = $state("");
   let dbSize = $state<string>("—");
   let syncFolder = $state<string | null>(readSyncFolder());
+  let syncFolderDraft = $state(readSyncFolder() ?? "");
   let busy = $state<string | null>(null);
   let message = $state<{ kind: "ok" | "err"; text: string } | null>(null);
   let resetConfirmOpen = $state(false);
@@ -40,7 +44,14 @@
   let cleanRecyclePreview = $state<string | null>(null);
   let catalogLang = $state<CatalogLangPreference>(readCatalogLang());
   let olStrict = $state(readOlStrictLanguage());
+  let isAndroid = $state(false);
+  let hasStorageAccess = $state(true);
   const resetWord = $derived(appLocale.current === "en" ? "DELETE" : "BORRAR");
+  const showFolderPicker = $derived(!isAndroid);
+  const needsStoragePermission = $derived(isAndroid && !hasStorageAccess);
+  const syncFolderPlaceholder = $derived(
+    isAndroid ? t("settings.sync_folder_placeholder_android") : t("settings.sync_folder_placeholder"),
+  );
 
   function clearOpenLibrarySearchResults() {
     if (searchSession.source === "openlibrary" && searchSession.hits.length > 0) {
@@ -61,8 +72,57 @@
   }
 
   onMount(() => {
+    isAndroid = isAndroidPlatform();
+    // Precargar ruta típica como valor real (no solo placeholder).
+    if (isAndroid && !syncFolderDraft.trim()) {
+      syncFolderDraft = ANDROID_DEFAULT_SYNC_DIR;
+    }
     void loadDbInfo();
+    void refreshStorageAccess();
+    const onVis = () => {
+      if (document.visibilityState === "visible") void refreshStorageAccess();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   });
+
+  async function refreshStorageAccess() {
+    if (!isAndroidPlatform()) {
+      hasStorageAccess = true;
+      return;
+    }
+    try {
+      hasStorageAccess = await hasAllFilesAccess();
+    } catch (e) {
+      logWarn("settings.sync.storage_access.check_failed", e);
+      hasStorageAccess = false;
+    }
+  }
+
+  /** En Android exige MANAGE_EXTERNAL_STORAGE antes de tocar la carpeta Sync. */
+  async function ensureStorageAccess(): Promise<boolean> {
+    if (!isAndroidPlatform()) return true;
+    await refreshStorageAccess();
+    if (hasStorageAccess) return true;
+    setMessage("err", t("settings.sync_storage_permission_denied"));
+    return false;
+  }
+
+  async function runRequestStoragePermission() {
+    message = null;
+    try {
+      const res = await requestAllFilesAccess();
+      if (res.granted) {
+        hasStorageAccess = true;
+        setMessage("ok", t("settings.action_done"));
+        return;
+      }
+      setMessage("ok", t("settings.sync_storage_permission_opened"));
+    } catch (e) {
+      logError("settings.sync.storage_access.request_failed", e);
+      setMessage("err", e instanceof Error ? e.message : String(e));
+    }
+  }
 
   async function loadDbInfo() {
     const info = await getDatabaseInfo();
@@ -76,21 +136,76 @@
 
   async function chooseSyncFolder() {
     logInfo("settings.sync.choose_folder.open");
-    const selected = await open({ directory: true, multiple: false, recursive: true });
-    if (typeof selected === "string" && selected) {
-      syncFolder = selected;
-      persistSyncFolder(selected);
-      logInfo("settings.sync.choose_folder.selected", { syncFolder: selected });
-      setMessage("ok", t("settings.action_done"));
+    try {
+      const selected = await open({ directory: true, multiple: false, recursive: true });
+      if (typeof selected === "string" && selected) {
+        await applySyncFolderPath(selected);
+      }
+    } catch (e) {
+      logWarn("settings.sync.choose_folder.unavailable", e);
+      setMessage("err", t("settings.sync_picker_unavailable"));
     }
   }
 
-  async function runSyncFolder() {
-    if (!syncFolder) {
-      logError("settings.sync.run.no_folder");
+  /** Valida, crea `…/shelfside` si hace falta, y persiste. Devuelve true si quedó aplicada. */
+  async function applySyncFolderPath(raw: string): Promise<boolean> {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      if (!syncFolder) setMessage("err", t("settings.sync_no_folder"));
+      return false;
+    }
+    // Ya aplicada: no repetir toast al salir del campo.
+    if (
+      syncFolder &&
+      (trimmed === syncFolder ||
+        trimmed.replace(/[/\\]+$/, "") === syncFolder.replace(/[/\\]+$/, "") ||
+        // El usuario escribió la raíz Syncthing y ya tenemos …/shelfside.
+        `${trimmed.replace(/[/\\]+$/, "")}/shelfside` === syncFolder.replace(/[/\\]+$/, ""))
+    ) {
+      syncFolderDraft = syncFolder;
+      return true;
+    }
+    message = null;
+    try {
+      if (!(await ensureStorageAccess())) return false;
+      const validated = await validateSyncFolderPath(trimmed);
+      if (!validated.ok) {
+        setMessage("err", t("settings.sync_path_invalid"));
+        return false;
+      }
+      syncFolderDraft = validated.path;
+      if (syncFolder === validated.path) return true;
+      syncFolder = validated.path;
+      persistSyncFolder(validated.path);
+      logInfo("settings.sync.path.applied", { syncFolder: validated.path });
+      setMessage("ok", t("settings.action_done"));
+      return true;
+    } catch (e) {
+      logError("settings.sync.path.error", e);
+      setMessage("err", e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  }
+
+  /** Si aún no hay carpeta activa, aplica el borrador (o el default Android) y luego sincroniza. */
+  async function ensureSyncFolderReady(): Promise<boolean> {
+    if (syncFolder) return true;
+    const candidate =
+      syncFolderDraft.trim() || (isAndroidPlatform() ? ANDROID_DEFAULT_SYNC_DIR : "");
+    if (!candidate) {
       setMessage("err", t("settings.sync_no_folder"));
+      return false;
+    }
+    syncFolderDraft = candidate;
+    return applySyncFolderPath(candidate);
+  }
+
+  async function runSyncFolder() {
+    if (!(await ensureSyncFolderReady()) || !syncFolder) {
+      logError("settings.sync.run.no_folder");
       return;
     }
+    if (!(await ensureStorageAccess())) return;
     busy = "sync";
     message = null;
     logInfo("settings.sync.run.start", { syncFolder });
@@ -307,11 +422,21 @@
     {dbPath}
     {dbSize}
     {syncFolder}
+    {syncFolderDraft}
+    {syncFolderPlaceholder}
+    {showFolderPicker}
+    {needsStoragePermission}
+    statusMessage={message}
     {busy}
     {resetConfirmOpen}
     {resetTyped}
     {resetWord}
     onChooseSyncFolder={() => void chooseSyncFolder()}
+    onRequestStoragePermission={() => void runRequestStoragePermission()}
+    onSyncFolderDraftChange={(v) => {
+      syncFolderDraft = v;
+    }}
+    onApplySyncFolderPath={() => void applySyncFolderPath(syncFolderDraft)}
     onSyncFolder={() => void runSyncFolder()}
     onExportMd={() => void runExportMd()}
     onImportMerge={() => void runImportMerge()}

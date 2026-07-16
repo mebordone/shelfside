@@ -35,11 +35,14 @@ describe("i18n", () => {
 
   it("incluye claves de sync 3.3 en es y en", () => {
     setAppLocale("es");
-    expect(t("settings.sync_now")).toBe("Sincronizar carpeta");
+    expect(t("settings.sync_now")).toBe("Sincronizar");
     expect(t("settings.sync_summary")).toContain("{imported}");
-    expect(t("settings.sync_help")).toMatch(/external_id/i);
+    expect(t("settings.sync_help")).toMatch(/shelfside\.csv/i);
+    expect(t("settings.sync_folder_placeholder_android")).toMatch(/storage\/emulated\/0\/Sync/);
+    expect(t("settings.sync_storage_permission_grant")).toMatch(/acceso/i);
     setAppLocale("en");
-    expect(t("settings.sync_now")).toBe("Sync folder");
-    expect(t("settings.sync_help")).toMatch(/external_id/i);
+    expect(t("settings.sync_now")).toBe("Sync");
+    expect(t("settings.sync_help")).toMatch(/shelfside\.csv/i);
+    expect(t("settings.sync_folder_placeholder_android")).toMatch(/storage\/emulated\/0\/Sync/);
   });
 });

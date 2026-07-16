@@ -5,11 +5,19 @@
     dbPath: string;
     dbSize: string;
     syncFolder: string | null;
+    syncFolderDraft: string;
+    syncFolderPlaceholder: string;
+    showFolderPicker: boolean;
+    needsStoragePermission: boolean;
+    statusMessage: { kind: "ok" | "err"; text: string } | null;
     busy: string | null;
     resetConfirmOpen: boolean;
     resetTyped: string;
     resetWord: string;
     onChooseSyncFolder: () => void;
+    onRequestStoragePermission: () => void;
+    onSyncFolderDraftChange: (value: string) => void;
+    onApplySyncFolderPath: () => void;
     onSyncFolder: () => void;
     onExportMd: () => void;
     onImportMerge: () => void;
@@ -31,11 +39,19 @@
     dbPath,
     dbSize,
     syncFolder,
+    syncFolderDraft,
+    syncFolderPlaceholder,
+    showFolderPicker,
+    needsStoragePermission,
+    statusMessage,
     busy,
     resetConfirmOpen,
     resetTyped,
     resetWord,
     onChooseSyncFolder,
+    onRequestStoragePermission,
+    onSyncFolderDraftChange,
+    onApplySyncFolderPath,
     onSyncFolder,
     onExportMd,
     onImportMerge,
@@ -73,18 +89,68 @@
     {t("settings.sync")}
   </h2>
   <p class="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.sync_help")}</p>
-  <p class="text-xs break-all text-zinc-500">
-    {syncFolder ?? t("settings.sync_no_folder")}
-  </p>
-  <div class="flex flex-wrap gap-2">
-    <button
-      type="button"
-      class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-      disabled={busy !== null}
-      onclick={() => onChooseSyncFolder()}
+  {#if needsStoragePermission}
+    <div
+      class="space-y-2 rounded-md border border-amber-300 bg-amber-50/80 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/30"
     >
-      {t("settings.sync_choose_folder")}
-    </button>
+      <p class="text-amber-950 dark:text-amber-100">{t("settings.sync_storage_permission_needed")}</p>
+      <button
+        type="button"
+        class="rounded-md bg-amber-800 px-3 py-1.5 text-sm text-white hover:bg-amber-900 disabled:opacity-50"
+        disabled={busy !== null}
+        onclick={() => onRequestStoragePermission()}
+      >
+        {t("settings.sync_storage_permission_grant")}
+      </button>
+    </div>
+  {/if}
+  {#if statusMessage}
+    <p
+      class="rounded-md border px-3 py-2 text-sm {statusMessage.kind === 'ok'
+        ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100'
+        : 'border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'}"
+      role="status"
+    >
+      {statusMessage.text}
+    </p>
+  {/if}
+  <label class="block text-xs text-zinc-600 dark:text-zinc-400" for="sync-folder-path">
+    {t("settings.sync_folder")}
+  </label>
+  <input
+    id="sync-folder-path"
+    class="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm break-all dark:border-zinc-700 dark:bg-zinc-900"
+    placeholder={syncFolderPlaceholder}
+    value={syncFolderDraft}
+    disabled={busy !== null}
+    oninput={(e) => onSyncFolderDraftChange((e.currentTarget as HTMLInputElement).value)}
+    onblur={() => onApplySyncFolderPath()}
+    onkeydown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onApplySyncFolderPath();
+      }
+    }}
+  />
+  {#if syncFolder}
+    <p class="text-xs break-all text-zinc-500">
+      {t("settings.sync_folder_active")}:
+      <code class="ml-1 rounded bg-zinc-100 px-1 dark:bg-zinc-800">{syncFolder}</code>
+    </p>
+  {:else}
+    <p class="text-xs text-zinc-500">{t("settings.sync_no_folder")}</p>
+  {/if}
+  <div class="flex flex-wrap gap-2">
+    {#if showFolderPicker}
+      <button
+        type="button"
+        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        disabled={busy !== null}
+        onclick={() => onChooseSyncFolder()}
+      >
+        {t("settings.sync_choose_folder")}
+      </button>
+    {/if}
     <button
       type="button"
       class="rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
@@ -93,31 +159,38 @@
     >
       {busy === "sync" ? t("common.loading") : t("settings.sync_now")}
     </button>
-    <button
-      type="button"
-      class="rounded-md border border-emerald-700 px-3 py-1.5 text-sm text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
-      disabled={busy !== null}
-      onclick={() => onExportMd()}
-    >
-      {busy === "md" ? t("common.loading") : t("settings.sync_export_md")}
-    </button>
-    <button
-      type="button"
-      class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
-      disabled={busy !== null}
-      onclick={() => onImportMerge()}
-    >
-      {busy === "import" ? t("common.loading") : t("settings.sync_import")}
-    </button>
-    <button
-      type="button"
-      class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
-      disabled={busy !== null || !syncFolder}
-      onclick={() => onCleanRecycleOpen()}
-    >
-      {busy === "cleanRecycle" ? t("common.loading") : t("settings.sync_clean_recycle")}
-    </button>
   </div>
+  <details class="rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
+    <summary class="cursor-pointer text-sm text-zinc-700 dark:text-zinc-300">
+      {t("settings.sync_advanced")}
+    </summary>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="rounded-md border border-emerald-700 px-3 py-1.5 text-sm text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+        disabled={busy !== null}
+        onclick={() => onExportMd()}
+      >
+        {busy === "md" ? t("common.loading") : t("settings.sync_export_md")}
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+        disabled={busy !== null}
+        onclick={() => onImportMerge()}
+      >
+        {busy === "import" ? t("common.loading") : t("settings.sync_import")}
+      </button>
+      <button
+        type="button"
+        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+        disabled={busy !== null || !syncFolder}
+        onclick={() => onCleanRecycleOpen()}
+      >
+        {busy === "cleanRecycle" ? t("common.loading") : t("settings.sync_clean_recycle")}
+      </button>
+    </div>
+  </details>
   {#if cleanRecycleConfirmOpen && cleanRecyclePreview}
     <div
       class="space-y-2 rounded-md border border-amber-300 bg-amber-50/80 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/30"

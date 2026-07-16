@@ -168,26 +168,40 @@ export const enMessages: Record<string, string> = {
   "settings.db_unknown": "Unavailable",
   "settings.sync": "Synchronization",
   "settings.sync_help":
-    "Syncthing (or similar) replicates the folder; «Sync folder» imports .md files then exports your local library. Removing from library writes a tombstone (deleted: true) to the sync folder; the other device applies it on sync if the deletion is newer than local edits. «Clean recycle bin» deletes those .md files only when they are no longer in your library (do this after all devices have synced). Catalog items match by source and external_id; manuals by frontmatter external_id.",
-  "settings.sync_folder": "Sync folder",
+    "Choose or type your Syncthing folder (on Android it is usually prefilled as /storage/emulated/0/Sync). Shelfside creates a shelfside/ subfolder and syncs shelfside.csv. On Android grant file access if asked, then tap Sync. Markdown (Obsidian/migration) is under «More options».",
+  "settings.sync_folder": "Syncthing folder",
+  "settings.sync_folder_placeholder": "/home/…/Sync",
+  "settings.sync_folder_placeholder_android": "/storage/emulated/0/Sync",
+  "settings.sync_folder_active": "Using",
   "settings.sync_choose_folder": "Choose folder",
-  "settings.sync_no_folder": "Choose a sync folder first.",
-  "settings.sync_now": "Sync folder",
+  "settings.sync_path_invalid": "Folder is not accessible or cannot be created.",
+  "settings.sync_picker_unavailable":
+    "Folder picker is not available on this device. Paste the path and confirm with Enter.",
+  "settings.sync_storage_permission_needed":
+    "Shelfside needs all-files access to read and write your Syncthing folder.",
+  "settings.sync_storage_permission_grant": "Allow file access",
+  "settings.sync_storage_permission_opened":
+    "Enable «All files access» for Shelfside, then return to the app.",
+  "settings.sync_storage_permission_denied":
+    "Without file access sync cannot run. Grant the permission and try again.",
+  "settings.sync_no_folder": "Choose or type your Syncthing folder first.",
+  "settings.sync_now": "Sync",
+  "settings.sync_advanced": "More options (Markdown, recycle bin)",
   "settings.sync_summary":
-    "Imported: {imported} · Updated: {updated} · Removed: {deleted} · Unchanged: {skipped} · Exported: {exported} files",
+    "From CSV: {imported} new · {updated} updated · {deleted} removed · {skipped} unchanged. Then rewrote the CSV with {exported} rows (full library).",
   "settings.sync_errors_prefix": "{count} error(s)",
-  "settings.sync_export_md": "Export Markdown to sync folder",
-  "settings.sync_import": "Import / merge from sync folder",
+  "settings.sync_export_md": "Export Markdown (Obsidian)",
+  "settings.sync_import": "Import Markdown (migration)",
   "settings.sync_clean_recycle": "Clean sync recycle bin",
   "settings.sync_clean_recycle_confirm":
-    "Delete from disk the .md files marked as deleted (deleted: true) that are no longer in your library? Only do this after all your devices have synced those deletions.",
+    "Remove deleted rows (deleted=true) from the CSV that are no longer in your library? Only do this after all your devices have synced those deletions.",
   "settings.sync_clean_recycle_preview":
-    "{eligible} file(s) will be removed. {skipped} skipped because a local library entry still exists.",
+    "{eligible} row(s) will be removed. {skipped} skipped because a local library entry still exists.",
   "settings.sync_clean_recycle_summary":
     "Removed: {removed} · Skipped: {skipped}",
   "settings.export_md_ok": "Exported Markdown files to library/",
-  "settings.import_md_ok": "Import completed",
-  "settings.import_md_errors": "Import finished with errors",
+  "settings.import_md_ok": "Markdown import completed",
+  "settings.import_md_errors": "Markdown import finished with errors",
   "settings.export_csv": "Export CSV…",
   "settings.backup_db": "Back up database…",
   "settings.logs_copy": "Copy runtime logs",

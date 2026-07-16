@@ -169,26 +169,40 @@ export const esMessages: Record<string, string> = {
   "settings.db_unknown": "No disponible",
   "settings.sync": "Sincronización",
   "settings.sync_help":
-    "Syncthing (u otro) replica la carpeta; «Sincronizar carpeta» importa los .md y luego exporta tu biblioteca local. Quitar de biblioteca escribe un tombstone (deleted: true) en la carpeta sync; el otro dispositivo lo aplica al sincronizar si el borrado es más reciente que tus ediciones locales. «Limpiar papelera» elimina esos .md solo si ya no están en tu biblioteca (hacelo cuando todos los dispositivos sincronizaron). Obras de catálogo se reconocen por source y external_id; manuales por external_id del frontmatter.",
-  "settings.sync_folder": "Carpeta de sincronización",
+    "Elegí o escribí la carpeta Syncthing (en Android suele venir precargada /storage/emulated/0/Sync). Shelfside crea la subcarpeta shelfside/ y sincroniza shelfside.csv. En Android concedé acceso a archivos si lo pide y tocá Sincronizar. Markdown (Obsidian/migración) está en «Más opciones».",
+  "settings.sync_folder": "Carpeta Syncthing",
+  "settings.sync_folder_placeholder": "/home/…/Sync",
+  "settings.sync_folder_placeholder_android": "/storage/emulated/0/Sync",
+  "settings.sync_folder_active": "Usando",
   "settings.sync_choose_folder": "Elegir carpeta",
-  "settings.sync_no_folder": "Elegí una carpeta de sincronización primero.",
-  "settings.sync_now": "Sincronizar carpeta",
+  "settings.sync_path_invalid": "La carpeta no es accesible o no se puede crear.",
+  "settings.sync_picker_unavailable":
+    "El selector de carpeta no está disponible en este dispositivo. Pegá la ruta a mano y confirmá con Enter.",
+  "settings.sync_storage_permission_needed":
+    "Shelfside necesita acceso a todos los archivos para leer y escribir en la carpeta Syncthing.",
+  "settings.sync_storage_permission_grant": "Permitir acceso a archivos",
+  "settings.sync_storage_permission_opened":
+    "Activá «Acceso a todos los archivos» para Shelfside y volvé a la app.",
+  "settings.sync_storage_permission_denied":
+    "Sin acceso a archivos no se puede sincronizar. Concedé el permiso e intentá de nuevo.",
+  "settings.sync_no_folder": "Elegí o escribí la carpeta de Syncthing primero.",
+  "settings.sync_now": "Sincronizar",
+  "settings.sync_advanced": "Más opciones (Markdown, papelera)",
   "settings.sync_summary":
-    "Importados: {imported} · Actualizados: {updated} · Borrados: {deleted} · Sin cambios: {skipped} · Exportados: {exported} archivos",
+    "Del CSV: {imported} nuevas · {updated} actualizadas · {deleted} borradas · {skipped} sin cambios. Luego se reescribió el CSV con {exported} filas (toda la biblioteca).",
   "settings.sync_errors_prefix": "{count} error(es)",
-  "settings.sync_export_md": "Exportar Markdown a carpeta sync",
-  "settings.sync_import": "Importar / combinar desde carpeta sync",
+  "settings.sync_export_md": "Exportar Markdown (Obsidian)",
+  "settings.sync_import": "Importar Markdown (migración)",
   "settings.sync_clean_recycle": "Limpiar papelera de sync",
   "settings.sync_clean_recycle_confirm":
-    "¿Eliminar del disco los .md marcados como borrados (deleted: true) que ya no están en tu biblioteca? Solo hacelo cuando todos tus dispositivos ya sincronizaron esos borrados.",
+    "¿Quitar del CSV las filas marcadas como borradas (deleted=true) que ya no están en tu biblioteca? Solo hacelo cuando todos tus dispositivos ya sincronizaron esos borrados.",
   "settings.sync_clean_recycle_preview":
-    "Se eliminarán {eligible} archivo(s). {skipped} se omiten porque aún hay entrada local.",
+    "Se eliminarán {eligible} fila(s). {skipped} se omiten porque aún hay entrada local.",
   "settings.sync_clean_recycle_summary":
     "Eliminados: {removed} · Omitidos: {skipped}",
   "settings.export_md_ok": "Exportados archivos Markdown en library/",
-  "settings.import_md_ok": "Importación completada",
-  "settings.import_md_errors": "Importación con errores",
+  "settings.import_md_ok": "Importación Markdown completada",
+  "settings.import_md_errors": "Importación Markdown con errores",
   "settings.export_csv": "Exportar CSV…",
   "settings.backup_db": "Copia de seguridad de la base…",
   "settings.logs_copy": "Copiar logs de ejecución",
