@@ -14,6 +14,16 @@
     "sql:allow-execute",
     "sql:allow-select",
     "dialog:default",
+    "http:default",
+    {
+      "identifier": "http:allow-fetch",
+      "allow": [
+        { "url": "https://image.tmdb.org/**" },
+        { "url": "https://*.tmdb.org/**" },
+        { "url": "https://covers.openlibrary.org/**" },
+        { "url": "https://*.openlibrary.org/**" }
+      ]
+    },
     "fs:default",
     "fs:scope-applocaldata-recursive",
     "fs:scope-home-recursive",

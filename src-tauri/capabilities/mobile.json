@@ -1,16 +1,27 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "mobile",
-  "description": "Capability base para Android (sql, fs, dialog)",
+  "description": "Capability base para Android (sql, fs, dialog, http)",
   "windows": ["main"],
   "platforms": ["android"],
   "permissions": [
     "core:default",
+    "allow-android-storage",
     "sql:default",
     "sql:allow-load",
     "sql:allow-execute",
     "sql:allow-select",
     "dialog:default",
+    "http:default",
+    {
+      "identifier": "http:allow-fetch",
+      "allow": [
+        { "url": "https://image.tmdb.org/**" },
+        { "url": "https://*.tmdb.org/**" },
+        { "url": "https://covers.openlibrary.org/**" },
+        { "url": "https://*.openlibrary.org/**" }
+      ]
+    },
     "fs:default",
     "fs:scope-applocaldata-recursive",
     "fs:read-files",
@@ -20,7 +31,15 @@
       "allow": [
         { "path": "$APPLOCALDATA" },
         { "path": "$APPLOCALDATA/**" },
-        { "path": "$APPLOCALDATA/**/*" }
+        { "path": "$APPLOCALDATA/**/*" },
+        { "path": "$DOCUMENT" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOCUMENT/**/*" },
+        { "path": "$DOWNLOAD" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOWNLOAD/**/*" },
+        { "path": "/storage/emulated/0/**" },
+        { "path": "/storage/emulated/0/**/*" }
       ]
     },
     {
@@ -28,7 +47,15 @@
       "allow": [
         { "path": "$APPLOCALDATA" },
         { "path": "$APPLOCALDATA/**" },
-        { "path": "$APPLOCALDATA/**/*" }
+        { "path": "$APPLOCALDATA/**/*" },
+        { "path": "$DOCUMENT" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOCUMENT/**/*" },
+        { "path": "$DOWNLOAD" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOWNLOAD/**/*" },
+        { "path": "/storage/emulated/0/**" },
+        { "path": "/storage/emulated/0/**/*" }
       ]
     },
     {
@@ -36,7 +63,15 @@
       "allow": [
         { "path": "$APPLOCALDATA" },
         { "path": "$APPLOCALDATA/**" },
-        { "path": "$APPLOCALDATA/**/*" }
+        { "path": "$APPLOCALDATA/**/*" },
+        { "path": "$DOCUMENT" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOCUMENT/**/*" },
+        { "path": "$DOWNLOAD" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOWNLOAD/**/*" },
+        { "path": "/storage/emulated/0/**" },
+        { "path": "/storage/emulated/0/**/*" }
       ]
     },
     {
@@ -44,7 +79,15 @@
       "allow": [
         { "path": "$APPLOCALDATA" },
         { "path": "$APPLOCALDATA/**" },
-        { "path": "$APPLOCALDATA/**/*" }
+        { "path": "$APPLOCALDATA/**/*" },
+        { "path": "$DOCUMENT" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOCUMENT/**/*" },
+        { "path": "$DOWNLOAD" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOWNLOAD/**/*" },
+        { "path": "/storage/emulated/0/**" },
+        { "path": "/storage/emulated/0/**/*" }
       ]
     },
     {
@@ -54,7 +97,15 @@
         { "path": "$APPLOCALDATA/**" },
         { "path": "$APPLOCALDATA/**/*" },
         { "path": "$APPDATA/**" },
-        { "path": "$APPCACHE/**" }
+        { "path": "$APPCACHE/**" },
+        { "path": "$DOCUMENT" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOCUMENT/**/*" },
+        { "path": "$DOWNLOAD" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOWNLOAD/**/*" },
+        { "path": "/storage/emulated/0/**" },
+        { "path": "/storage/emulated/0/**/*" }
       ]
     }
   ]

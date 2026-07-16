@@ -1,4 +1,5 @@
 import { BaseDirectory, exists, mkdir, readFile, remove, writeFile } from "@tauri-apps/plugin-fs";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 const POSTERS_DIR = "posters";
 
@@ -22,10 +23,10 @@ export async function writeBytesUnderApp(relativePath: string, data: Uint8Array)
   await writeFile(relativePath, data, { baseDir: BaseDirectory.AppLocalData });
 }
 
-/** Descarga una URL de imagen y la guarda bajo BaseDirectory.AppLocalData. Devuelve ruta relativa. */
+/** Descarga una URL de imagen vía plugin-http (evita CORS del WebView) y la guarda bajo AppLocalData. */
 export async function downloadPosterToApp(remoteUrl: string, relativeDest: string): Promise<string> {
   await ensurePostersDir();
-  const res = await fetch(remoteUrl);
+  const res = await tauriFetch(remoteUrl);
   if (!res.ok) {
     throw new Error(`Poster: HTTP ${res.status}`);
   }

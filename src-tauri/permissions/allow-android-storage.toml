@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-android-storage"
+description = "Comprobar y solicitar acceso a todos los archivos (carpeta Syncthing en Android)."
+commands.allow = ["has_all_files_access", "request_all_files_access"]
