@@ -1,7 +1,8 @@
-import { join } from "@tauri-apps/api/path";
-import { readDir, readTextFile, remove } from "@tauri-apps/plugin-fs";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { SqlDb } from "$lib/db/catalog";
-import { parseMarkdownEntry } from "./parseMarkdown";
+import { syncCsvPath } from "./csvPath";
+import { readExistingSyncCsv } from "./mergeFromCsv";
+import { serializeSyncCsv, type SyncCsvRow } from "./parseCsv";
 import { resolveLocalEntry } from "./resolveLocalEntry";
 
 export type CleanRecycleResult = {
@@ -16,69 +17,73 @@ export type CleanRecyclePreview = {
   errors: string[];
 };
 
-async function scanTombstones(
+async function partitionTombstones(
   db: SqlDb,
   syncDir: string,
 ): Promise<
   | { ok: false; errors: string[] }
-  | { ok: true; toRemove: string[]; skipped: number; errors: string[] }
+  | { ok: true; keep: SyncCsvRow[]; removeCount: number; skipped: number; errors: string[] }
 > {
-  const libraryDir = await join(syncDir, "library");
   const errors: string[] = [];
-  const toRemove: string[] = [];
-  let skipped = 0;
-
-  let entries;
+  let rows: SyncCsvRow[];
   try {
-    entries = await readDir(libraryDir);
+    rows = await readExistingSyncCsv(syncDir);
   } catch (e) {
     return { ok: false, errors: [e instanceof Error ? e.message : String(e)] };
   }
 
-  for (const ent of entries) {
-    if (!ent.name?.endsWith(".md")) continue;
-    const filePath = await join(libraryDir, ent.name);
-    try {
-      const text = await readTextFile(filePath);
-      const parsed = parseMarkdownEntry(text);
-      if (!parsed.deleted) continue;
+  const keep: SyncCsvRow[] = [];
+  let removeCount = 0;
+  let skipped = 0;
 
-      const local = await resolveLocalEntry(db, parsed);
+  for (const row of rows) {
+    if (!row.deleted) {
+      keep.push(row);
+      continue;
+    }
+    try {
+      const local = await resolveLocalEntry(db, row);
       if (local) {
         skipped += 1;
+        keep.push(row);
         continue;
       }
-      toRemove.push(filePath);
+      removeCount += 1;
     } catch (e) {
-      errors.push(`${ent.name}: ${e instanceof Error ? e.message : String(e)}`);
+      errors.push(
+        `${row.source}/${row.external_id}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      keep.push(row);
     }
   }
 
-  return { ok: true, toRemove, skipped, errors };
+  return { ok: true, keep, removeCount, skipped, errors };
 }
 
 export async function previewCleanSyncRecycleBin(
   db: SqlDb,
   syncDir: string,
 ): Promise<CleanRecyclePreview> {
-  const scan = await scanTombstones(db, syncDir);
+  const scan = await partitionTombstones(db, syncDir);
   if (!scan.ok) return { eligible: 0, skipped: 0, errors: scan.errors };
-  return { eligible: scan.toRemove.length, skipped: scan.skipped, errors: scan.errors };
+  return { eligible: scan.removeCount, skipped: scan.skipped, errors: scan.errors };
 }
 
 export async function cleanSyncRecycleBin(db: SqlDb, syncDir: string): Promise<CleanRecycleResult> {
-  const scan = await scanTombstones(db, syncDir);
+  const scan = await partitionTombstones(db, syncDir);
   if (!scan.ok) return { removed: 0, skipped: 0, errors: scan.errors };
 
-  let removed = 0;
-  for (const filePath of scan.toRemove) {
-    try {
-      await remove(filePath);
-      removed += 1;
-    } catch (e) {
-      scan.errors.push(`${filePath}: ${e instanceof Error ? e.message : String(e)}`);
-    }
+  if (scan.removeCount === 0) {
+    return { removed: 0, skipped: scan.skipped, errors: scan.errors };
   }
 
-  return { removed, skipped: scan.skipped, errors: scan.errors };
+  try {
+    const path = await syncCsvPath(syncDir);
+    await writeTextFile(path, serializeSyncCsv(scan.keep));
+  } catch (e) {
+    scan.errors.push(e instanceof Error ? e.message : String(e));
+    return { removed: 0, skipped: scan.skipped, errors: scan.errors };
+  }
+
+  return { removed: scan.removeCount, skipped: scan.skipped, errors: scan.errors };
 }

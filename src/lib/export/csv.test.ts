@@ -36,7 +36,7 @@ describe("buildLibraryCsv", () => {
     const csv = await buildLibraryCsv(db as never);
     const lines = csv.split("\n");
     expect(lines[0]).toBe(
-      "shelfside_id,title,media_type,source,external_id,status,score,current_season,last_episode_watched,progress_current,progress_total,owned,started_at,completed_at,notes,image_url,catalog_updated_at,library_updated_at",
+      "shelfside_id,title,media_type,source,external_id,status,score,current_season,last_episode_watched,progress_current,progress_total,owned,started_at,completed_at,notes,image_url,catalog_updated_at,library_updated_at,deleted,deleted_at",
     );
     expect(lines[1]).toContain('"Título ""X"""');
     expect(lines[1]).toContain('"a, b"');

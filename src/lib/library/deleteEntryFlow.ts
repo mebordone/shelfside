@@ -1,6 +1,6 @@
 import { deleteLibraryEntry, getLibraryEntryById, type SqlDb } from "$lib/db";
 import { removePosterFile } from "$lib/poster";
-import { writeTombstoneToSyncFolder } from "$lib/sync/writeTombstone";
+import { writeTombstoneToSyncCsv } from "$lib/sync/writeTombstoneCsv";
 
 export async function deleteLibraryEntryWithAssets(
   db: SqlDb,
@@ -12,7 +12,7 @@ export async function deleteLibraryEntryWithAssets(
 
   const syncDir = options?.syncDir?.trim();
   if (syncDir) {
-    await writeTombstoneToSyncFolder(syncDir, row);
+    await writeTombstoneToSyncCsv(syncDir, row);
   }
 
   const posterPath = row.poster_local_path;

@@ -27,6 +27,8 @@ export const CSV_COLUMNS = [
   "image_url",
   "catalog_updated_at",
   "library_updated_at",
+  "deleted",
+  "deleted_at",
 ] as const;
 
 export async function buildLibraryCsv(db: SqlDb): Promise<string> {
@@ -57,6 +59,8 @@ export async function buildLibraryCsv(db: SqlDb): Promise<string> {
       r.image_url,
       catalogMap.get(r.catalog_item_id) ?? "",
       r.updated_at,
+      "false",
+      "",
     ];
     return fields.map(escapeCsvField).join(",");
   });

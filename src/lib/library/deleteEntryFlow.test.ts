@@ -14,8 +14,8 @@ vi.mock("$lib/poster", () => ({
   removePosterFile: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("$lib/sync/writeTombstone", () => ({
-  writeTombstoneToSyncFolder: vi.fn().mockResolvedValue(undefined),
+vi.mock("$lib/sync/writeTombstoneCsv", () => ({
+  writeTombstoneToSyncCsv: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("deleteLibraryEntryWithAssets", () => {
@@ -35,9 +35,9 @@ describe("deleteLibraryEntryWithAssets", () => {
     expect(removePosterFile).toHaveBeenCalledWith("posters/book_OL1M.jpg");
   });
 
-  it("escribe tombstone si hay carpeta sync", async () => {
+  it("escribe tombstone CSV si hay carpeta sync", async () => {
     const { getLibraryEntryById, deleteLibraryEntry } = await import("$lib/db");
-    const { writeTombstoneToSyncFolder } = await import("$lib/sync/writeTombstone");
+    const { writeTombstoneToSyncCsv } = await import("$lib/sync/writeTombstoneCsv");
     const row = {
       id: 5,
       catalog_item_id: 9,
@@ -65,7 +65,7 @@ describe("deleteLibraryEntryWithAssets", () => {
     const db = {} as never;
     await deleteLibraryEntryWithAssets(db, 5, { syncDir: "/sync" });
 
-    expect(writeTombstoneToSyncFolder).toHaveBeenCalledWith("/sync", row);
+    expect(writeTombstoneToSyncCsv).toHaveBeenCalledWith("/sync", row);
     expect(deleteLibraryEntry).toHaveBeenCalledWith(db, 5);
   });
 });

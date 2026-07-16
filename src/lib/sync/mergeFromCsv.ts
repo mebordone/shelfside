@@ -1,0 +1,229 @@
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import { findCatalogBySource, insertCatalogItem, type SqlDb } from "$lib/db/catalog";
+import { deleteLibraryEntry } from "$lib/db/library";
+import { isStatus, type LibraryListRow, type Status } from "$lib/db/types";
+import { mergeStatusTimestamps, normalizeScore } from "$lib/db/libraryRules";
+import { removePosterFile } from "$lib/poster";
+import { effectiveRemoteTime } from "./parseMarkdown";
+import { parseSyncCsv, type SyncCsvRow } from "./parseCsv";
+import { syncCsvPath } from "./csvPath";
+import { resolveLocalEntry } from "./resolveLocalEntry";
+import type { MergeResult } from "./mergeFromFolder";
+
+function compareUpdatedAt(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+function normalizeNotes(notes: string | null | undefined): string {
+  return (notes ?? "").trim();
+}
+
+function remoteEntryDiffersFromLocal(local: LibraryListRow, remote: SyncCsvRow): boolean {
+  const remoteStatus: string = isStatus(remote.status) ? remote.status : local.status;
+
+  if (remoteStatus !== local.status) return true;
+  if (normalizeScore(remote.score) !== normalizeScore(local.score)) return true;
+  if (remote.current_season !== local.current_season) return true;
+  if (remote.last_episode_watched !== local.last_episode_watched) return true;
+  if (remote.progress_current !== local.progress_current) return true;
+  if (remote.progress_total !== local.progress_total) return true;
+  if ((remote.owned ?? null) !== (local.owned ?? null)) return true;
+  if ((remote.started_at ?? null) !== (local.started_at ?? null)) return true;
+  if ((remote.completed_at ?? null) !== (local.completed_at ?? null)) return true;
+  if (normalizeNotes(remote.notes) !== normalizeNotes(local.notes)) return true;
+  if (remote.title !== local.title) return true;
+  if ((remote.image_url ?? null) !== (local.image_url ?? null)) return true;
+
+  return false;
+}
+
+function shouldApplyRemote(local: LibraryListRow | null, remote: SyncCsvRow): boolean {
+  if (remote.deleted) {
+    if (!local) return false;
+    const remoteTime = effectiveRemoteTime(remote);
+    return compareUpdatedAt(remoteTime, local.updated_at) > 0;
+  }
+  if (!local) return true;
+  if (compareUpdatedAt(remote.updated_at, local.updated_at) > 0) return true;
+  if (compareUpdatedAt(remote.updated_at, local.updated_at) < 0) return false;
+  return remoteEntryDiffersFromLocal(local, remote);
+}
+
+async function updateLocalFromRemote(
+  db: SqlDb,
+  local: LibraryListRow,
+  remote: SyncCsvRow,
+): Promise<void> {
+  const status: Status = isStatus(remote.status) ? remote.status : (local.status as Status);
+  const { started_at, completed_at } = mergeStatusTimestamps(
+    local.status as Status,
+    status,
+    { started_at: local.started_at, completed_at: local.completed_at },
+    remote.updated_at,
+  );
+  await db.execute(
+    `UPDATE catalog_item SET title = $1, image_url = $2, updated_at = $3 WHERE id = $4`,
+    [remote.title, remote.image_url, remote.catalog_updated_at ?? remote.updated_at, local.catalog_item_id],
+  );
+  await db.execute(
+    `UPDATE library_entry SET
+       status = $1, score = $2, notes = $3, current_season = $4, last_episode_watched = $5,
+       progress_current = $6, progress_total = $7, owned = $8,
+       started_at = $9, completed_at = $10, updated_at = $11
+     WHERE id = $12`,
+    [
+      status,
+      normalizeScore(remote.score),
+      remote.notes || null,
+      remote.current_season,
+      remote.last_episode_watched,
+      remote.progress_current,
+      remote.progress_total,
+      remote.owned,
+      started_at,
+      completed_at,
+      remote.updated_at,
+      local.id,
+    ],
+  );
+}
+
+async function applyRemoteEntry(
+  db: SqlDb,
+  remote: SyncCsvRow,
+  local: LibraryListRow | null,
+): Promise<"inserted" | "updated"> {
+  if (local) {
+    await updateLocalFromRemote(db, local, remote);
+    return "updated";
+  }
+
+  const catalog = await findCatalogBySource(db, remote.source, remote.external_id, remote.media_type);
+  let catalogId: number;
+  if (catalog) {
+    catalogId = catalog.id;
+    await db.execute(
+      `UPDATE catalog_item SET title = $1, image_url = $2, updated_at = $3 WHERE id = $4`,
+      [remote.title, remote.image_url, remote.catalog_updated_at ?? remote.updated_at, catalogId],
+    );
+  } else {
+    catalogId = await insertCatalogItem(db, {
+      media_type: remote.media_type,
+      source: remote.source,
+      external_id: remote.external_id,
+      title: remote.title,
+      image_url: remote.image_url,
+    });
+  }
+
+  const status = isStatus(remote.status) ? remote.status : "planning";
+  const { started_at, completed_at } = mergeStatusTimestamps(
+    "planning",
+    status,
+    { started_at: null, completed_at: null },
+    remote.updated_at,
+  );
+
+  await db.execute(
+    `INSERT INTO library_entry (
+       id, catalog_item_id, status, score, notes, current_season, last_episode_watched,
+       progress_current, progress_total, owned, started_at, completed_at, updated_at
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    [
+      remote.shelfside_id,
+      catalogId,
+      status,
+      normalizeScore(remote.score),
+      remote.notes || null,
+      remote.current_season,
+      remote.last_episode_watched,
+      remote.progress_current,
+      remote.progress_total,
+      remote.owned,
+      started_at,
+      completed_at,
+      remote.updated_at,
+    ],
+  );
+  return "inserted";
+}
+
+async function applyRemoteTombstone(db: SqlDb, local: LibraryListRow): Promise<void> {
+  const posterPath = local.poster_local_path;
+  await deleteLibraryEntry(db, local.id);
+  await removePosterFile(posterPath);
+}
+
+async function mergeOneRow(db: SqlDb, remote: SyncCsvRow, result: MergeResult): Promise<void> {
+  const local = await resolveLocalEntry(db, remote);
+
+  if (remote.deleted) {
+    if (!local) {
+      result.skipped += 1;
+      return;
+    }
+    if (!shouldApplyRemote(local, remote)) {
+      result.skipped += 1;
+      return;
+    }
+    await applyRemoteTombstone(db, local);
+    result.deleted += 1;
+    return;
+  }
+
+  if (!shouldApplyRemote(local, remote)) {
+    result.skipped += 1;
+    return;
+  }
+  const outcome = await applyRemoteEntry(db, remote, local);
+  if (outcome === "inserted") result.imported += 1;
+  else result.updated += 1;
+}
+
+export async function readExistingSyncCsv(syncDir: string): Promise<SyncCsvRow[]> {
+  const path = await syncCsvPath(syncDir);
+  try {
+    if (!(await exists(path))) return [];
+    const text = await readTextFile(path);
+    if (!text.trim()) return [];
+    return parseSyncCsv(text);
+  } catch {
+    return [];
+  }
+}
+
+export async function mergeFromSyncCsv(db: SqlDb, syncDir: string): Promise<MergeResult> {
+  const result: MergeResult = { imported: 0, updated: 0, deleted: 0, skipped: 0, errors: [] };
+  const path = await syncCsvPath(syncDir);
+
+  let text: string;
+  try {
+    if (!(await exists(path))) return result;
+    text = await readTextFile(path);
+  } catch (e) {
+    result.errors.push(e instanceof Error ? e.message : String(e));
+    return result;
+  }
+
+  if (!text.trim()) return result;
+
+  let rows: SyncCsvRow[];
+  try {
+    rows = parseSyncCsv(text);
+  } catch (e) {
+    result.errors.push(e instanceof Error ? e.message : String(e));
+    return result;
+  }
+
+  for (const remote of rows) {
+    try {
+      await mergeOneRow(db, remote, result);
+    } catch (e) {
+      result.errors.push(
+        `${remote.source}/${remote.external_id}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  return result;
+}

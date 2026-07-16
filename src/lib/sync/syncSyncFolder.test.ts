@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import * as exportSync from "./exportToSyncFolder";
-import * as mergeMod from "./mergeFromFolder";
+import * as exportCsv from "./exportToSyncCsv";
+import * as mergeCsv from "./mergeFromCsv";
 import { syncSyncFolder } from "./syncSyncFolder";
 
 describe("syncSyncFolder", () => {
-  it("importa antes de exportar", async () => {
+  it("importa CSV antes de exportar CSV", async () => {
     const order: string[] = [];
-    vi.spyOn(mergeMod, "mergeFromSyncFolder").mockImplementation(async () => {
+    vi.spyOn(mergeCsv, "mergeFromSyncCsv").mockImplementation(async () => {
       order.push("merge");
       return { imported: 1, updated: 2, deleted: 0, skipped: 3, errors: [] };
     });
-    vi.spyOn(exportSync, "exportToSyncFolder").mockImplementation(async () => {
+    vi.spyOn(exportCsv, "exportToSyncCsv").mockImplementation(async () => {
       order.push("export");
       return 6;
     });
