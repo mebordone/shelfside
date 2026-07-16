@@ -75,18 +75,18 @@
 </script>
 
 {#if bootError}
-  <div class="flex min-h-screen items-center justify-center p-6">
+  <div class="flex min-h-screen items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top,0px))]">
     <p class="max-w-md text-center text-red-600 dark:text-red-400">{bootError}</p>
   </div>
 {:else if !ready}
-  <div class="flex min-h-screen items-center justify-center p-6">
+  <div class="flex min-h-screen items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top,0px))]">
     <p class="text-zinc-500 dark:text-zinc-400">{t("home.loading")}</p>
   </div>
 {:else}
   {#key appLocale.current}
-  <div class="flex min-h-screen flex-col">
+  <div class="flex min-h-screen flex-col pb-[env(safe-area-inset-bottom,0px)]">
     <nav
-      class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 border-b border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
+      class="flex w-full flex-wrap items-start gap-x-3 gap-y-1 border-b border-zinc-200 bg-zinc-50 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] dark:border-zinc-800 dark:bg-zinc-950"
       aria-label={t("nav.aria")}
     >
       <a
