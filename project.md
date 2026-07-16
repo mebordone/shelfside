@@ -174,8 +174,8 @@ Cortes semver en [`roadmap.md`](./roadmap.md) Release 4: **`v0.4.0`–`v0.4.6`**
 
 - **Tauri Android** (APK sideload; sin Play Store; software libre de uso personal).
 - **Paridad** con desktop en pantallas existentes; navegación móvil con **barra inferior** (Inicio · Biblioteca · Buscar · Más).
-- Validación de plugins (`sql`, `fs`, `dialog`) en Android; carpeta sync por **diálogo** o **ruta escrita** con validación.
-- **Sync por carpeta** (Syncthing / Nextcloud): merge al **abrir** (toast + resumen; toggle en Ajustes) y botón manual; SQLite **solo local** (no replicar el `.db` vivo).
+- Validación de plugins (`sql`, `fs`, `dialog`, `http`) en Android; carpeta sync por **ruta escrita** (en móvil el folder picker de Tauri no está disponible) con validación, auto-subcarpeta `shelfside/` y permiso de acceso a archivos cuando hace falta.
+- **Sync por carpeta** (Syncthing / Nextcloud) sobre un **archivo CSV** (desde `v0.4.1`): merge LWW al **abrir** (toast + resumen; toggle en Ajustes) y botón manual; SQLite **solo local** (no replicar el `.db` vivo). El **Markdown** pasa a export de solo lectura (Obsidian/Joplin). Ver §8.
 - **B1** UUID para manuales nuevos en **`v0.4.0`**.
 - Opcional: episodio a episodio o etiquetas/listas si el uso lo pide.
 
@@ -255,9 +255,17 @@ Resumen único para implementar sin reabrir discusiones. Todas las preguntas est
 
 ### Exportación, portable, offline
 
-- Export mínimo v1: **CSV** y **Markdown** (carpeta, un `.md` por ítem de biblioteca).  
-- **Markdown (Obsidian / Joplin / sync):** carpeta de sincronización persistida (`localStorage`); un `.md` por ítem en `library/`; frontmatter YAML con **`shelfside_id`** y **`updated_at`**; cuerpo = `notes`. **Release 3 (v0.3.x):** export + import/merge en desktop (altas/ediciones, last-write-wins; **sin** propagar borrados). **Backlog 3.3 B3a–B3b:** tombstone `deleted: true` al quitar de biblioteca (papelera en disco) + botón «Limpiar papelera» (borrar esos `.md` solo si ya no hay entrada local); ver `roadmap.md`. **CSV y backup:** diálogo «Guardar como…» cada vez. **Release 4:** mismo flujo MD en Android. Posters: no embebidos; opcional `image_url` en frontmatter.
-- **Sync entre PC y celu:** carpeta replicada por **Syncthing** o **Nextcloud**; Shelfside no implementa red — solo lee/escribe archivos. **No** usar el archivo `shelfside.db` como artefacto sincronizado entre dispositivos.
+**Roles de artefacto (decisión `v0.4.1+`):** separar **sync/backup de datos** (máquina ↔ máquina) del **export para vault** (humano).
+
+| Artefacto | Rol | Notas |
+|-----------|-----|-------|
+| **CSV** (un archivo, p. ej. `shelfside.csv` en la carpeta sync) | **Sync + backup entre dispositivos** | Merge **LWW** por fila; identidad por catálogo (`source`+`external_id`+`media_type`) y manuales por `external_id` UUID; tombstones = columnas `deleted` / `deleted_at`. **Shelfside es el único que lo escribe.** Columnas en README. |
+| **Markdown** (`library/*.md`, frontmatter YAML, cuerpo = `notes`) | **Export de solo lectura** (Obsidian / Joplin) | One-way; opcional «Importar Markdown» **puntual** para migrar v0.3.x → CSV. **No** es canal de sync automático. |
+| **`.sqlite`** | **Backup catastrófico local** | Copia fiel de la DB desde Configuración; no es artefacto multi-dispositivo. |
+
+- **Historia:** en **Release 3 / 3.3 (v0.3.x)** el **Markdown** fue el canal de sync (export + import/merge LWW, tombstones B3). Desde **`v0.4.1`** ese rol pasa al **CSV**; el motor de merge (`src/lib/sync/`) se **porta** de filas Markdown a filas CSV y el Markdown queda como export. Ver `roadmap.md` (Release 4 → «Cambio de protocolo de sync/backup»).
+- **CSV y backup:** el **CSV de sync** vive en la carpeta sincronizada (Shelfside lo lee/escribe en cada sync). El **backup `.sqlite`** y el **export Markdown** usan diálogo «Guardar como…» cada vez. Posters: no embebidos; opcional `image_url` como columna CSV / frontmatter.
+- **Sync entre PC y celu:** carpeta replicada por **Syncthing** o **Nextcloud** que contiene el **CSV**; Shelfside no implementa red — solo lee/escribe el archivo. **No** usar `shelfside.db` como artefacto sincronizado entre dispositivos. Disciplina ante conflictos: sync en la app → esperar a que Syncthing replique → sync en el otro dispositivo (LWW por fila resuelve el resto).
 - **Reiniciar datos:** borra **todo** el contenido de usuario: tablas de biblioteca/catálogo (vía SQL o borrado de `shelfside.db` + migraciones) y archivos en `posters/` bajo `app_data_dir()`. Requiere confirmación explícita en UI.
 - **Portable:** datos en SQLite + caché en `app_data_dir()`; respaldo = copiar `shelfside.db` o carpeta de datos desde **Configuración**.
 - **Offline:** ver y editar la biblioteca y posters en caché; **búsqueda** de obras nuevas requiere red.

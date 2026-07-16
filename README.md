@@ -217,9 +217,14 @@ Incluye **películas, series TV y libros** (TMDB + Open Library + alta manual).
 ## Release 3 — Configuración, export y estadísticas (`v0.3.0`)
 
 - **Rutas:** `/settings` (tema, idioma es/en, datos, sync, export CSV, backup DB, reinicio de fábrica), `/stats` (conteos por estado y tipo).
-- **Sync Markdown (Syncthing):** en Ajustes, definí la carpeta de sincronización y usá **Sincronizar carpeta**: primero fusiona los `.md` que Syncthing/Nextcloud replicaron, luego reescribe los archivos con el estado local. Quitar de biblioteca escribe un tombstone (`deleted: true`) en la carpeta sync; el otro PC lo aplica al sincronizar si el borrado es más reciente (LWW). **Limpiar papelera de sync** elimina esos `.md` del disco solo cuando ya no están en tu biblioteca local (hacelo cuando todos los dispositivos sincronizaron). La misma obra se alinea por catálogo aunque el `shelfside_id` difiera entre PCs. No sincroniza el `.sqlite`. Exportar/Importar por separado siguen disponibles para depuración.
-- **CSV y backup:** diálogo «Guardar como…» cada vez (`library.csv`, `shelfside-YYYY-MM-DD-HHmm.db`).
-- **CSV columnas:** `shelfside_id`, `title`, `media_type`, `source`, `external_id`, `status`, `score`, `current_season`, `last_episode_watched`, `progress_current`, `progress_total`, `owned`, `started_at`, `completed_at`, `notes`, `image_url`, `catalog_updated_at`, `library_updated_at`.
+> **Protocolo actual (`v0.4.1+`):** el **canal de sincronización es el archivo `shelfside.csv`** en la carpeta sync. El **Markdown** es export de solo lectura (Obsidian/Joplin) o import puntual de migración. Ver [roadmap.md](./roadmap.md) → Release 4 «Cambio de protocolo de sync/backup».
+
+- **Sync CSV (Syncthing):** en Ajustes, elegí o escribí la carpeta Syncthing (p. ej. `~/Sync`). Si no termina en `shelfside`, la app crea y usa `…/shelfside` automáticamente (así el CSV no se mezcla con otras notas). Al salir del campo o al elegir carpeta se persiste; no hace falta un botón Guardar. Luego **Sincronizar** importa/merge desde `shelfside.csv` y reexporta el estado local. Quitar de biblioteca escribe una fila tombstone (`deleted=true`) en el CSV; el otro dispositivo lo aplica al sincronizar si el borrado es más reciente (LWW). **Limpiar papelera** quita esas filas del CSV solo cuando ya no están en tu biblioteca local. No sincroniza el `.sqlite`.
+- **Markdown:** Exportar Markdown crea `library/*.md` (Obsidian). Importar Markdown fusiona `.md` antiguos (migración desde v0.3.x).
+- **CSV one-shot y backup:** diálogo «Guardar como…» (`library.csv`, `shelfside-YYYY-MM-DD-HHmm.db`).
+- **CSV columnas (sync/export):** `shelfside_id`, `title`, `media_type`, `source`, `external_id`, `status`, `score`, `current_season`, `last_episode_watched`, `progress_current`, `progress_total`, `owned`, `started_at`, `completed_at`, `notes`, `image_url`, `catalog_updated_at`, `library_updated_at`, `deleted`, `deleted_at`.
+
+**Android:** el selector de carpeta no está disponible (limitación de Tauri). La ruta típica `/storage/emulated/0/Sync` viene precargada; la app usa `…/Sync/shelfside`. Concedé **Acceso a todos los archivos** cuando la app lo pida.
 
 ---
 

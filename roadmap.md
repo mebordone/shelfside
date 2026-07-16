@@ -12,7 +12,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | 3.1 — Idioma de catálogo | `v0.3.1` | Entregado |
 | 3.2 — Consolidación pre-4.0 | `v0.3.2` | Entregado |
 | 3.3 — Sync Markdown entre escritorios | `v0.3.3` | Entregado |
-| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.0` entregado**; sigue `v0.4.1`) |
+| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.1` entregado**; sigue `v0.4.2`) |
 | 5 — Anime y juegos | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
 | 7 — Backlog y expansión | `v0.7.0+` | Sin versión fija |
@@ -88,9 +88,11 @@ Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri):
 
 ## Release 3.3 — Sync Markdown entre escritorios · `v0.3.3`
 
+> **Nota (v0.4.1+):** el **rol de sync** del Markdown queda **superado** por el **CSV** (ver «Cambio de protocolo de sync/backup» en Release 4). Lo entregado en R3.3 sigue siendo válido y es la base del motor LWW/merge/tombstones que se **porta** a CSV; el Markdown pasa a **export de solo lectura** (Obsidian/Joplin). Esta sección se conserva como registro histórico del diseño del merge.
+
 **Objetivo:** usar **dos instancias desktop** (y luego Android en R4) con la misma carpeta Syncthing/Nextcloud, sin duplicar obras de catálogo ni depender de recordar export/import por separado.
 
-**Transporte:** Syncthing (o copia manual de carpeta); Shelfside **no** replica `shelfside.db` vivo. Protocolo: `library/{slug}-{id}.md` + frontmatter YAML.
+**Transporte:** Syncthing (o copia manual de carpeta); Shelfside **no** replica `shelfside.db` vivo. Protocolo (histórico): `library/{slug}-{id}.md` + frontmatter YAML; desde v0.4.1 el mismo modelo de merge opera sobre un **CSV**.
 
 ### Base ya cubierta (`v0.3.2` y trabajo en curso)
 
@@ -130,7 +132,7 @@ Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri):
 | B4 | Aviso **`*.sync-conflict`** | Detectar archivos de conflicto Syncthing en la carpeta sync y mostrar aviso (no merge automático). |
 | B5 | Renombrar archivos por clave de catálogo (opcional) | p. ej. incluir `external_id` en el nombre; solo si A1 no alcanza para evitar dos `.md` de la misma obra en disco. **Pospuesto** mientras import dedupe por catálogo. |
 
-**Fuera de alcance en 3.3:** sync en tiempo real; import bidireccional desde CSV; replicar SQLite por la carpeta sync.
+**Fuera de alcance en 3.3:** sync en tiempo real; import bidireccional desde CSV (**se retoma como canal principal en `v0.4.1`**); replicar SQLite por la carpeta sync.
 
 **Criterio de cierre Release 3.3:** Fase A cerrada; B2 hecho o pospuesto; B1 pasa a **`v0.4.0`**; B3a–B5 en backlog documentado (tabla «Después» arriba o Release 7).
 
@@ -140,24 +142,39 @@ Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri):
 
 **Objetivo:** mismo producto en el celular (uso personal, **software libre**, **sin Play Store**) y biblioteca alineada con el escritorio vía **carpeta compartida** (Syncthing / Nextcloud), sin servidor propio. **Paridad funcional** con desktop en las pantallas ya existentes (no anime/juegos hasta Release 5).
 
-**Dependencias:** motor de sync y contrato `.md` cerrados en **Release 3.3** (Fase A). No reimplementar merge en Android: reutilizar `src/lib/sync/` y `src/lib/export/markdown.ts`.
+### Cambio de protocolo de sync/backup (desde `v0.4.1`)
+
+**Decisión (reemplaza el rol de sync del Markdown definido en R3.3):**
+
+| Artefacto | Rol desde `v0.4.1` |
+|-----------|--------------------|
+| **CSV** (un archivo, p. ej. `shelfside.csv` en la carpeta sync) | **Canal de sincronización y backup** máquina ↔ máquina. Merge **LWW** por fila; identidad por catálogo (`source`+`external_id`+`media_type`) y manuales por `external_id` UUID (B1). Tombstones = columna `deleted` / `deleted_at`. **Shelfside es el único que escribe** este archivo (el usuario no lo edita a mano salvo emergencia). |
+| **Markdown** (`library/*.md`) | **Export de solo lectura** para Obsidian / Joplin. One-way; opcional «Importar Markdown» **puntual** (migración), **no** canal de sync automático. |
+| **`.sqlite`** | **Backup catastrófico local** (copia fiel de la DB); no es artefacto multi-dispositivo. |
+
+**Motivación:** un solo archivo simplifica el sync en Android (path a archivo vs `readDir` de carpeta), reduce conflictos Syncthing por-ítem y separa audiencias (sync de datos ≠ vault Obsidian). **Contra asumido:** cualquier cambio reescribe el CSV completo y un conflicto Syncthing afecta todo el archivo → disciplina de orden (sync app → esperar Syncthing → sync en el otro dispositivo) y LWW por fila al re-importar.
+
+**Impacto:** el motor LWW / merge por catálogo / tombstones de `src/lib/sync/` se **porta** de filas Markdown a filas CSV; `src/lib/export/markdown.ts` queda como export (y opcional import de migración). Ver §8 de [`project.md`](./project.md).
+
+**Dependencias:** lógica de merge (LWW, identidad por catálogo, tombstones) cerrada en **Release 3.3** (Fase A / B3). No reimplementar el merge en Android: reutilizar `src/lib/sync/` portándolo al formato CSV.
 
 **Decisiones de producto (cerradas):**
 
 | Tema | Decisión |
 |------|----------|
 | Alcance | **Paridad** con desktop (biblioteca, búsqueda, manual, stats, settings, export/backup donde el SO lo permita) |
+| Formato sync/backup | **CSV** (un archivo) como canal de sync y backup; **Markdown** pasa a export solo lectura (Obsidian). Ver «Cambio de protocolo» arriba |
 | Sync al abrir | **Automático** tras migraciones si hay carpeta sync; **toast** con resumen (`formatSyncSummary`); toggle en Ajustes para desactivar y usar solo sync manual |
-| Carpeta sync | **Elegir carpeta** (diálogo) **y** editar ruta **escribiendo** con validación (existencia / lectura de `library/`); misma UX en desktop y Android |
+| Carpeta sync | **Elegir carpeta** (diálogo) **y** editar ruta **escribiendo** con validación (existencia / lectura del CSV o creación); misma UX en desktop y Android |
 | Navegación móvil | **Barra inferior** (Inicio · Biblioteca · Buscar · Más); «Más» agrupa Ajustes, Estadísticas y Alta manual; nav superior solo en viewport ancho (desktop) |
 | Manuales multi-dispositivo | **B1** — UUID `external_id` al crear manual (antes o en el primer corte de R4) |
 | Entorno | Host Linux **sin** SDK Android hoy → **`v0.4.0`** documenta instalación; APK **arm64** para **dispositivo físico** (sideload / `adb`) |
 
-**Fuera de alcance en Release 4:** Play Store; sync en tiempo real; replicar `shelfside.db` por Syncthing; búsqueda/alta de **anime** y **juegos** (Release 5 — los `.md` existentes sí se importan).
+**Fuera de alcance en Release 4:** Play Store; sync en tiempo real; replicar `shelfside.db` por Syncthing; búsqueda/alta de **anime** y **juegos** (Release 5 — las filas CSV existentes sí se importan).
 
 **Opcional si no entró en 3.3:** B4 `*.sync-conflict`; `activity_log`; etiquetas/listas.
 
-**Criterio de cierre Release 4 (tag `v0.4.6`):** APK release instala en celular físico; paridad de flujos; sync manual y automático (con toggle); carpeta sync por diálogo o texto validado; roundtrip PC ↔ Syncthing ↔ Android verificado y documentado.
+**Criterio de cierre Release 4 (tag `v0.4.6`):** APK release instala en celular físico; paridad de flujos; sync manual y automático (con toggle) **sobre CSV**; carpeta sync por diálogo o texto validado; roundtrip PC ↔ Syncthing ↔ Android (CSV) verificado y documentado; export Markdown para Obsidian sigue disponible.
 
 ---
 
@@ -188,15 +205,19 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 
 ---
 
-#### `v0.4.1` — Plugins FS + carpeta sync + sync manual
+#### `v0.4.1` — Sync CSV + carpeta sync + plugins FS
+
+**Cambio de formato:** el sync pasa de `library/*.md` a **un archivo CSV** (ver «Cambio de protocolo» al inicio de Release 4). El Markdown queda como export solo lectura.
 
 | Id | Entregable | Notas |
 |----|------------|--------|
-| 4.1a | **Permisos `fs` / `dialog` Android** | Scopes Syncthing; **selector de carpeta** (hoy falla en móvil); posters TMDB sin CORS (descarga local) |
-| 4.1b | **Carpeta sync: elegir + escribir** | Diálogo donde exista; **campo texto obligatorio en Android**; validación `library/` |
-| 4.1c | **Sync manual en Android** | Botón «Sincronizar carpeta» en Ajustes llama a `syncSyncFolder`; resumen visible (no solo toast) |
+| 4.1a | **Motor de merge sobre CSV** | **Hecho:** `parseCsv` / `mergeFromCsv` / `exportToSyncCsv` / tombstones / clean + tests |
+| 4.1b | **Permisos `fs` / `dialog` Android** | **Hecho:** scopes Syncthing + `plugin-http` posters TMDB |
+| 4.1c | **Carpeta/archivo sync: elegir + escribir** | **Hecho:** campo texto + validación + auto-`shelfside/`; en Android sin picker (ruta precargada + permiso archivos) |
+| 4.1d | **Sync manual en Android** | **Hecho:** botón Sync → CSV; resumen `formatSyncSummary`; roundtrip PC↔Syncthing↔S23 |
+| 4.1e | **Markdown = export** | **Hecho:** export/import MD desacoplados del sync |
 
-**Cierre `v0.4.1`:** en el celu podés fijar la carpeta Syncthing y sincronizar a mano con el mismo merge que en Linux.
+**Cierre `v0.4.1`:** en el celu podés fijar la carpeta Syncthing y sincronizar a mano contra el **CSV** con el mismo merge que en Linux; el export Markdown sigue disponible para Obsidian. **Verificado en dispositivo** (Samsung S23, sync manual CSV).
 
 ---
 
@@ -204,7 +225,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 
 | Id | Entregable | Notas |
 |----|------------|--------|
-| 4.2a | **Sync al iniciar** | Tras `runMigrations` en layout: si hay carpeta sync y toggle activo → `syncSyncFolder` (no bloquear UI: loading sutil o banner) |
+| 4.2a | **Sync al iniciar** | Tras `runMigrations` en layout: si hay carpeta sync y toggle activo → sync del CSV (no bloquear UI: loading sutil o banner) |
 | 4.2b | **Toast de resultado** | Éxito/error con texto de `formatSyncSummary`; errores de red/fs no silenciosos |
 | 4.2c | **Ajustes: «Sincronizar al abrir»** | `localStorage` (p. ej. `shelfside-sync-on-start`); default **on** si ya hay carpeta; desactivado = solo sync manual |
 | 4.2d | **Paridad desktop** | Misma lógica en Linux (no solo Android) |
@@ -245,7 +266,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | 4.5a | **Búsqueda TMDB + Open Library** | Misma UX que desktop; teclado, paginación, añadir con estado |
 | 4.5b | **Alta manual** | Formulario + imagen; UUID B1 |
 | 4.5c | **`/stats`** | Conteos y gráficos livianos legibles en móvil |
-| 4.5d | **Export CSV / backup DB** | Diálogo «Guardar como…» donde Android lo permita; mensajes si no hay permiso |
+| 4.5d | **Export Markdown / backup DB** | Export MD (Obsidian) y backup `.sqlite` con diálogo «Guardar como…» donde Android lo permita; mensajes si no hay permiso. (El CSV de sync se gestiona en la carpeta sync, no aquí) |
 
 **Cierre `v0.4.5`:** paridad funcional con desktop (salvo anime/juegos).
 
@@ -256,7 +277,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | Id | Entregable | Notas |
 |----|------------|--------|
 | 4.6a | **APK release** | `tauri android build` → APK firmado o debug estable; sideload en dispositivo físico |
-| 4.6b | **Guía PC ↔ Syncthing ↔ celu** | README: instalar Syncthing en ambos, carpeta compartida, orden recomendado (sync PC → esperar → abrir app en celu) |
+| 4.6b | **Guía PC ↔ Syncthing ↔ celu** | README: instalar Syncthing en ambos, carpeta compartida con el **CSV**, orden recomendado (sync PC → esperar → abrir app en celu); nota sobre export Markdown para Obsidian |
 | 4.6c | **Pulido** | Errores API visibles; no bloquear arranque si sync falla; prueba tombstones B3 si está en rama |
 | 4.6d | **CHANGELOG + versión** | `package.json` / `tauri.conf.json` → `0.4.6`; entrada en CHANGELOG |
 
@@ -269,7 +290,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | Versión | Foco |
 |---------|------|
 | `v0.4.0` | Toolchain, B1 UUID, primer APK |
-| `v0.4.1` | Carpeta sync + sync manual |
+| `v0.4.1` | Sync CSV + carpeta sync + sync manual (MD → export) |
 | `v0.4.2` | Sync al abrir + toast + toggle |
 | `v0.4.3` | Bottom nav + responsive shell |
 | `v0.4.4` | Biblioteca + detalle |

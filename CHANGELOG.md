@@ -4,6 +4,30 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-07-16
+
+### Añadido
+
+- **Sync CSV:** canal de sincronización `shelfside.csv` (merge LWW, tombstones `deleted`/`deleted_at`, limpiar papelera).
+- Campo de **ruta sync editable** en Ajustes (+ validación). Si la ruta no termina en `shelfside/`, la app crea y usa esa subcarpeta automáticamente.
+- En Android: ruta Syncthing precargada (`/storage/emulated/0/Sync`), permiso **Acceso a todos los archivos** (`MANAGE_EXTERNAL_STORAGE` + plugin nativo), sin selector de carpeta (no soportado por Tauri).
+- Permisos FS Android ampliados (`$DOCUMENT`, `$DOWNLOAD`, `/storage/emulated/0/**`) y `plugin-http` para descargar posters sin CORS del WebView.
+- Safe-area en la barra de navegación (evita solaparse con la barra de estado en Android edge-to-edge).
+
+### Cambiado
+
+- Botón **Sincronizar** opera sobre CSV (ya no sobre `library/*.md`); al sincronizar aplica el borrador de ruta si aún no había carpeta activa.
+- Tombstones al quitar de biblioteca se escriben en el CSV.
+- Export/Import **Markdown** quedan para Obsidian / migración («Más opciones»).
+- Resumen de sync más claro: del CSV (nuevas/actualizadas/…) y luego reescritura del CSV con el estado completo.
+- Textos i18n de sync actualizados.
+
+### Notas
+
+- Migración desde sync MD v0.3.x: «Importar Markdown» una vez y luego sync CSV.
+- **QA:** roundtrip PC ↔ Syncthing ↔ Android (Samsung S23) verificado con sync manual del CSV.
+- En Android concedé acceso a archivos cuando la app lo pida; el APK de depuración puede mostrar aviso de alineación 16 KB (no bloquea el uso).
+
 ## [0.4.0] — 2026-05-25
 
 ### Añadido
