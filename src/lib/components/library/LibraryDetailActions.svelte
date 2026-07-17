@@ -87,7 +87,7 @@
 </div>
 
 {#if deleteConfirmOpen}
-  <section
+  <div
     class="rounded-md border border-red-200 bg-red-50/80 p-4 text-sm dark:border-red-900 dark:bg-red-950/30"
     role="alertdialog"
     aria-labelledby="delete-confirm-title"
@@ -113,5 +113,5 @@
         {t("common.cancel")}
       </button>
     </div>
-  </section>
+  </div>
 {/if}

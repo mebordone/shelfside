@@ -4,12 +4,15 @@
 use serde::{Deserialize, Serialize};
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    AppHandle, Manager, Runtime,
+    AppHandle, Runtime,
 };
+#[cfg(target_os = "android")]
+use tauri::Manager;
 
 #[cfg(target_os = "android")]
 pub struct AndroidStorageState<R: Runtime>(pub tauri::plugin::PluginHandle<R>);
 
+#[cfg(target_os = "android")]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GrantedResponse {
