@@ -12,7 +12,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | 3.1 — Idioma de catálogo | `v0.3.1` | Entregado |
 | 3.2 — Consolidación pre-4.0 | `v0.3.2` | Entregado |
 | 3.3 — Sync Markdown entre escritorios | `v0.3.3` | Entregado |
-| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.4` entregado**; sigue `v0.4.5`) |
+| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | **Entregado (`v0.4.6`)** |
 | 5 — Anime y juegos | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
 | 7 — Backlog y expansión | `v0.7.0+` | Sin versión fija |
@@ -263,27 +263,41 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 
 ---
 
-#### `v0.4.5` — Paridad: búsqueda, manual, stats, datos
+#### `v0.4.5` — Paridad: búsqueda, manual, stats, datos ✅
 
 | Id | Entregable | Notas |
 |----|------------|--------|
-| 4.5a | **Búsqueda TMDB + Open Library** | Misma UX que desktop; teclado, paginación, añadir con estado |
-| 4.5b | **Alta manual** | Formulario + imagen; UUID B1 |
-| 4.5c | **`/stats`** | Conteos y gráficos livianos legibles en móvil |
-| 4.5d | **Export Markdown / backup DB** | Export MD (Obsidian) y backup `.sqlite` con diálogo «Guardar como…» donde Android lo permita; mensajes si no hay permiso. (El CSV de sync se gestiona en la carpeta sync, no aquí) |
+| 4.5a | **Búsqueda TMDB + Open Library** | ✅ Teclado, targets, detalle full-width móvil |
+| 4.5b | **Alta manual** | ✅ Sticky Guardar, touch, mensaje imagen Android |
+| 4.5c | **`/stats`** | ✅ Barras legibles + empty CTAs |
+| 4.5d | **Export Markdown / backup DB** | ✅ Permisos, fallback Descargas, i18n path |
 
 **Cierre `v0.4.5`:** paridad funcional con desktop (salvo anime/juegos).
 
 ---
 
-#### `v0.4.6` — Cierre Release 4 (APK release + doc + pulido)
+#### `0.4.5-ux.1` — Acciones rápidas y pulido móvil ✅
+
+> Corte UX móvil de la línea **0.4.5** (plan «v0.4.5.1»). Paquete semver `0.4.5-ux.1`.
 
 | Id | Entregable | Notas |
 |----|------------|--------|
-| 4.6a | **APK release** | `tauri android build` → APK firmado o debug estable; sideload en dispositivo físico |
-| 4.6b | **Guía PC ↔ Syncthing ↔ celu** | README: instalar Syncthing en ambos, carpeta compartida con el **CSV**, orden recomendado (sync PC → esperar → abrir app en celu); nota sobre export Markdown para Obsidian |
-| 4.6c | **Pulido** | Errores API visibles; no bloquear arranque si sync falla; prueba tombstones B3 si está en rama |
-| 4.6d | **CHANGELOG + versión** | `package.json` / `tauri.conf.json` → `0.4.6`; entrada en CHANGELOG |
+| 4.5.1a | **Detalle tocable** | ✅ Estado, temporada/episodio, progreso libro |
+| 4.5.1b | **Menú `…` en listas** | ✅ Inicio + Biblioteca (+ long-press) |
+| 4.5.1c | **Filtros compactos** | ✅ «Todos» + chips densos |
+
+**Cierre `0.4.5-ux.1`:** actualizar progreso/estado en uno o dos toques sin el formulario completo.
+
+---
+
+#### `v0.4.6` — Cierre Release 4 (APK release + doc + pulido) ✅
+
+| Id | Entregable | Notas |
+|----|------------|--------|
+| 4.6a | **APK release** | ✅ APK debug sideload en dispositivo físico (`adb install`) |
+| 4.6b | **Guía PC ↔ Syncthing ↔ celu** | ✅ README: CSV, orden sync, tombstones, Markdown export |
+| 4.6c | **Pulido** | ✅ Errores API visibles; sync al abrir no bloquea; tests tombstone CSV |
+| 4.6d | **CHANGELOG + versión** | ✅ `0.4.6` |
 
 **Cierre `v0.4.6`:** Release 4 lista para uso personal Linux + Android.
 
@@ -298,8 +312,9 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | `v0.4.2` | Sync al abrir + toast + toggle |
 | `v0.4.3` | Bottom nav + responsive shell + pulido Inicio básico + ELF 16 KB |
 | `v0.4.4` | Biblioteca + detalle + UX Inicio (carrusel, shell, long-press) ✅ |
-| `v0.4.5` | Búsqueda + manual + stats + export |
-| `v0.4.6` | APK release + documentación + cierre R4 |
+| `v0.4.5` | Búsqueda + manual + stats + export ✅ |
+| `0.4.5-ux.1` | Acciones rápidas (estado/progreso) + filtros ✅ |
+| `v0.4.6` | APK release + documentación + cierre R4 ✅ |
 
 ---
 

@@ -4,6 +4,49 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.6] — 2026-07-17
+
+### Añadido
+
+- Guía **PC ↔ Syncthing ↔ Android** en README (CSV `shelfside.csv`, orden recomendado, tombstones, Markdown = export).
+- Mensajes de error de red/API más claros en búsqueda y sugerencias (`userFacingError`).
+
+### Cambiado
+
+- Confirmado: sync al abrir no bloquea el arranque; si falla, banner de error y la UI sigue usable (test de layout).
+- Tombstones CSV (B3) cubiertos por la suite existente (`mergeFromCsv` / `writeTombstoneCsv` / clean recycle).
+
+### Release
+
+- Versión **0.4.6** — cierre Release 4 (APK debug sideload en dispositivo físico).
+
+## [0.4.5-ux.1] — 2026-07-17
+
+> Corte intermedio de UX móvil dentro de la línea **0.4.5** (plan «v0.4.5.1»). Paquete semver `0.4.5-ux.1` (Tauri no acepta `0.4.5.1`). La release distribuible sigue siendo `0.4.6`.
+
+### Añadido
+
+- **Detalle:** chip de estado tocable con selector rápido; progreso de TV (temporada/episodio) editable in situ con `−/+` y CTA `+1 episodio`; progreso de libro editable al tocar páginas.
+- Acceso visible `…` a edición rápida en tarjetas de Inicio y filas de Biblioteca (además del long-press).
+
+### Cambiado
+
+- Filtro de medio: etiqueta «Todos» (antes «Todos los tipos») y chips un poco más compactos sin bajar de ~44px de alto.
+
+## [0.4.5] — 2026-07-17
+
+### Añadido
+
+- **Búsqueda móvil:** input `type="search"` con `enterkeyhint`, scroll al focus; CTA «Añadir» y menú de estados con targets ~44px; detalle TMDB/OL con botón full-width en móvil.
+- **Alta manual:** footer sticky Guardar, targets táctiles; mensaje claro si el picker de imagen falla en Android.
+- **Stats:** barras y tipografía más legibles; empty con enlaces a Biblioteca y Buscar.
+- **Export / backup:** helper de destino (`saveDestination`); Markdown a `library/` de sync o fallback Descargas/`shelfside-library/`; backup/CSV one-shot con `dialog.save` o fallback a Descargas + mensaje con path.
+
+### Cambiado
+
+- Botones de datos en Ajustes con `shelf-touch` / `min-h-11`.
+- Compact «+» de related ≥ 44px; thumbs de búsqueda degradan a placeholder si fallan.
+
 ## [0.4.4] — 2026-07-17
 
 ### Añadido

@@ -6,7 +6,7 @@ Aplicación minimalista para seguimiento de consumos culturales con soberanía d
 - Roadmap: [roadmap.md](./roadmap.md)
 - Cambios por versión: [CHANGELOG.md](./CHANGELOG.md)
 
-**Plataformas (roadmap):** desarrollo y uso diario en **Linux**; **Android** (Tauri, APK sideload) en Release 4 (`v0.4.0`), antes que **Windows** (backlog Release 7+). Biblioteca compartida PC ↔ celu vía carpeta **Syncthing / Nextcloud** y archivos Markdown (no servidor propio). Ver [roadmap.md](./roadmap.md) y `project.md` §8.
+**Plataformas (roadmap):** desarrollo y uso diario en **Linux**; **Android** (Tauri, APK sideload) en Release 4 (`v0.4.0`–`v0.4.6`), antes que **Windows** (backlog Release 7+). Biblioteca compartida PC ↔ celu vía carpeta **Syncthing / Nextcloud** y el archivo **`shelfside.csv`** (no servidor propio). El Markdown es export de solo lectura para Obsidian. Ver [roadmap.md](./roadmap.md), la guía Syncthing más abajo y `project.md` §8.
 
 ---
 
@@ -176,7 +176,48 @@ APK release sin firmar (requiere keystore propio para sideload):
 # src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
 ```
 
-**Manuales y sync:** entradas manuales nuevas llevan `external_id` UUID (v0.4.0). Manuales viejos: reexportá Markdown desde Ajustes para alinear. La carpeta Syncthing en el celu se configura en `v0.4.1`.
+**Manuales y sync:** entradas manuales nuevas llevan `external_id` UUID (v0.4.0). Manuales viejos: reexportá Markdown desde Ajustes para alinear. La carpeta Syncthing en el celu se configura en `v0.4.1` (ver guía más abajo).
+
+---
+
+## Guía: PC ↔ Syncthing ↔ Android (`shelfside.csv`)
+
+Objetivo: la misma biblioteca en Linux y en el celular, sin servidor. **Shelfside escribe un solo archivo** `shelfside.csv` dentro de una subcarpeta `shelfside/` de tu Sync.
+
+### 1. Syncthing en ambos lados
+
+1. Instalá [Syncthing](https://syncthing.net/) en la PC y en el Android (F-Droid / sitio oficial).
+2. Emparejá los dispositivos (IDs) y compartí una carpeta, p. ej. `~/Sync` en Linux y `/storage/emulated/0/Sync` en Android.
+3. Esperá a que Syncthing marque la carpeta como **Up to Date** en ambos.
+
+### 2. Configurar Shelfside (PC)
+
+1. Abrí **Ajustes → Sync**.
+2. Elegí o escribí la carpeta Syncthing (p. ej. `~/Sync`). Shelfside usará `…/Sync/shelfside/` y creará `shelfside.csv` al sincronizar.
+3. Dejá activo **Sincronizar al abrir** si querés merge automático al iniciar; si no, usá solo el botón **Sincronizar**.
+4. Tocá **Sincronizar** una vez y comprobá que exista `…/Sync/shelfside/shelfside.csv`.
+
+### 3. Configurar Shelfside (Android)
+
+1. Instalá el APK (ver sección Android arriba) y concedé **Acceso a todos los archivos** si la app lo pide.
+2. En **Ajustes → Sync**, la ruta típica `/storage/emulated/0/Sync` suele venir precargada; la app usa `…/Sync/shelfside`.
+3. Esperá a que Syncthing haya bajado el CSV, luego **Sincronizar** (o abrí la app con sync al inicio activo).
+
+### 4. Orden recomendado (evitar conflictos)
+
+Syncthing no mergea filas: si ambos dispositivos reescriben el CSV a la vez, puede quedar un conflicto de archivo.
+
+1. En el dispositivo A: abrí Shelfside → **Sincronizar** (o dejá que sync-al-abrir termine).
+2. Esperá a que Syncthing diga **Up to Date** en A y B.
+3. En el dispositivo B: abrí Shelfside → **Sincronizar**.
+4. Repetí el ciclo si seguís editando en ambos lados el mismo día.
+
+Borrados: quitar un ítem escribe un tombstone (`deleted=true`) en el CSV; el otro dispositivo lo aplica al sincronizar (LWW). **Limpiar papelera** en Ajustes solo cuando todos los dispositivos ya vieron ese borrado.
+
+### 5. Markdown (Obsidian) y backup
+
+- **Exportar Markdown** (Ajustes → Más opciones): genera `library/*.md` para Obsidian/Joplin; **no** es el canal de sync.
+- **Backup `.db` / CSV one-shot:** copias locales; no reemplazan Syncthing.
 
 ### Windows y macOS (backlog)
 
@@ -283,6 +324,13 @@ Cobertura: `src/**/*.{ts,svelte}` con exclusiones de rutas de UI extensas, `post
 
 ## Versión
 
+- **v0.4.6** — Cierre Release 4: APK sideload documentado, guía Syncthing CSV PC↔Android, pulido de errores API y sync al abrir no bloqueante (detalle en [CHANGELOG.md](./CHANGELOG.md)).
+- **v0.4.5 / 0.4.5-ux.1** — Paridad móvil búsqueda/manual/stats/export + acciones rápidas de estado/progreso.
+- **v0.4.4** — Biblioteca/detalle móvil, carrusel Inicio, long-press.
+- **v0.4.3** — Shell móvil (bottom nav) + ELF 16 KB.
+- **v0.4.2** — Sync al abrir + toggle.
+- **v0.4.1** — Sync CSV + carpeta sync Android.
+- **v0.4.0** — Toolchain Android + B1 UUID manuales.
 - **v0.3.3** — Sync Markdown entre escritorios: botón Sincronizar carpeta, merge por `source`+`external_id`, resumen i18n, campos `progress_*`/`owned`, logs de ejecución (detalle en [CHANGELOG.md](./CHANGELOG.md)).
 - **v0.3.2** — Consolidación pre-v0.4: registro de fuentes, componentes relacionados unificados, i18n/mutaciones/delete flow, settings y detalle modularizados, reparar portada OL, límite en inicio, paginación OL y mensajes sync MD.
 - **v0.3.1** — Idioma de catálogo (Ajustes + Buscar), títulos de edición en Open Library, TMDB con `language`/`region`, portadas OL en biblioteca, quitar ítem de biblioteca.

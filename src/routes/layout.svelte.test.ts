@@ -70,7 +70,7 @@ describe("+layout (arranque)", () => {
   });
 
   it("no sincroniza al abrir si el toggle está off", async () => {
-    localStorage.setItem("shelfside-sync-dir", "/tmp/sync");
+    localStorage.setItem("shelfside-sync-dir", "/vault/sync");
     localStorage.setItem("shelfside-sync-on-start", "0");
     render(LayoutHarness);
     await waitFor(() => {
@@ -91,19 +91,33 @@ describe("+layout (arranque)", () => {
   });
 
   it("sincroniza al abrir cuando hay carpeta y toggle activo", async () => {
-    localStorage.setItem("shelfside-sync-dir", "/tmp/sync");
+    localStorage.setItem("shelfside-sync-dir", "/vault/sync");
     localStorage.setItem("shelfside-sync-on-start", "1");
     render(LayoutHarness);
     await waitFor(() => {
       expect(screen.getByTestId("layout-child")).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(syncSyncFolder).toHaveBeenCalledWith({}, "/tmp/sync");
+      expect(syncSyncFolder).toHaveBeenCalledWith({}, "/vault/sync");
     });
     await waitFor(() => {
       expect(afterLibraryChanged).toHaveBeenCalled();
     });
     expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("si el sync al abrir falla, la UI igual carga y muestra el error", async () => {
+    localStorage.setItem("shelfside-sync-dir", "/vault/sync");
+    localStorage.setItem("shelfside-sync-on-start", "1");
+    syncSyncFolder.mockRejectedValueOnce(new Error("fs-denied"));
+    render(LayoutHarness);
+    await waitFor(() => {
+      expect(screen.getByTestId("layout-child")).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/fs-denied/)).toBeInTheDocument();
+    });
+    expect(runMigrations).toHaveBeenCalled();
   });
 
   it("en desktop muestra top nav y no bottom nav", async () => {

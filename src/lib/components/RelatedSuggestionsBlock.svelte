@@ -2,6 +2,7 @@
   import { resolve } from "$app/paths";
   import type { Status } from "$lib/db/types";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
+  import { userFacingError } from "$lib/api/userFacingError";
   import { t } from "$lib/i18n";
 
   export type RelatedDetailTarget =
@@ -71,7 +72,7 @@
         if (!cancelled) rows = loaded;
       } catch (e) {
         if (!cancelled) {
-          err = e instanceof Error ? e.message : String(e);
+          err = userFacingError(e);
           rows = [];
         }
       } finally {
@@ -97,7 +98,7 @@
         msg = r.alreadyInLibrary ? t("search.already") : t("detail.related_added");
       }
     } catch (e) {
-      err = e instanceof Error ? e.message : String(e);
+      err = userFacingError(e);
     } finally {
       addingKey = null;
     }
