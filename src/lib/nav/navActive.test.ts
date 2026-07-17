@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { navActive } from "./navActive";
+import { brandClassMobile, navActive } from "./navActive";
 
 describe("navActive", () => {
   it("detecta secciones principales", () => {
@@ -15,4 +15,8 @@ describe("navActive", () => {
     expect(navActive("/library", "more")).toBe(false);
   });
 
+  it("brandClassMobile no usa fondo sólido emerald", () => {
+    expect(brandClassMobile(true)).not.toMatch(/bg-emerald/);
+    expect(brandClassMobile(true)).toMatch(/text-emerald/);
+  });
 });
