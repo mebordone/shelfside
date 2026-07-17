@@ -4,6 +4,24 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.3] — 2026-07-17
+
+### Añadido
+
+- **Shell móvil:** detección `isMobileLayout` (viewport ≤767px o Android).
+- **Bottom navigation** con 4 tabs: Inicio, Biblioteca, Buscar, Más (safe-area inferior).
+- Hoja **«Más»** con enlaces a Alta manual, Estadísticas y Configuración.
+- Targets táctiles ~44px (`.shelf-touch`, `.shelf-btn-primary`) en nav y CTAs principales.
+
+### Cambiado
+
+- En desktop se mantiene el nav superior; en móvil, header compacto + bottom bar.
+- **Pulido Inicio (móvil):** marca sin bloque verde sólido; títulos de cards en zinc (no emerald); chips de filtro ~44px; progreso TV sin `T—` (`E144` / `T2` / `T2 · E4`).
+
+### Corregido
+
+- Alineación ELF **16 KB** de `libshelfside_lib.so` (flags de linker en `build.rs`) para el aviso de compatibilidad en Android.
+
 ## [0.4.2] — 2026-07-17
 
 ### Añadido

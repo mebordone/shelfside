@@ -12,7 +12,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | 3.1 — Idioma de catálogo | `v0.3.1` | Entregado |
 | 3.2 — Consolidación pre-4.0 | `v0.3.2` | Entregado |
 | 3.3 — Sync Markdown entre escritorios | `v0.3.3` | Entregado |
-| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.2` entregado**; sigue `v0.4.3`) |
+| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.3` entregado**; sigue `v0.4.4`) |
 | 5 — Anime y juegos | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
 | 7 — Backlog y expansión | `v0.7.0+` | Sin versión fija |
@@ -234,28 +234,32 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 
 ---
 
-#### `v0.4.3` — Shell móvil (navegación + responsive base)
+#### `v0.4.3` — Shell móvil (navegación + responsive base) ✅
 
 | Id | Entregable | Notas |
 |----|------------|--------|
-| 4.3a | **Detección viewport / plataforma** | Clase o store `isMobileLayout` (ancho + opcional `import { platform } from '@tauri-apps/plugin-os'`) |
-| 4.3b | **Bottom navigation** | 4 tabs: Inicio, Biblioteca, Buscar, Más; iconos + labels; `safe-area-inset` para notch |
-| 4.3c | **Hoja «Más»** | Enlaces a Ajustes, Estadísticas, Alta manual; en desktop ancho, nav superior actual sin bottom bar |
-| 4.3d | **Targets táctiles** | Mín. ~44px; espaciado en listas y botones primarios |
+| 4.3a | **Detección viewport / plataforma** | ✅ Store `isMobileLayout` (`matchMedia` ≤767px + Android) |
+| 4.3b | **Bottom navigation** | ✅ 4 tabs: Inicio, Biblioteca, Buscar, Más; safe-area |
+| 4.3c | **Hoja «Más»** | ✅ Links a Ajustes, Estadísticas, Alta manual; desktop sin bottom bar |
+| 4.3d | **Targets táctiles** | ✅ Mín. ~44px en tabs y CTAs primarios (`.shelf-touch` / `.shelf-btn-primary`) |
 
 **Cierre `v0.4.3`:** la app se siente nativa en el teléfono; desktop sin regresiones de layout.
 
 ---
 
-#### `v0.4.4` — Paridad: biblioteca y detalle
+#### `v0.4.4` — Paridad: biblioteca y detalle (+ UX Inicio diferida)
 
 | Id | Entregable | Notas |
 |----|------------|--------|
 | 4.4a | **Lista biblioteca** | Paginación, filtros `FilterChipBar`, posters; scroll y estados vacíos en móvil |
 | 4.4b | **Detalle y edición** | Status, notas, progreso TV/libro, quitar de biblioteca (tombstone si sync); formularios usables en pantalla chica |
-| 4.4c | **Inicio** | Panel por estado; usable en móvil |
+| 4.4c | **Inicio** | Carrusel horizontal por sección; más aire entre bloques; empty state por sección |
+| 4.4d | **Shell** | Indicador de tab activo más claro; header mínimo / ocultable en Inicio |
+| 4.4e | **Long-press en cards** | Cambiar estado / progreso desde Inicio o biblioteca |
 
-**Cierre `v0.4.4`:** día a día podés consultar y editar la biblioteca solo desde el celu.
+**Cierre `v0.4.4`:** día a día podés consultar y editar la biblioteca solo desde el celu; Inicio más cómodo en pantalla chica.
+
+*(Nota: pulido básico de Inicio — marca, chips, títulos, progreso TV — ya entregado en `v0.4.3`.)*
 
 ---
 
@@ -292,8 +296,8 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | `v0.4.0` | Toolchain, B1 UUID, primer APK |
 | `v0.4.1` | Sync CSV + carpeta sync + sync manual (MD → export) |
 | `v0.4.2` | Sync al abrir + toast + toggle |
-| `v0.4.3` | Bottom nav + responsive shell |
-| `v0.4.4` | Biblioteca + detalle |
+| `v0.4.3` | Bottom nav + responsive shell + pulido Inicio básico + ELF 16 KB |
+| `v0.4.4` | Biblioteca + detalle + UX Inicio (carrusel, shell, long-press) |
 | `v0.4.5` | Búsqueda + manual + stats + export |
 | `v0.4.6` | APK release + documentación + cierre R4 |
 
