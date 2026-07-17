@@ -4,6 +4,25 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.4] — 2026-07-17
+
+### Añadido
+
+- **Inicio:** carrusel horizontal por sección, empty por sección, long-press → edición rápida (estado + progreso TV).
+- **Biblioteca:** filas enteras tappeables, empties con CTAs, paginación con targets ~44px.
+- Progreso de **libro** (`progress_current` / `progress_total`) en detalle y formulario de edición.
+- Sheet **edición rápida** compartido (Inicio + biblioteca).
+
+### Cambiado
+
+- Shell móvil: indicador de tab activo (`border-t`); sin header en Inicio (safe-area en el main).
+- Acciones de detalle apiladas y táctiles en móvil; footer sticky al guardar en edit.
+- Filtros de biblioteca: chips de estado en fila propia.
+
+### Corregido
+
+- Banner de sync al abrir: padding `safe-area-inset-top` en Inicio para que «Cerrar» no quede bajo la barra de estado.
+
 ## [0.4.3] — 2026-07-17
 
 ### Añadido

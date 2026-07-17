@@ -12,7 +12,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | 3.1 — Idioma de catálogo | `v0.3.1` | Entregado |
 | 3.2 — Consolidación pre-4.0 | `v0.3.2` | Entregado |
 | 3.3 — Sync Markdown entre escritorios | `v0.3.3` | Entregado |
-| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.3` entregado**; sigue `v0.4.4`) |
+| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.4` entregado**; sigue `v0.4.5`) |
 | 5 — Anime y juegos | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
 | 7 — Backlog y expansión | `v0.7.0+` | Sin versión fija |
@@ -247,15 +247,15 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 
 ---
 
-#### `v0.4.4` — Paridad: biblioteca y detalle (+ UX Inicio diferida)
+#### `v0.4.4` — Paridad: biblioteca y detalle (+ UX Inicio) ✅
 
 | Id | Entregable | Notas |
 |----|------------|--------|
-| 4.4a | **Lista biblioteca** | Paginación, filtros `FilterChipBar`, posters; scroll y estados vacíos en móvil |
-| 4.4b | **Detalle y edición** | Status, notas, progreso TV/libro, quitar de biblioteca (tombstone si sync); formularios usables en pantalla chica |
-| 4.4c | **Inicio** | Carrusel horizontal por sección; más aire entre bloques; empty state por sección |
-| 4.4d | **Shell** | Indicador de tab activo más claro; header mínimo / ocultable en Inicio |
-| 4.4e | **Long-press en cards** | Cambiar estado / progreso desde Inicio o biblioteca |
+| 4.4a | **Lista biblioteca** | ✅ Filtros, fila tappable, empties + CTAs, paginación táctil |
+| 4.4b | **Detalle y edición** | ✅ Acciones touch; progreso libro; footer sticky en edit |
+| 4.4c | **Inicio** | ✅ Carrusel horizontal; aire; empty por sección |
+| 4.4d | **Shell** | ✅ Indicador tab activo; sin header en Inicio |
+| 4.4e | **Long-press en cards** | ✅ Sheet edición rápida (status + TV) en Inicio y biblioteca |
 
 **Cierre `v0.4.4`:** día a día podés consultar y editar la biblioteca solo desde el celu; Inicio más cómodo en pantalla chica.
 
@@ -297,7 +297,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | `v0.4.1` | Sync CSV + carpeta sync + sync manual (MD → export) |
 | `v0.4.2` | Sync al abrir + toast + toggle |
 | `v0.4.3` | Bottom nav + responsive shell + pulido Inicio básico + ELF 16 KB |
-| `v0.4.4` | Biblioteca + detalle + UX Inicio (carrusel, shell, long-press) |
+| `v0.4.4` | Biblioteca + detalle + UX Inicio (carrusel, shell, long-press) ✅ |
 | `v0.4.5` | Búsqueda + manual + stats + export |
 | `v0.4.6` | APK release + documentación + cierre R4 |
 
