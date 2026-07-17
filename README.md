@@ -22,9 +22,9 @@ A partir de **v0.4.6** (cierre Release 4) encontrás típicamente:
 |-----------|------------|--------|
 | `*.deb` | Linux (Debian/Ubuntu) | `sudo dpkg -i shelfside_*.deb` (o abrilo con el instalador) |
 | `*.AppImage` | Linux | `chmod +x` y ejecutar |
-| `*-android-*-debug.apk` | Android (arm64) | Sideload / `adb install -r …` (APK debug firmado para uso personal) |
+| `shelfside-*-android-arm64.apk` | Android (arm64) | APK **release firmado** para sideload / distribución; `adb install -r …` |
 
-También podés clonar y compilar: `npm run tauri build` (desktop) o `npm run tauri:android:build` (APK).
+También podés clonar y compilar: `npm run tauri build` (desktop) o `npx tauri android build --apk` (APK release; requiere `keystore.properties` local, ver [firma Android](https://v2.tauri.app/distribute/sign/android/)).
 
 ---
 
@@ -182,17 +182,15 @@ npm run tauri:android:dev     # desarrollo en el celu/emulador
 npm run tauri:android:build   # APK debug/release
 ```
 
-Instalar APK en el teléfono (ruta exacta la imprime el build; debug firmado listo para sideload):
+Instalar APK **release firmado** (distribución / sideload):
 
 ```bash
-adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+# Requiere keystore.properties + .jks (no se versionan; ver guía Tauri)
+npx tauri android build --apk --target aarch64
+adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
 ```
 
-APK release sin firmar (requiere keystore propio para sideload):
-
-```bash
-# src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
-```
+Para desarrollo diario sigue sirviendo el APK debug (`--debug`). El APK de [GitHub Releases](https://github.com/mebordone/shelfside/releases) es release firmado.
 
 **Manuales y sync:** entradas manuales nuevas llevan `external_id` UUID (v0.4.0). Manuales viejos: reexportá Markdown desde Ajustes para alinear. La carpeta Syncthing en el celu se configura en `v0.4.1` (ver guía más abajo).
 

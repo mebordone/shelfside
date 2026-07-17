@@ -19,7 +19,7 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 ### Release
 
 - Versión **0.4.6** — cierre Release 4.
-- Binarios en GitHub Releases: [v0.4.6](https://github.com/mebordone/shelfside/releases/tag/v0.4.6) (`.deb`, AppImage, APK debug Android).
+- Binarios en GitHub Releases: [v0.4.6](https://github.com/mebordone/shelfside/releases/tag/v0.4.6) (`.deb`, AppImage, APK Android **release firmado**).
 
 ## [0.4.5-ux.1] — 2026-07-17
 

@@ -34,3 +34,11 @@ Thumbs.db
 # Editor (ajustes locales; no versionar)
 .vscode/
 .idea/
+
+# Firma Android (nunca subir al repo)
+*.jks
+*.keystore
+keystore.properties
+key.properties
+src-tauri/gen/android/keystore.properties
+src-tauri/gen/android/key.properties
