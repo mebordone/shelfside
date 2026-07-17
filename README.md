@@ -10,6 +10,24 @@ Aplicación minimalista para seguimiento de consumos culturales con soberanía d
 
 ---
 
+## Descargas (GitHub Releases)
+
+Los binarios **no** van en el árbol del repo. Se publican en la página de Releases:
+
+**[https://github.com/mebordone/shelfside/releases](https://github.com/mebordone/shelfside/releases)**
+
+A partir de **v0.4.6** (cierre Release 4) encontrás típicamente:
+
+| Artefacto | Plataforma | Notas |
+|-----------|------------|--------|
+| `*.deb` | Linux (Debian/Ubuntu) | `sudo dpkg -i shelfside_*.deb` (o abrilo con el instalador) |
+| `*.AppImage` | Linux | `chmod +x` y ejecutar |
+| `*-android-*-debug.apk` | Android (arm64) | Sideload / `adb install -r …` (APK debug firmado para uso personal) |
+
+También podés clonar y compilar: `npm run tauri build` (desktop) o `npm run tauri:android:build` (APK).
+
+---
+
 ## Cómo correr el proyecto (mínimo)
 
 1. Instalá **Node.js** (LTS), **Rust** (`rustup` + stable) y las **librerías de sistema** de tu SO (ver abajo; en Linux: WebKitGTK, etc.).

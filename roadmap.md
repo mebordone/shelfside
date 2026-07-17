@@ -299,7 +299,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | 4.6c | **Pulido** | ✅ Errores API visibles; sync al abrir no bloquea; tests tombstone CSV |
 | 4.6d | **CHANGELOG + versión** | ✅ `0.4.6` |
 
-**Cierre `v0.4.6`:** Release 4 lista para uso personal Linux + Android.
+**Cierre `v0.4.6`:** Release 4 lista para uso personal Linux + Android. Descargas: [GitHub Releases v0.4.6](https://github.com/mebordone/shelfside/releases/tag/v0.4.6).
 
 ---
 
