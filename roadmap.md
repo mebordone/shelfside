@@ -301,6 +301,16 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 
 **Cierre `v0.4.6`:** Release 4 lista para uso personal Linux + Android. Descargas: [GitHub Releases v0.4.6](https://github.com/mebordone/shelfside/releases/tag/v0.4.6).
 
+#### `v0.4.7` — Madurez R4 (UX + robustez) ✅
+
+| Id | Entregable | Notas |
+|----|------------|--------|
+| 4.7a | **Inicio** | ✅ Header Shelfside siempre visible + toggle carrusel/grilla + bloque Continuar |
+| 4.7b | **Biblioteca** | ✅ Toggle lista/grilla + filtros tipo/estado recordados |
+| 4.7c | **Sync/robustez** | ✅ Última sync en Ajustes; retry en búsqueda/sugerencias; vacíos más claros |
+| 4.7d | **UX previa** | ✅ Limpiar/derivar búsqueda, categorías en grilla, «Ver más», recomendados clicables |
+| 4.7e | **CHANGELOG + versión** | ✅ `0.4.7` |
+
 ---
 
 ### Mapa rápido versión ↔ tema
@@ -315,6 +325,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | `v0.4.5` | Búsqueda + manual + stats + export ✅ |
 | `0.4.5-ux.1` | Acciones rápidas (estado/progreso) + filtros ✅ |
 | `v0.4.6` | APK release + documentación + cierre R4 ✅ |
+| `v0.4.7` | Madurez R4: UX Inicio/Biblioteca + última sync + retry ✅ |
 
 ---
 

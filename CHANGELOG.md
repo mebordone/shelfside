@@ -4,6 +4,27 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.7] — 2026-07-17
+
+> Paquete de madurez post-R4. Retoques de UX pedidos (limpiar/derivar búsqueda, ver categorías en grilla, más sugerencias, recomendados clicables) más piezas de madurez (Inicio con marca + toggle, filtros recordados, última sync, retry, vacíos).
+
+### Añadido
+
+- **Inicio:** header **Shelfside** siempre visible en móvil con toggle **carrusel | grilla** a la derecha (en desktop, junto a los filtros). Bloque **Continuar** con hasta 3 ítems en progreso.
+- **Biblioteca:** toggle **grilla | lista** persistido; se recuerdan los filtros de **tipo** y **estado** entre sesiones.
+- **Ajustes → Datos:** «Última sincronización: hace X» con resumen corto (OK/error) tras cada sync.
+- **Búsqueda y sugerencias:** botón **Reintentar** cuando falla la carga.
+- **Sugerencias:** póster clicable para abrir la ficha y hoja **Ver más** con paginación (TMDB).
+- **Biblioteca ↔ Búsqueda:** limpiar/reiniciar búsqueda con «×» y derivar la consulta desde Biblioteca al catálogo cuando no hay resultados.
+
+### Cambiado
+
+- Vacíos de Biblioteca con copy distinto según haya filtros activos o la biblioteca esté vacía.
+
+### Release
+
+- Versión **0.4.7**. `npm run check` sin errores; suite de tests en verde. APK instalado por `adb` para validación.
+
 ## [0.4.6] — 2026-07-17
 
 ### Añadido
