@@ -2,6 +2,7 @@
   import "../app.css";
   import type { Snippet } from "svelte";
   import { onMount } from "svelte";
+  import { page } from "$app/state";
   import BottomNav from "$lib/components/nav/BottomNav.svelte";
   import MobileHeader from "$lib/components/nav/MobileHeader.svelte";
   import MoreSheet from "$lib/components/nav/MoreSheet.svelte";
@@ -17,6 +18,7 @@
   import { readSyncOnStart } from "$lib/stores/syncOnStart";
   import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
   import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
+  import { navActive } from "$lib/nav/navActive";
 
   interface Props {
     children: Snippet;
@@ -28,6 +30,9 @@
   let bootError = $state<string | null>(null);
   let bootSyncBanner = $state<{ kind: "ok" | "err" | "info"; text: string } | null>(null);
   let moreOpen = $state(false);
+
+  const pathname = $derived(page.url.pathname);
+  const showMobileHeader = $derived(mobileLayout.current && !navActive(pathname, "home"));
 
   async function runBootSyncIfNeeded() {
     const syncDir = readSyncFolder();
@@ -93,13 +98,18 @@
       : ''}"
   >
     {#if mobileLayout.current}
-      <MobileHeader />
+      {#if showMobileHeader}
+        <MobileHeader />
+      {/if}
     {:else}
       <TopNav />
     {/if}
     {#if bootSyncBanner}
       <div
-        class="flex items-start gap-2 border-b px-3 py-2 text-sm {bootSyncBanner.kind === 'ok'
+        class="flex items-start gap-2 border-b px-3 py-2 text-sm {mobileLayout.current &&
+        !showMobileHeader
+          ? 'pt-[max(0.5rem,env(safe-area-inset-top,0px))]'
+          : ''} {bootSyncBanner.kind === 'ok'
           ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
           : bootSyncBanner.kind === 'err'
             ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'
@@ -109,7 +119,7 @@
         <p class="min-w-0 flex-1 break-words">{bootSyncBanner.text}</p>
         <button
           type="button"
-          class="shelf-touch shrink-0 rounded px-1.5 py-0.5 text-xs opacity-70 hover:opacity-100"
+          class="shelf-touch inline-flex shrink-0 items-center justify-center self-start rounded-md px-2 text-xs font-medium opacity-80 hover:opacity-100"
           onclick={() => {
             bootSyncBanner = null;
           }}

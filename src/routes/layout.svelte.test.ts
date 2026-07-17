@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import LayoutHarness from "../test/LayoutHarness.svelte";
 
-const { runMigrations, syncSyncFolder, getDatabase, afterLibraryChanged, mobileLayout } = vi.hoisted(
-  () => ({
+const { runMigrations, syncSyncFolder, getDatabase, afterLibraryChanged, mobileLayout, pageState } =
+  vi.hoisted(() => ({
     runMigrations: vi.fn().mockResolvedValue(undefined),
     syncSyncFolder: vi.fn().mockResolvedValue({
       merge: { imported: 1, updated: 0, deleted: 0, skipped: 0, errors: [] },
@@ -13,8 +13,8 @@ const { runMigrations, syncSyncFolder, getDatabase, afterLibraryChanged, mobileL
     getDatabase: vi.fn().mockResolvedValue({}),
     afterLibraryChanged: vi.fn(),
     mobileLayout: { current: false },
-  }),
-);
+    pageState: { url: { pathname: "/" }, params: {} },
+  }));
 
 vi.mock("$lib/db", () => ({ runMigrations }));
 vi.mock("$lib/db/connection", () => ({ getDatabase }));
@@ -24,6 +24,11 @@ vi.mock("$lib/stores/mobileLayout.svelte", () => ({
   mobileLayout,
   initMobileLayout: vi.fn(() => () => {}),
   destroyMobileLayout: vi.fn(),
+}));
+vi.mock("$app/state", () => ({
+  get page() {
+    return pageState;
+  },
 }));
 
 afterEach(() => {
@@ -38,6 +43,7 @@ describe("+layout (arranque)", () => {
     getDatabase.mockClear();
     afterLibraryChanged.mockClear();
     mobileLayout.current = false;
+    pageState.url.pathname = "/";
     localStorage.clear();
     localStorage.removeItem("shelfside-theme");
     document.documentElement.classList.remove("dark");
@@ -118,7 +124,8 @@ describe("+layout (arranque)", () => {
       expect(screen.getByTestId("layout-child")).toBeInTheDocument();
     });
     expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
-    expect(screen.getByTestId("mobile-header")).toBeInTheDocument();
+    // En Inicio (/) no hay MobileHeader; la marca está en el tab.
+    expect(screen.queryByTestId("mobile-header")).not.toBeInTheDocument();
     expect(screen.queryByTestId("top-nav")).not.toBeInTheDocument();
     expect(screen.queryByTestId("more-sheet")).not.toBeInTheDocument();
 

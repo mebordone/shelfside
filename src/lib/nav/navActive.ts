@@ -58,8 +58,8 @@ export function settingsIconClass(active: boolean): string {
 
 export function bottomTabClass(active: boolean): string {
   const base =
-    "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1 text-[11px] font-medium transition-colors";
+    "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-t-2 px-1 py-1 text-[11px] transition-colors";
   return active
-    ? `${base} text-emerald-700 dark:text-emerald-300`
-    : `${base} text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200`;
+    ? `${base} border-emerald-600 font-semibold text-emerald-700 dark:border-emerald-400 dark:text-emerald-300`
+    : `${base} border-transparent font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200`;
 }
