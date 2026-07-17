@@ -16,10 +16,9 @@
   import { initTheme } from "$lib/stores/theme.svelte";
   import { readSyncFolder } from "$lib/stores/syncFolder";
   import { readSyncOnStart } from "$lib/stores/syncOnStart";
+  import { persistLastSync } from "$lib/stores/lastSync";
   import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
   import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
-  import { navActive } from "$lib/nav/navActive";
-
   interface Props {
     children: Snippet;
   }
@@ -32,7 +31,7 @@
   let moreOpen = $state(false);
 
   const pathname = $derived(page.url.pathname);
-  const showMobileHeader = $derived(mobileLayout.current && !navActive(pathname, "home"));
+  const showMobileHeader = $derived(mobileLayout.current);
 
   async function runBootSyncIfNeeded() {
     const syncDir = readSyncFolder();
@@ -45,16 +44,15 @@
       const { merge, exported } = await syncSyncFolder(db, syncDir);
       logInfo("sync.boot.ok", { ...merge, exported, syncDir });
       afterLibraryChanged();
-      bootSyncBanner = {
-        kind: merge.errors.length ? "err" : "ok",
-        text: formatSyncSummary(merge, exported),
-      };
+      const summary = formatSyncSummary(merge, exported);
+      const kind = merge.errors.length ? "err" : "ok";
+      bootSyncBanner = { kind, text: summary };
+      persistLastSync({ at: Date.now(), kind, summary });
     } catch (e) {
       logError("sync.boot.error", e);
-      bootSyncBanner = {
-        kind: "err",
-        text: e instanceof Error ? e.message : String(e),
-      };
+      const errText = e instanceof Error ? e.message : String(e);
+      bootSyncBanner = { kind: "err", text: errText };
+      persistLastSync({ at: Date.now(), kind: "err", summary: errText });
     }
   }
 

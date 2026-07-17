@@ -3,8 +3,11 @@
   import { page } from "$app/state";
   import { t } from "$lib/i18n";
   import { brandClassMobile, navActive } from "$lib/nav/navActive";
+  import ViewToggle from "$lib/components/ViewToggle.svelte";
+  import { homeView, setHomeView } from "$lib/stores/homeView.svelte";
 
   const pathname = $derived(page.url.pathname);
+  const isHome = $derived(navActive(pathname, "home"));
 </script>
 
 <header
@@ -12,9 +15,22 @@
   data-testid="mobile-header"
 >
   <a
-    class={brandClassMobile(navActive(pathname, "home"))}
+    class={brandClassMobile(isHome)}
     href={resolve("/")}
-    aria-current={navActive(pathname, "home") ? "page" : undefined}
+    aria-current={isHome ? "page" : undefined}
     >{t("app.title")}</a
   >
+  {#if isHome}
+    <div class="ml-auto">
+      <ViewToggle
+        value={homeView.current}
+        first="carousel"
+        second="grid"
+        firstLabel={t("home.view_carousel")}
+        secondLabel={t("home.view_grid")}
+        ariaLabel={t("home.view_toggle")}
+        onchange={(v) => setHomeView(v as "carousel" | "grid")}
+      />
+    </div>
+  {/if}
 </header>

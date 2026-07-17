@@ -54,6 +54,22 @@ describe("i18n", () => {
     expect(t("common.close")).toBe("Close");
   });
 
+  it("incluye claves de madurez 0.4.7 en es y en", () => {
+    setAppLocale("es");
+    expect(t("home.view_carousel")).toBe("Carrusel");
+    expect(t("home.view_grid")).toBe("Grilla");
+    expect(t("home.continue_heading")).toBe("Continuar");
+    expect(t("library.view_list")).toBe("Lista");
+    expect(t("settings.last_sync")).toMatch(/sincroniz/i);
+    expect(t("search.retry")).toBe("Reintentar");
+    setAppLocale("en");
+    expect(t("home.view_carousel")).toBe("Carousel");
+    expect(t("home.continue_heading")).toBe("Continue");
+    expect(t("library.view_list")).toBe("List");
+    expect(t("settings.last_sync")).toBe("Last sync");
+    expect(t("search.retry")).toBe("Retry");
+  });
+
   it("incluye claves de nav móvil 0.4.3 en es y en", () => {
     setAppLocale("es");
     expect(t("nav.more")).toBe("Más");

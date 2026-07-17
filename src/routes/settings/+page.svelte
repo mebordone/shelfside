@@ -24,6 +24,12 @@
     readOlStrictLanguage,
   } from "$lib/stores/catalogPrefs";
   import { clearSearchResults, searchSession } from "$lib/stores/searchSession.svelte";
+  import {
+    formatRelativeTime,
+    persistLastSync,
+    readLastSync,
+    type LastSync,
+  } from "$lib/stores/lastSync";
   import { persistSyncFolder, readSyncFolder } from "$lib/stores/syncFolder";
   import { persistSyncOnStart, readSyncOnStart } from "$lib/stores/syncOnStart";
   import { hasAllFilesAccess, requestAllFilesAccess } from "$lib/sync/androidStorageAccess";
@@ -49,6 +55,8 @@
   let isAndroid = $state(false);
   let hasStorageAccess = $state(true);
   let syncOnStart = $state(readSyncOnStart());
+  let lastSync = $state<LastSync | null>(null);
+  const lastSyncLabel = $derived(lastSync ? formatRelativeTime(lastSync.at) : null);
   const resetWord = $derived(appLocale.current === "en" ? "DELETE" : "BORRAR");
   const showFolderPicker = $derived(!isAndroid);
   const needsStoragePermission = $derived(isAndroid && !hasStorageAccess);
@@ -85,6 +93,7 @@
     if (isAndroid && !syncFolderDraft.trim()) {
       syncFolderDraft = ANDROID_DEFAULT_SYNC_DIR;
     }
+    lastSync = readLastSync();
     void loadDbInfo();
     void refreshStorageAccess();
     const onVis = () => {
@@ -208,6 +217,12 @@
     return applySyncFolderPath(candidate);
   }
 
+  function recordLastSync(kind: "ok" | "err", summary: string) {
+    const entry: LastSync = { at: Date.now(), kind, summary };
+    persistLastSync(entry);
+    lastSync = entry;
+  }
+
   async function runSyncFolder() {
     if (!(await ensureSyncFolderReady()) || !syncFolder) {
       logError("settings.sync.run.no_folder");
@@ -222,10 +237,14 @@
       const { merge, exported } = await syncSyncFolder(db, syncFolder);
       logInfo("settings.sync.run.ok", { ...merge, exported, syncFolder });
       afterLibraryChanged();
-      setMessage(merge.errors.length ? "err" : "ok", formatSyncSummary(merge, exported));
+      const summary = formatSyncSummary(merge, exported);
+      setMessage(merge.errors.length ? "err" : "ok", summary);
+      recordLastSync(merge.errors.length ? "err" : "ok", summary);
     } catch (e) {
       logError("settings.sync.run.error", e);
-      setMessage("err", e instanceof Error ? e.message : String(e));
+      const errText = e instanceof Error ? e.message : String(e);
+      setMessage("err", errText);
+      recordLastSync("err", errText);
     } finally {
       busy = null;
     }
@@ -267,10 +286,14 @@
       const r = await mergeFromSyncFolder(db, syncFolder);
       logInfo("settings.sync.import.ok", { ...r, syncFolder });
       afterLibraryChanged();
-      setMessage(r.errors.length ? "err" : "ok", formatSyncSummary(r, 0));
+      const summary = formatSyncSummary(r, 0);
+      setMessage(r.errors.length ? "err" : "ok", summary);
+      recordLastSync(r.errors.length ? "err" : "ok", summary);
     } catch (e) {
       logError("settings.sync.import.error", e);
-      setMessage("err", e instanceof Error ? e.message : String(e));
+      const errText = e instanceof Error ? e.message : String(e);
+      setMessage("err", errText);
+      recordLastSync("err", errText);
     } finally {
       busy = null;
     }
@@ -439,6 +462,9 @@
   <SettingsDataSection
     {dbPath}
     {dbSize}
+    {lastSyncLabel}
+    lastSyncSummary={lastSync?.summary ?? null}
+    lastSyncKind={lastSync?.kind ?? null}
     {syncFolder}
     {syncFolderDraft}
     {syncFolderPlaceholder}

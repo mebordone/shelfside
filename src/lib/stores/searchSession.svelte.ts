@@ -23,6 +23,8 @@ export const searchSession = $state({
   totalPages: 0,
   pageSize: 10,
   pageCache: {} as Record<number, SearchHitRow[]>,
+  /** Tras handoff desde Biblioteca: ejecutar búsqueda al montar /search. */
+  pendingAutoSearch: false,
 });
 
 export function clearSearchPagination(): void {
@@ -38,4 +40,29 @@ export function clearSearchResults(): void {
   searchSession.err = null;
   searchSession.msg = null;
   clearSearchPagination();
+}
+
+/** Vacía query, resultados y caché (botón limpiar). */
+export function resetSearchSession(): void {
+  searchSession.query = "";
+  searchSession.pendingAutoSearch = false;
+  clearSearchResults();
+}
+
+/**
+ * Prepara /search con el texto de Biblioteca y marca auto-run.
+ * No navega: el caller hace goto.
+ */
+export function handoffLibraryQueryToSearch(libraryQuery: string): void {
+  const q = libraryQuery.trim();
+  searchSession.query = q;
+  clearSearchResults();
+  searchSession.pendingAutoSearch = q.length > 0;
+}
+
+/** Consume el flag; true si hay que ejecutar runSearch(). */
+export function consumePendingAutoSearch(): boolean {
+  if (!searchSession.pendingAutoSearch) return false;
+  searchSession.pendingAutoSearch = false;
+  return searchSession.query.trim().length > 0;
 }

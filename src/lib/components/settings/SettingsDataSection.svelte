@@ -4,6 +4,9 @@
   interface Props {
     dbPath: string;
     dbSize: string;
+    lastSyncLabel: string | null;
+    lastSyncSummary: string | null;
+    lastSyncKind: "ok" | "err" | null;
     syncFolder: string | null;
     syncFolderDraft: string;
     syncFolderPlaceholder: string;
@@ -40,6 +43,9 @@
   let {
     dbPath,
     dbSize,
+    lastSyncLabel,
+    lastSyncSummary,
+    lastSyncKind,
     syncFolder,
     syncFolderDraft,
     syncFolderPlaceholder,
@@ -85,6 +91,17 @@
   <p class="text-xs text-zinc-600 dark:text-zinc-400">
     <span class="font-medium">{t("settings.db_size")}:</span>
     {dbSize}
+  </p>
+  <p class="text-xs text-zinc-600 dark:text-zinc-400">
+    <span class="font-medium">{t("settings.last_sync")}:</span>
+    {#if lastSyncLabel}
+      <span class={lastSyncKind === "err" ? "text-red-600 dark:text-red-400" : ""}>{lastSyncLabel}</span>
+      {#if lastSyncSummary}
+        <span class="mt-0.5 block text-zinc-500 dark:text-zinc-400">{lastSyncSummary}</span>
+      {/if}
+    {:else}
+      <span class="text-zinc-500 dark:text-zinc-400">{t("settings.last_sync_never")}</span>
+    {/if}
   </p>
 </section>
 

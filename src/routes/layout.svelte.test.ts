@@ -138,8 +138,8 @@ describe("+layout (arranque)", () => {
       expect(screen.getByTestId("layout-child")).toBeInTheDocument();
     });
     expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
-    // En Inicio (/) no hay MobileHeader; la marca está en el tab.
-    expect(screen.queryByTestId("mobile-header")).not.toBeInTheDocument();
+    // En Inicio (/) el MobileHeader ahora es visible (marca + toggle de vista).
+    expect(screen.getByTestId("mobile-header")).toBeInTheDocument();
     expect(screen.queryByTestId("top-nav")).not.toBeInTheDocument();
     expect(screen.queryByTestId("more-sheet")).not.toBeInTheDocument();
 

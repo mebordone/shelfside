@@ -13,21 +13,26 @@
     row: Row;
     onLongPress: (row: Row) => void;
     onQuickEdit: (row: Row) => void;
+    /** `carousel`: ancho fijo en Inicio; `grid`: ocupa la celda de la grilla. */
+    layout?: "carousel" | "grid";
   }
 
-  let { row, onLongPress, onQuickEdit }: Props = $props();
+  let { row, onLongPress, onQuickEdit, layout = "carousel" }: Props = $props();
 
   const progress = $derived(
     row.media_type === "tv"
       ? formatTvProgress(row.current_season, row.last_episode_watched)
       : null,
   );
+
+  const shellClass = $derived(
+    layout === "grid"
+      ? "group relative flex w-full flex-col gap-1.5 rounded-lg border border-zinc-200 bg-white p-2 shadow-sm transition hover:border-emerald-400 hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-500"
+      : "group relative flex w-[6.75rem] shrink-0 snap-start flex-col gap-1.5 rounded-lg border border-zinc-200 bg-white p-2 shadow-sm transition hover:border-emerald-400 hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-500",
+  );
 </script>
 
-<div
-  class="group relative flex w-[6.75rem] shrink-0 snap-start flex-col gap-1.5 rounded-lg border border-zinc-200 bg-white p-2 shadow-sm transition hover:border-emerald-400 hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-500"
-  use:longPress={() => onLongPress(row)}
->
+<div class={shellClass} use:longPress={() => onLongPress(row)}>
   <a class="flex flex-col gap-1.5" href={resolve("/library/[id]", { id: String(row.id) })}>
     {#if row.displayUrl}
       <img src={row.displayUrl} alt="" class="aspect-[2/3] w-full rounded object-cover" />

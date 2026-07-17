@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { afterNavigate } from "$app/navigation";
+  import { afterNavigate, goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { onMount } from "svelte";
   import { getDatabase } from "$lib/db/connection";
@@ -17,6 +17,10 @@
     readHomeMediaFilter,
     type HomeMediaFilter,
   } from "$lib/stores/homeMediaFilter";
+  import { openLibraryStatusFilter } from "$lib/stores/librarySession.svelte";
+  import { homeView, initHomeView, setHomeView } from "$lib/stores/homeView.svelte";
+  import { mobileLayout } from "$lib/stores/mobileLayout.svelte";
+  import ViewToggle from "$lib/components/ViewToggle.svelte";
 
   const HOME_MAX_PER_SECTION = 24;
 
@@ -67,6 +71,11 @@
     void loadLibrary();
   }
 
+  async function openStatusInLibrary(status: string) {
+    openLibraryStatusFilter(status);
+    await goto(resolve("/library"));
+  }
+
   async function loadLibrary() {
     loading = true;
     try {
@@ -79,6 +88,7 @@
   }
 
   onMount(() => {
+    initHomeView();
     void loadLibrary();
   });
 
@@ -94,14 +104,29 @@
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
   {:else}
-    <FilterChipBar
-      options={mediaChipOptions}
-      value={mediaFilter}
-      includeAll
-      allLabel={t("media.all")}
-      ariaLabel={t("home.media_filter")}
-      onchange={onHomeMediaFilterChange}
-    />
+    <div class="flex items-center gap-3">
+      <div class="min-w-0 flex-1">
+        <FilterChipBar
+          options={mediaChipOptions}
+          value={mediaFilter}
+          includeAll
+          allLabel={t("media.all")}
+          ariaLabel={t("home.media_filter")}
+          onchange={onHomeMediaFilterChange}
+        />
+      </div>
+      {#if !mobileLayout.current}
+        <ViewToggle
+          value={homeView.current}
+          first="carousel"
+          second="grid"
+          firstLabel={t("home.view_carousel")}
+          secondLabel={t("home.view_grid")}
+          ariaLabel={t("home.view_toggle")}
+          onchange={(v) => setHomeView(v as "carousel" | "grid")}
+        />
+      {/if}
+    </div>
 
     {#if allSectionsEmpty}
       <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("home.empty_focus")}</p>
@@ -117,16 +142,44 @@
       </p>
     {:else}
       {#each HOME_SECTION_ORDER as st (st)}
+        {@const fullList = grouped[st] ?? []}
         {@const list = groupedLimited.sections[st] ?? []}
+        {@const isContinue = st === "in_progress"}
         <section class="space-y-3">
           <div class="flex items-baseline justify-between gap-2 border-b border-zinc-200 pb-1 dark:border-zinc-800">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
-              {labelForStatus(st)}
+            <h2
+              class="text-sm font-semibold uppercase tracking-wide {isContinue
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-zinc-700 dark:text-zinc-300'}"
+            >
+              {isContinue ? t("home.continue_heading") : labelForStatus(st)}
             </h2>
-            <span class="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">{list.length}</span>
+            <div class="flex items-center gap-2 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+              <span>{fullList.length}</span>
+              {#if fullList.length > 0}
+                <button
+                  type="button"
+                  class="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                  onclick={() => void openStatusInLibrary(st)}
+                >
+                  {t("home.see_all")}
+                </button>
+              {/if}
+            </div>
           </div>
           {#if list.length === 0}
             <p class="text-sm text-zinc-500 dark:text-zinc-400">{t("home.empty_section")}</p>
+          {:else if homeView.current === "grid"}
+            <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+              {#each list as r (r.id)}
+                <HomePosterCard
+                  row={r}
+                  layout="grid"
+                  onLongPress={(row) => (quickEditRow = row)}
+                  onQuickEdit={(row) => (quickEditRow = row)}
+                />
+              {/each}
+            </div>
           {:else}
             <div
               class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5"

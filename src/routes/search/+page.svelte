@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
+  import { onMount } from "svelte";
   import { getTmdbApiKeyFromEnv } from "$lib/api";
   import { userFacingError } from "$lib/api/userFacingError";
   import type { OpenLibrarySearchHit } from "$lib/api/openlibrary/types";
@@ -22,6 +23,8 @@
   import {
     clearSearchPagination,
     clearSearchResults,
+    consumePendingAutoSearch,
+    resetSearchSession,
     searchSession,
     type SearchHitRow,
     type SearchSource,
@@ -92,6 +95,7 @@
       searchSession.err = t("search.need_key");
       return;
     }
+    if (!searchSession.query.trim()) return;
     loading = true;
     searchSession.err = null;
     searchSession.msg = null;
@@ -104,6 +108,10 @@
     } finally {
       loading = false;
     }
+  }
+
+  function onClearSearch() {
+    resetSearchSession();
   }
 
   async function clearStrictAndSearch() {
@@ -134,6 +142,11 @@
     }
   }
 
+  onMount(() => {
+    if (consumePendingAutoSearch()) {
+      void runSearch();
+    }
+  });
 </script>
 
 <div class="mx-auto max-w-2xl space-y-4 px-4 py-8">
@@ -167,18 +180,31 @@
       void runSearch();
     }}
   >
-    <input
-      type="search"
-      enterkeyhint="search"
-      class="shelf-field min-w-[12rem] flex-1"
-      placeholder={searchSession.source === "openlibrary"
-        ? t("search.query_placeholder_books")
-        : t("search.query_placeholder")}
-      bind:value={searchSession.query}
-      onfocus={(e) => {
-        (e.currentTarget as HTMLInputElement).scrollIntoView({ block: "center", behavior: "smooth" });
-      }}
-    />
+    <div class="relative min-w-[12rem] flex-1">
+      <input
+        type="search"
+        enterkeyhint="search"
+        class="shelf-field w-full {searchSession.query.trim() ? 'pr-11' : ''}"
+        placeholder={searchSession.source === "openlibrary"
+          ? t("search.query_placeholder_books")
+          : t("search.query_placeholder")}
+        bind:value={searchSession.query}
+        onfocus={(e) => {
+          (e.currentTarget as HTMLInputElement).scrollIntoView({ block: "center", behavior: "smooth" });
+        }}
+      />
+      {#if searchSession.query.trim() || searchSession.hits.length > 0}
+        <button
+          type="button"
+          class="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-lg leading-none text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          aria-label={t("search.clear")}
+          title={t("common.clear")}
+          onclick={onClearSearch}
+        >
+          ×
+        </button>
+      {/if}
+    </div>
     <button
       type="submit"
       class="shelf-btn-primary"
@@ -189,7 +215,19 @@
   </form>
 
   {#if searchSession.err}
-    <p class="text-sm text-red-600 dark:text-red-400">{searchSession.err}</p>
+    <div class="flex flex-wrap items-center gap-3">
+      <p class="text-sm text-red-600 dark:text-red-400">{searchSession.err}</p>
+      {#if searchSession.query.trim() && canSearch}
+        <button
+          type="button"
+          class="shelf-touch inline-flex min-h-9 items-center rounded-md border border-zinc-300 px-3 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          disabled={loading}
+          onclick={() => void loadPage(searchSession.page)}
+        >
+          {t("search.retry")}
+        </button>
+      {/if}
+    </div>
   {/if}
   {#if searchSession.msg}
     <p class="text-sm text-zinc-600 dark:text-zinc-400">{searchSession.msg}</p>
