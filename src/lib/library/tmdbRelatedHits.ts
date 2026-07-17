@@ -1,7 +1,10 @@
 import type { TmdbSearchHit } from "$lib/api/tmdb/client";
 
-/** Máximo de tarjetas en el carrusel de relacionados. */
-export const RELATED_TMDB_HITS_CAP = 16;
+/** Máximo de tarjetas en el carrusel de relacionados (preview). */
+export const RELATED_TMDB_HITS_CAP = 12;
+
+/** Tope al ir cargando páginas en el sheet «Ver más». */
+export const RELATED_TMDB_SHEET_CAP = 60;
 
 function appendUniqueHits(
   out: TmdbSearchHit[],

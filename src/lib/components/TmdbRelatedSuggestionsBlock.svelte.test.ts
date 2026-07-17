@@ -59,8 +59,8 @@ describe("TmdbRelatedSuggestionsBlock", () => {
     hoisted.getMovieSimilar.mockClear();
     render(TmdbRelatedSuggestionsBlock, { props: { mediaType: "movie", tmdbId: 11 } });
     await waitFor(() => {
-      expect(hoisted.getMovieRecommendations).toHaveBeenCalledWith(11);
-      expect(hoisted.getMovieSimilar).toHaveBeenCalledWith(11);
+      expect(hoisted.getMovieRecommendations).toHaveBeenCalledWith(11, 1);
+      expect(hoisted.getMovieSimilar).toHaveBeenCalledWith(11, 1);
     });
     expect(createTmdbClient).toHaveBeenCalled();
     await waitFor(() => {
@@ -74,8 +74,8 @@ describe("TmdbRelatedSuggestionsBlock", () => {
     hoisted.getTvSimilar.mockClear();
     render(TmdbRelatedSuggestionsBlock, { props: { mediaType: "tv", tmdbId: 42 } });
     await waitFor(() => {
-      expect(hoisted.getTvRecommendations).toHaveBeenCalledWith(42);
-      expect(hoisted.getTvSimilar).toHaveBeenCalledWith(42);
+      expect(hoisted.getTvRecommendations).toHaveBeenCalledWith(42, 1);
+      expect(hoisted.getTvSimilar).toHaveBeenCalledWith(42, 1);
     });
   });
 });

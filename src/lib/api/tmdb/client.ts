@@ -280,23 +280,29 @@ export function createTmdbClient(opts: TmdbClientOptions) {
       };
     },
 
-    async getMovieRecommendations(id: number): Promise<TmdbSearchHit[]> {
-      const data = await request<{ results?: TmdbMovieListRow[] }>(`/movie/${id}/recommendations`);
+    async getMovieRecommendations(id: number, page = 1): Promise<TmdbSearchHit[]> {
+      const p = Math.max(1, Math.floor(page));
+      const data = await request<{ results?: TmdbMovieListRow[] }>(
+        `/movie/${id}/recommendations?page=${p}`,
+      );
       return hitsFromMovieResults(data.results);
     },
 
-    async getMovieSimilar(id: number): Promise<TmdbSearchHit[]> {
-      const data = await request<{ results?: TmdbMovieListRow[] }>(`/movie/${id}/similar`);
+    async getMovieSimilar(id: number, page = 1): Promise<TmdbSearchHit[]> {
+      const p = Math.max(1, Math.floor(page));
+      const data = await request<{ results?: TmdbMovieListRow[] }>(`/movie/${id}/similar?page=${p}`);
       return hitsFromMovieResults(data.results);
     },
 
-    async getTvRecommendations(id: number): Promise<TmdbSearchHit[]> {
-      const data = await request<{ results?: TmdbTvListRow[] }>(`/tv/${id}/recommendations`);
+    async getTvRecommendations(id: number, page = 1): Promise<TmdbSearchHit[]> {
+      const p = Math.max(1, Math.floor(page));
+      const data = await request<{ results?: TmdbTvListRow[] }>(`/tv/${id}/recommendations?page=${p}`);
       return hitsFromTvResults(data.results);
     },
 
-    async getTvSimilar(id: number): Promise<TmdbSearchHit[]> {
-      const data = await request<{ results?: TmdbTvListRow[] }>(`/tv/${id}/similar`);
+    async getTvSimilar(id: number, page = 1): Promise<TmdbSearchHit[]> {
+      const p = Math.max(1, Math.floor(page));
+      const data = await request<{ results?: TmdbTvListRow[] }>(`/tv/${id}/similar?page=${p}`);
       return hitsFromTvResults(data.results);
     },
 

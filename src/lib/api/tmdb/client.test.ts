@@ -186,7 +186,7 @@ describe("createTmdbClient", () => {
     const client = createTmdbClient({ apiKey: "k", fetchImpl });
     const hits = await client.getMovieRecommendations(99);
     expect(fetchImpl).toHaveBeenCalledWith(
-      expect.stringContaining("/movie/99/recommendations"),
+      expect.stringContaining("/movie/99/recommendations?page=1"),
       expect.anything(),
     );
     expect(hits).toHaveLength(1);
@@ -218,9 +218,27 @@ describe("createTmdbClient", () => {
     });
     const client = createTmdbClient({ apiKey: "k", fetchImpl });
     const hits = await client.getTvSimilar(5);
-    expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("/tv/5/similar"), expect.anything());
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("/tv/5/similar?page=1"),
+      expect.anything(),
+    );
     expect(hits[0]?.mediaType).toBe("tv");
     expect(hits[0]?.title).toBe("Show");
     expect(hits[0]?.yearLabel).toBe("2018");
+  });
+
+  it("getMovieRecommendations acepta página > 1", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () => JSON.stringify({ results: [] }),
+    });
+    const client = createTmdbClient({ apiKey: "k", fetchImpl });
+    await client.getMovieRecommendations(7, 2);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("/movie/7/recommendations?page=2"),
+      expect.anything(),
+    );
   });
 });

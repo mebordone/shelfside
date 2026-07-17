@@ -16,6 +16,8 @@
   import { addOpenLibrarySearchHitToLibrary } from "$lib/library/sources/registry";
   import { resolvePosterDisplayUrl } from "$lib/poster";
 
+  const PREVIEW_CAP = 12;
+
   interface Props {
     editionId: string;
   }
@@ -23,18 +25,9 @@
   let { editionId }: Props = $props();
 
   let hitsByKey = new SvelteMap<string, OpenLibrarySearchHit>();
+  let allRowsCache = $state<RelatedSuggestionRow[]>([]);
 
-  async function loadRows(): Promise<RelatedSuggestionRow[]> {
-    hitsByKey = new SvelteMap();
-    const eid = editionId.replace(/^\/books\//, "");
-    if (!/^OL[\dA-Z]+M$/i.test(eid)) return [];
-
-    const client = createOpenLibraryClient();
-    const raw = await client.getRelatedEditionHits(eid);
-    const merged = mergeRelatedOpenLibraryHits([raw], {
-      cap: RELATED_OPEN_LIBRARY_HITS_CAP,
-      excludeEditionId: eid,
-    });
+  async function mapHits(merged: OpenLibrarySearchHit[]): Promise<RelatedSuggestionRow[]> {
     const db = await getDatabase();
     const presence = await getOpenLibraryHitsLibraryPresence(
       db,
@@ -52,14 +45,34 @@
           libraryId: libId,
           detailTarget:
             libId != null
-              ? { kind: "library", id: libId }
-              : { kind: "book", editionId: h.editionId },
+              ? { kind: "library" as const, id: libId }
+              : { kind: "book" as const, editionId: h.editionId },
           detailAriaNew: t("detail.related_openlibrary_open"),
           detailAriaInLibrary: t("detail.related_open_aria"),
           openInLibraryTitle: t("detail.related_in_library") + " · " + t("detail.related_open"),
         };
       }),
     );
+  }
+
+  async function loadRows(): Promise<RelatedSuggestionRow[]> {
+    hitsByKey = new SvelteMap();
+    allRowsCache = [];
+    const eid = editionId.replace(/^\/books\//, "");
+    if (!/^OL[\dA-Z]+M$/i.test(eid)) return [];
+
+    const client = createOpenLibraryClient();
+    const raw = await client.getRelatedEditionHits(eid);
+    const merged = mergeRelatedOpenLibraryHits([raw], {
+      cap: RELATED_OPEN_LIBRARY_HITS_CAP,
+      excludeEditionId: eid,
+    });
+    allRowsCache = await mapHits(merged);
+    return allRowsCache.slice(0, PREVIEW_CAP);
+  }
+
+  async function loadMoreRows(_current: RelatedSuggestionRow[]): Promise<RelatedSuggestionRow[]> {
+    return allRowsCache;
   }
 
   async function onAdd(row: RelatedSuggestionRow, status: Status) {
@@ -70,6 +83,8 @@
     afterLibraryChanged();
     return r;
   }
+
+  const canSeeMore = $derived(allRowsCache.length > PREVIEW_CAP);
 </script>
 
 {#key editionId}
@@ -82,7 +97,9 @@
   inLibraryLabel={t("detail.related_in_library")}
   openAriaLabel={t("detail.related_open_aria")}
   openLabel={t("detail.related_open")}
+  canSeeMore={canSeeMore || allRowsCache.length > 0}
   {loadRows}
+  {loadMoreRows}
   {onAdd}
 />
 {/key}

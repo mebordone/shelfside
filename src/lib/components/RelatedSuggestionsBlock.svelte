@@ -32,7 +32,11 @@
     openAriaLabel: string;
     openLabel?: string;
     addDisabled?: boolean;
+    /** Si hay más de lo mostrado en el carrusel o se puede paginar. */
+    canSeeMore?: boolean;
     loadRows: () => Promise<RelatedSuggestionRow[]>;
+    /** Carga acumulada para el sheet (página siguiente). */
+    loadMoreRows?: (current: RelatedSuggestionRow[]) => Promise<RelatedSuggestionRow[]>;
     onAdd: (
       row: RelatedSuggestionRow,
       status: Status,
@@ -49,18 +53,43 @@
     openAriaLabel,
     openLabel,
     addDisabled = false,
+    canSeeMore = false,
     loadRows,
+    loadMoreRows,
     onAdd,
   }: Props = $props();
 
   let rows = $state<RelatedSuggestionRow[]>([]);
+  let sheetRows = $state<RelatedSuggestionRow[]>([]);
   let loading = $state(false);
+  let sheetLoading = $state(false);
+  let sheetOpen = $state(false);
+  let sheetCanLoadMore = $state(false);
   let err = $state<string | null>(null);
   let msg = $state<string | null>(null);
   let addingKey = $state<string | null>(null);
+  let reloadNonce = $state(0);
+
+  function detailHref(target: RelatedDetailTarget): string {
+    if (target.kind === "library") {
+      return resolve("/library/[id]", { id: String(target.id) });
+    }
+    if (target.kind === "book") {
+      return resolve("/search/book/[editionId]", { editionId: target.editionId });
+    }
+    return resolve("/search/[mediaType]/[id]", {
+      mediaType: target.mediaType,
+      id: String(target.id),
+    });
+  }
+
+  function detailAria(row: RelatedSuggestionRow): string {
+    return row.libraryId != null ? row.detailAriaInLibrary : row.detailAriaNew;
+  }
 
   $effect(() => {
     const loader = loadRows;
+    reloadNonce;
     let cancelled = false;
     loading = true;
     err = null;
@@ -95,6 +124,9 @@
         rows = rows.map((item) =>
           item.key === row.key ? { ...item, libraryId: r.libraryId } : item,
         );
+        sheetRows = sheetRows.map((item) =>
+          item.key === row.key ? { ...item, libraryId: r.libraryId } : item,
+        );
         msg = r.alreadyInLibrary ? t("search.already") : t("detail.related_added");
       }
     } catch (e) {
@@ -102,6 +134,50 @@
     } finally {
       addingKey = null;
     }
+  }
+
+  async function openSeeMore() {
+    sheetOpen = true;
+    sheetRows = [...rows];
+    sheetCanLoadMore = Boolean(loadMoreRows) && canSeeMore;
+    if (loadMoreRows && sheetRows.length === 0) {
+      sheetLoading = true;
+      try {
+        sheetRows = await loadMoreRows([]);
+        sheetCanLoadMore = sheetRows.length > 0;
+      } catch (e) {
+        err = userFacingError(e);
+      } finally {
+        sheetLoading = false;
+      }
+    }
+  }
+
+  async function onLoadMoreInSheet() {
+    if (!loadMoreRows) {
+      sheetCanLoadMore = false;
+      return;
+    }
+    sheetLoading = true;
+    try {
+      const before = sheetRows.length;
+      const next = await loadMoreRows(sheetRows);
+      sheetRows = next;
+      sheetCanLoadMore = next.length > before;
+    } catch (e) {
+      err = userFacingError(e);
+      sheetCanLoadMore = false;
+    } finally {
+      sheetLoading = false;
+    }
+  }
+
+  function closeSheet() {
+    sheetOpen = false;
+  }
+
+  function retryLoad() {
+    reloadNonce += 1;
   }
 </script>
 
@@ -124,8 +200,17 @@
   {/if}
   {#if loading}
     <p class="px-3 py-4 text-sm text-zinc-500">{loadingLabel}</p>
-  {:else if err}
-    <p class="px-3 py-3 text-sm text-red-600 dark:text-red-400">{err}</p>
+  {:else if err && rows.length === 0}
+    <div class="flex flex-wrap items-center gap-3 px-3 py-3">
+      <p class="text-sm text-red-600 dark:text-red-400">{err}</p>
+      <button
+        type="button"
+        class="shelf-touch inline-flex min-h-9 items-center rounded-md border border-zinc-300 px-3 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        onclick={retryLoad}
+      >
+        {t("detail.related_retry")}
+      </button>
+    </div>
   {:else if rows.length === 0}
     <p class="px-3 py-3 text-xs text-zinc-500">{emptyLabel}</p>
   {:else}
@@ -137,44 +222,27 @@
           class="w-[6.75rem] shrink-0 snap-start overflow-visible rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900 sm:w-[7.25rem]"
         >
           <div class="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800">
-            {#if row.thumb}
-              <img src={row.thumb} alt="" class="h-full w-full object-cover" />
-            {/if}
+            <a
+              class="absolute inset-0 z-0 block"
+              href={detailHref(row.detailTarget)}
+              aria-label={detailAria(row)}
+            >
+              {#if row.thumb}
+                <img src={row.thumb} alt="" class="h-full w-full object-cover" />
+              {/if}
+            </a>
             <div
               class="pointer-events-none absolute inset-x-0 bottom-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-transparent px-1.5 pb-11 pt-6"
             >
-              {#if row.detailTarget.kind === "library"}
-                <a
-                  class="pointer-events-auto line-clamp-2 text-[10px] font-semibold leading-tight text-white drop-shadow-sm hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white"
-                  href={resolve("/library/[id]", { id: String(row.detailTarget.id) })}
-                  aria-label={row.libraryId != null ? row.detailAriaInLibrary : row.detailAriaNew}
-                  title={row.libraryId != null ? openLabel : undefined}
-                  onclick={(e) => e.stopPropagation()}
-                >
-                  {row.title}
-                </a>
-              {:else if row.detailTarget.kind === "book"}
-                <a
-                  class="pointer-events-auto line-clamp-2 text-[10px] font-semibold leading-tight text-white drop-shadow-sm hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white"
-                  href={resolve("/search/book/[editionId]", { editionId: row.detailTarget.editionId })}
-                  aria-label={row.detailAriaNew}
-                  onclick={(e) => e.stopPropagation()}
-                >
-                  {row.title}
-                </a>
-              {:else}
-                <a
-                  class="pointer-events-auto line-clamp-2 text-[10px] font-semibold leading-tight text-white drop-shadow-sm hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white"
-                  href={resolve("/search/[mediaType]/[id]", {
-                    mediaType: row.detailTarget.mediaType,
-                    id: String(row.detailTarget.id),
-                  })}
-                  aria-label={row.detailAriaNew}
-                  onclick={(e) => e.stopPropagation()}
-                >
-                  {row.title}
-                </a>
-              {/if}
+              <a
+                class="pointer-events-auto line-clamp-2 text-[10px] font-semibold leading-tight text-white drop-shadow-sm hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white"
+                href={detailHref(row.detailTarget)}
+                aria-label={detailAria(row)}
+                title={row.libraryId != null ? openLabel : undefined}
+                onclick={(e) => e.stopPropagation()}
+              >
+                {row.title}
+              </a>
               <p class="mt-0.5 truncate text-[9px] text-white/90">{row.subtitle}</p>
             </div>
             <div class="absolute right-1 bottom-1 z-[2]">
@@ -207,5 +275,100 @@
         </article>
       {/each}
     </div>
+    {#if canSeeMore || (loadMoreRows != null && rows.length > 0)}
+      <div class="border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
+        <button
+          type="button"
+          class="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+          onclick={() => void openSeeMore()}
+        >
+          {t("detail.related_see_more")}
+        </button>
+      </div>
+    {/if}
   {/if}
 </section>
+
+{#if sheetOpen}
+  <div
+    class="fixed inset-0 z-50 flex flex-col bg-zinc-50 dark:bg-zinc-950"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="related-sheet-title"
+  >
+    <header
+      class="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] dark:border-zinc-800"
+    >
+      <h2 id="related-sheet-title" class="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+        {t("detail.related_see_more_title")}
+      </h2>
+      <button
+        type="button"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+        aria-label={t("detail.related_sheet_close")}
+        onclick={closeSheet}
+      >
+        {t("common.close")}
+      </button>
+    </header>
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+      {#if sheetLoading && sheetRows.length === 0}
+        <p class="text-sm text-zinc-500">{loadingLabel}</p>
+      {:else if sheetRows.length === 0}
+        <p class="text-sm text-zinc-500">{emptyLabel}</p>
+      {:else}
+        <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+          {#each sheetRows as row (row.key)}
+            <article class="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+              <div class="relative aspect-[2/3] w-full bg-zinc-200 dark:bg-zinc-800">
+                <a class="absolute inset-0 block" href={detailHref(row.detailTarget)} aria-label={detailAria(row)}>
+                  {#if row.thumb}
+                    <img src={row.thumb} alt="" class="h-full w-full object-cover" />
+                  {/if}
+                </a>
+                <div class="absolute right-1 bottom-1 z-[1]">
+                  {#if row.libraryId != null && row.detailTarget.kind === "library"}
+                    <a
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-zinc-900/85 text-white shadow-md"
+                      href={resolve("/library/[id]", { id: String(row.detailTarget.id) })}
+                      aria-label={openAriaLabel}
+                    >
+                      <svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                        <path
+                          d="M4.5 3A1.5 1.5 0 003 4.5v7A1.5 1.5 0 004.5 13h7a1.5 1.5 0 001.5-1.5v-5l-1-1h-4L7 3H4.5z"
+                        />
+                      </svg>
+                    </a>
+                  {:else if row.libraryId == null}
+                    <AddToLibraryMenuButton
+                      menuId={`related-sheet-${row.key}`}
+                      variant="compact"
+                      busy={addingKey === row.key}
+                      disabled={addDisabled}
+                      onAdd={(status) => addWithStatus(row, status)}
+                    />
+                  {/if}
+                </div>
+              </div>
+              <p class="line-clamp-2 px-1.5 py-1 text-center text-[11px] font-medium leading-tight text-zinc-800 dark:text-zinc-100">
+                {row.title}
+              </p>
+            </article>
+          {/each}
+        </div>
+        {#if sheetCanLoadMore && loadMoreRows}
+          <div class="mt-4 flex justify-center">
+            <button
+              type="button"
+              class="shelf-btn-primary"
+              disabled={sheetLoading}
+              onclick={() => void onLoadMoreInSheet()}
+            >
+              {sheetLoading ? t("common.loading") : t("detail.related_load_more")}
+            </button>
+          </div>
+        {/if}
+      {/if}
+    </div>
+  </div>
+{/if}
