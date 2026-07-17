@@ -12,7 +12,7 @@ Documento de **releases ordenadas** para construir el producto. Modelo de datos,
 | 3.1 — Idioma de catálogo | `v0.3.1` | Entregado |
 | 3.2 — Consolidación pre-4.0 | `v0.3.2` | Entregado |
 | 3.3 — Sync Markdown entre escritorios | `v0.3.3` | Entregado |
-| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.1` entregado**; sigue `v0.4.2`) |
+| 4 — Android (Tauri) y sincronización | `v0.4.0`–`v0.4.6` | En progreso (**`v0.4.2` entregado**; sigue `v0.4.3`) |
 | 5 — Anime y juegos | `v0.5.0` | Planificado |
 | 6 — Calendario y próximos estrenos | `v0.6.0` | Planificado |
 | 7 — Backlog y expansión | `v0.7.0+` | Sin versión fija |
@@ -221,16 +221,16 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 
 ---
 
-#### `v0.4.2` — Sync automático al abrir + toggle
+#### `v0.4.2` — Sync automático al abrir + toggle ✅
 
 | Id | Entregable | Notas |
 |----|------------|--------|
-| 4.2a | **Sync al iniciar** | Tras `runMigrations` en layout: si hay carpeta sync y toggle activo → sync del CSV (no bloquear UI: loading sutil o banner) |
-| 4.2b | **Toast de resultado** | Éxito/error con texto de `formatSyncSummary`; errores de red/fs no silenciosos |
-| 4.2c | **Ajustes: «Sincronizar al abrir»** | `localStorage` (p. ej. `shelfside-sync-on-start`); default **on** si ya hay carpeta; desactivado = solo sync manual |
-| 4.2d | **Paridad desktop** | Misma lógica en Linux (no solo Android) |
+| 4.2a | **Sync al iniciar** | ✅ Tras `runMigrations` en layout: si hay carpeta sync y toggle activo → sync del CSV (UI lista; sync en background) |
+| 4.2b | **Banner de resultado** | ✅ Éxito/error con `formatSyncSummary` bajo el nav; errores fs no silenciosos |
+| 4.2c | **Ajustes: «Sincronizar al abrir»** | ✅ `shelfside-sync-on-start`; default **on** si ya hay carpeta; off = solo sync manual |
+| 4.2d | **Paridad desktop** | ✅ Misma lógica en Linux y Android |
 
-**Cierre `v0.4.2`:** abrís la app y, si está habilitado, sincroniza y avisa con toast; podés desactivarlo en Ajustes.
+**Cierre `v0.4.2`:** abrís la app y, si está habilitado, sincroniza y avisa con banner; podés desactivarlo en Ajustes.
 
 ---
 

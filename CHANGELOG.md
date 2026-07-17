@@ -4,6 +4,18 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-07-17
+
+### Añadido
+
+- **Sync al abrir:** tras migraciones, si hay carpeta sync y el toggle está activo, sincroniza `shelfside.csv` en background sin bloquear la UI.
+- Banner bajo el nav con progreso («Sincronizando…»), resumen (`formatSyncSummary`) o error.
+- Preferencia **Sincronizar al abrir** en Ajustes (`localStorage` `shelfside-sync-on-start`); default **on** solo si ya hay carpeta configurada.
+
+### Notas
+
+- Misma lógica en desktop y Android. En Android no se abre el diálogo de permisos al boot; si falla el acceso, el banner lo indica.
+
 ## [0.4.1] — 2026-07-16
 
 ### Añadido

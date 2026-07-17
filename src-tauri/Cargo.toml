@@ -1,6 +1,6 @@
 [package]
 name = "shelfside"
-version = "0.4.1"
+version = "0.4.2"
 description = "Shelfside — seguimiento cultural local"
 authors = ["you"]
 edition = "2021"
