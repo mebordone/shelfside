@@ -132,7 +132,11 @@
               class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5"
             >
               {#each list as r (r.id)}
-                <HomePosterCard row={r} onLongPress={(row) => (quickEditRow = row)} />
+                <HomePosterCard
+                  row={r}
+                  onLongPress={(row) => (quickEditRow = row)}
+                  onQuickEdit={(row) => (quickEditRow = row)}
+                />
               {/each}
             </div>
           {/if}

@@ -163,9 +163,9 @@
       data-testid="library-list"
     >
       {#each librarySession.rows as r (r.id)}
-        <li>
+        <li class="relative flex bg-white dark:bg-zinc-900">
           <a
-            class="flex min-h-14 gap-3 bg-white p-3 transition-colors hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
+            class="flex min-h-14 min-w-0 flex-1 gap-3 p-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80"
             href={resolve("/library/[id]", { id: String(r.id) })}
             data-library-id={String(r.id)}
             use:longPress={() => (quickEditRow = r)}
@@ -182,6 +182,19 @@
               </p>
             </div>
           </a>
+          <button
+            type="button"
+            class="shelf-touch mr-2 self-center inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md text-lg font-bold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            aria-label={t("quick_edit.open_aria")}
+            title={t("quick_edit.title")}
+            onclick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              quickEditRow = r;
+            }}
+          >
+            …
+          </button>
         </li>
       {/each}
     </ul>
