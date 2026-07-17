@@ -24,7 +24,8 @@
   }: Props = $props();
 
   function chipClass(active: boolean): string {
-    const base = "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors";
+    const base =
+      "inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 text-sm font-medium transition-colors";
     return active
       ? `${base} bg-emerald-600 text-white shadow-sm`
       : `${base} border border-zinc-300 text-zinc-700 hover:bg-zinc-200 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800`;
@@ -36,7 +37,7 @@
 </script>
 
 <div
-  class="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin]"
+  class="flex gap-2 overflow-x-auto px-0.5 py-0.5 [-ms-overflow-style:none] [scrollbar-width:thin]"
   role="radiogroup"
   aria-label={ariaLabel}
 >

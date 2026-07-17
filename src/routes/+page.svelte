@@ -15,6 +15,7 @@
     readHomeMediaFilter,
     type HomeMediaFilter,
   } from "$lib/stores/homeMediaFilter";
+  import { formatTvProgress } from "$lib/library/formatTvProgress";
 
   const HOME_MAX_PER_SECTION = 24;
 
@@ -65,10 +66,7 @@
 
   function tvProgressLine(r: Row): string | null {
     if (r.media_type !== "tv") return null;
-    if (r.current_season == null && r.last_episode_watched == null) return null;
-    const s = r.current_season ?? "—";
-    const e = r.last_episode_watched ?? "—";
-    return `T${s} · E${e}`;
+    return formatTvProgress(r.current_season, r.last_episode_watched);
   }
 
   async function loadLibrary() {
@@ -147,7 +145,7 @@
                 {:else}
                   <div class="aspect-[2/3] w-full rounded bg-zinc-200 dark:bg-zinc-800"></div>
                 {/if}
-                <p class="line-clamp-2 text-center text-[11px] font-medium leading-tight text-emerald-800 group-hover:underline dark:text-emerald-300">
+                <p class="line-clamp-2 text-center text-[11px] font-medium leading-tight text-zinc-800 group-hover:underline dark:text-zinc-100">
                   {r.title}
                 </p>
                 {#if tvProgressLine(r)}
