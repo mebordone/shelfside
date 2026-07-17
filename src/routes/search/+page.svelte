@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { getTmdbApiKeyFromEnv } from "$lib/api";
+  import { userFacingError } from "$lib/api/userFacingError";
   import type { OpenLibrarySearchHit } from "$lib/api/openlibrary/types";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
   import FilterChipBar from "$lib/components/FilterChipBar.svelte";
@@ -79,7 +80,7 @@
       searchSession.page = page;
       searchSession.hits = rows;
     } catch (e) {
-      searchSession.err = e instanceof Error ? e.message : String(e);
+      searchSession.err = userFacingError(e);
       searchSession.hits = [];
     } finally {
       loading = false;
@@ -98,7 +99,7 @@
       clearSearchPagination();
       await loadPage(0);
     } catch (e) {
-      searchSession.err = e instanceof Error ? e.message : String(e);
+      searchSession.err = userFacingError(e);
       searchSession.hits = [];
     } finally {
       loading = false;
@@ -127,7 +128,7 @@
         await goto(resolve("/library/[id]", { id: String(r.libraryId) }));
       }
     } catch (e) {
-      searchSession.err = e instanceof Error ? e.message : String(e);
+      searchSession.err = userFacingError(e);
     } finally {
       addingKey = null;
     }
@@ -167,11 +168,16 @@
     }}
   >
     <input
+      type="search"
+      enterkeyhint="search"
       class="shelf-field min-w-[12rem] flex-1"
       placeholder={searchSession.source === "openlibrary"
         ? t("search.query_placeholder_books")
         : t("search.query_placeholder")}
       bind:value={searchSession.query}
+      onfocus={(e) => {
+        (e.currentTarget as HTMLInputElement).scrollIntoView({ block: "center", behavior: "smooth" });
+      }}
     />
     <button
       type="submit"
@@ -196,7 +202,7 @@
       <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("search.ol_strict_empty")}</p>
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
         onclick={() => void clearStrictAndSearch()}
       >
         {t("search.ol_strict_clear")}
@@ -228,7 +234,14 @@
             aria-label={h.kind === "tmdb" ? t("search.aria_open_detail_tmdb") : t("search.aria_open_detail_book")}
           >
             {#if h.thumb}
-              <img src={h.thumb} alt="" class="h-20 w-14 shrink-0 rounded object-cover" />
+              <img
+                src={h.thumb}
+                alt=""
+                class="h-20 w-14 shrink-0 rounded object-cover"
+                onerror={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
             {:else}
               <div class="h-20 w-14 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800"></div>
             {/if}

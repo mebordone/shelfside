@@ -113,7 +113,7 @@
       <p class="text-amber-950 dark:text-amber-100">{t("settings.sync_storage_permission_needed")}</p>
       <button
         type="button"
-        class="rounded-md bg-amber-800 px-3 py-1.5 text-sm text-white hover:bg-amber-900 disabled:opacity-50"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md bg-amber-800 px-3 text-sm text-white hover:bg-amber-900 disabled:opacity-50"
         disabled={busy !== null}
         onclick={() => onRequestStoragePermission()}
       >
@@ -161,7 +161,7 @@
     {#if showFolderPicker}
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
         disabled={busy !== null}
         onclick={() => onChooseSyncFolder()}
       >
@@ -170,7 +170,7 @@
     {/if}
     <button
       type="button"
-      class="rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+      class="shelf-btn-primary"
       disabled={busy !== null}
       onclick={() => onSyncFolder()}
     >
@@ -184,7 +184,7 @@
     <div class="mt-3 flex flex-wrap gap-2">
       <button
         type="button"
-        class="rounded-md border border-emerald-700 px-3 py-1.5 text-sm text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-emerald-700 px-3 text-sm text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
         disabled={busy !== null}
         onclick={() => onExportMd()}
       >
@@ -192,7 +192,7 @@
       </button>
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-700"
         disabled={busy !== null}
         onclick={() => onImportMerge()}
       >
@@ -200,7 +200,7 @@
       </button>
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-700"
         disabled={busy !== null || !syncFolder}
         onclick={() => onCleanRecycleOpen()}
       >
@@ -234,7 +234,7 @@
 <section class="flex flex-wrap gap-2">
   <button
     type="button"
-    class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+    class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-700"
     disabled={busy !== null}
     onclick={() => onExportCsv()}
   >
@@ -242,7 +242,7 @@
   </button>
   <button
     type="button"
-    class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+    class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-700"
     disabled={busy !== null}
     onclick={() => onBackup()}
   >
@@ -250,7 +250,7 @@
   </button>
   <button
     type="button"
-    class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
+    class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-700"
     disabled={busy !== null}
     onclick={() => onCopyLogs()}
   >

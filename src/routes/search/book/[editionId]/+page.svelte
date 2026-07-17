@@ -3,6 +3,7 @@
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { createOpenLibraryClient, type OpenLibrarySearchHit } from "$lib/api";
+  import { userFacingError } from "$lib/api/userFacingError";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
   import OpenLibraryRelatedSuggestionsBlock from "$lib/components/OpenLibraryRelatedSuggestionsBlock.svelte";
   import type { Status } from "$lib/db/types";
@@ -10,6 +11,7 @@
   import { t } from "$lib/i18n";
   import { addOpenLibrarySearchHitToLibrary } from "$lib/library/sources/registry";
   import { resolvePosterDisplayUrl } from "$lib/poster";
+  import { mobileLayout } from "$lib/stores/mobileLayout.svelte";
   import { searchSession } from "$lib/stores/searchSession.svelte";
 
   let loading = $state(true);
@@ -65,7 +67,7 @@
         posterUrl = await resolvePosterDisplayUrl(null, d.coverUrl);
       } catch (e) {
         if (!cancelled) {
-          err = e instanceof Error ? e.message : String(e);
+          err = userFacingError(e);
           detail = null;
         }
       } finally {
@@ -92,7 +94,7 @@
         await goto(resolve("/library/[id]", { id: String(r.libraryId) }));
       }
     } catch (e) {
-      err = e instanceof Error ? e.message : String(e);
+      err = userFacingError(e);
     } finally {
       adding = false;
     }
@@ -137,7 +139,14 @@
         >
           {t("detail.book_open_library")}
         </button>
-        <AddToLibraryMenuButton menuId={detailMenuId} busy={adding} onAdd={(st) => addWithStatus(st)} />
+        <div class="mt-2 {mobileLayout.current ? 'w-full' : ''}">
+          <AddToLibraryMenuButton
+            menuId={detailMenuId}
+            busy={adding}
+            fullWidth={mobileLayout.current}
+            onAdd={(st) => addWithStatus(st)}
+          />
+        </div>
       </div>
     </header>
 

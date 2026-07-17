@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from "$app/paths";
   import { onMount } from "svelte";
   import { getDatabase } from "$lib/db/connection";
   import { countByMediaType, countByStatus, countLibraryEntries } from "$lib/db/stats";
@@ -42,22 +43,34 @@
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
   {:else if total === 0}
-    <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("stats.empty")}</p>
+    <div class="space-y-3">
+      <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("stats.empty")}</p>
+      <p class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <a
+          class="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+          href={resolve("/library")}>{t("nav.library")}</a
+        >
+        <a
+          class="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+          href={resolve("/search")}>{t("nav.search")}</a
+        >
+      </p>
+    </div>
   {:else}
     <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("stats.count").replace("{n}", String(total))}</p>
 
-    <section class="space-y-3">
+    <section class="space-y-4">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
         {t("stats.by_status")}
       </h2>
-      <ul class="space-y-2">
+      <ul class="space-y-3">
         {#each byStatus as row (row.label)}
-          <li class="space-y-1">
-            <div class="flex justify-between text-xs">
+          <li class="space-y-1.5">
+            <div class="flex justify-between text-sm">
               <span>{row.label}</span>
               <span class="tabular-nums text-zinc-500">{row.n}</span>
             </div>
-            <div class="h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+            <div class="h-3 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
               <div
                 class="h-full rounded bg-emerald-600 dark:bg-emerald-500"
                 style="width: {barWidth(row.n, maxStatus)}"
@@ -68,18 +81,18 @@
       </ul>
     </section>
 
-    <section class="space-y-3">
+    <section class="space-y-4">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
         {t("stats.by_media")}
       </h2>
-      <ul class="space-y-2">
+      <ul class="space-y-3">
         {#each byMedia as row (row.label)}
-          <li class="space-y-1">
-            <div class="flex justify-between text-xs">
+          <li class="space-y-1.5">
+            <div class="flex justify-between text-sm">
               <span>{row.label}</span>
               <span class="tabular-nums text-zinc-500">{row.n}</span>
             </div>
-            <div class="h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+            <div class="h-3 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
               <div
                 class="h-full rounded bg-emerald-600 dark:bg-emerald-500"
                 style="width: {barWidth(row.n, maxMedia)}"

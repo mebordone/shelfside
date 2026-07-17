@@ -9,6 +9,7 @@
   import { buildManualBookMetadata } from "$lib/library/openLibraryCatalogMeta";
   import { guessImageExtFromPath, saveManualPosterCopy } from "$lib/poster";
   import { t } from "$lib/i18n";
+  import { isAndroidPlatform } from "$lib/platform";
 
   let title = $state("");
   let mediaType = $state<"movie" | "tv" | "book">("movie");
@@ -33,7 +34,11 @@
         pickedPath = null;
       }
     } catch (e) {
-      err = e instanceof Error ? e.message : String(e);
+      if (isAndroidPlatform()) {
+        err = t("manual.image_picker_unavailable");
+      } else {
+        err = e instanceof Error ? e.message : String(e);
+      }
     }
   }
 
@@ -75,7 +80,7 @@
   }
 </script>
 
-<div class="mx-auto max-w-lg space-y-6 px-4 py-8">
+<div class="mx-auto max-w-lg space-y-6 px-4 py-8 pb-24 sm:pb-8">
   <h1 class="text-2xl font-semibold">{t("manual.title")}</h1>
   <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("manual.subtitle")}</p>
 
@@ -94,14 +99,14 @@
       <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_title")}</span>
       <input
         required
-        class="mt-1 shelf-field"
+        class="mt-1 shelf-field min-h-11"
         bind:value={title}
       />
     </label>
 
     <label class="block text-sm">
       <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_type")}</span>
-      <select class="mt-1 shelf-field" bind:value={mediaType}>
+      <select class="mt-1 shelf-field min-h-11" bind:value={mediaType}>
         <option value="movie">{t("media.movie")}</option>
         <option value="tv">{t("media.tv")}</option>
         <option value="book">{t("media.book")}</option>
@@ -111,18 +116,18 @@
     {#if mediaType === "book"}
       <label class="block text-sm">
         <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_author")}</span>
-        <input class="mt-1 shelf-field" bind:value={author} />
+        <input class="mt-1 shelf-field min-h-11" bind:value={author} />
       </label>
       <label class="block text-sm">
         <span class="text-zinc-600 dark:text-zinc-400">{t("manual.field_year")}</span>
-        <input class="mt-1 shelf-field" type="number" min="0" bind:value={yearStr} />
+        <input class="mt-1 shelf-field min-h-11" type="number" min="0" bind:value={yearStr} />
       </label>
     {/if}
 
     <label class="block text-sm">
       <span class="text-zinc-600 dark:text-zinc-400">{t("add.status_label")}</span>
       <select
-        class="mt-1 shelf-field"
+        class="mt-1 shelf-field min-h-11"
         bind:value={addStatus}
         onchange={() => persistDefaultAddStatus(addStatus)}
       >
@@ -145,7 +150,7 @@
     <div class="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-600"
         onclick={() => void pickImage()}
       >
         {t("manual.pick_image")}
@@ -155,12 +160,12 @@
       {/if}
     </div>
 
-    <button
-      type="submit"
-      class="shelf-btn-primary"
-      disabled={saving}
+    <div
+      class="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-zinc-200 bg-zinc-50/95 px-4 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-950/95 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:pt-4 sm:backdrop-blur-none"
     >
-      {t("manual.submit")}
-    </button>
+      <button type="submit" class="shelf-btn-primary" disabled={saving}>
+        {t("manual.submit")}
+      </button>
+    </div>
   </form>
 </div>

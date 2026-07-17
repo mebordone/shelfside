@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { open, save } from "@tauri-apps/plugin-dialog";
+  import { open } from "@tauri-apps/plugin-dialog";
   import { writeTextFile } from "@tauri-apps/plugin-fs";
   import SettingsAppearanceSection from "$lib/components/settings/SettingsAppearanceSection.svelte";
   import SettingsCatalogSection from "$lib/components/settings/SettingsCatalogSection.svelte";
@@ -10,8 +10,12 @@
   import { backupFilenameSuggestion, writeDatabaseBackup } from "$lib/export/backup";
   import { buildLibraryCsv } from "$lib/export/csv";
   import { formatBytes, getDatabaseInfo } from "$lib/export/dbInfo";
+  import { exportAllMarkdownToLibraryDir } from "$lib/export/markdown";
+  import { resolveMarkdownExportDestination, resolveSavePath } from "$lib/export/saveDestination";
   import { appLocale, setAppLocale, t } from "$lib/i18n";
   import { afterLibraryChanged } from "$lib/library/mutations";
+  import { copyRuntimeLogsToClipboard, logError, logInfo, logWarn } from "$lib/logs/runtimeLogs";
+  import { ANDROID_DEFAULT_SYNC_DIR, isAndroidPlatform } from "$lib/platform";
   import {
     type CatalogLangPreference,
     persistCatalogLang,
@@ -22,16 +26,13 @@
   import { clearSearchResults, searchSession } from "$lib/stores/searchSession.svelte";
   import { persistSyncFolder, readSyncFolder } from "$lib/stores/syncFolder";
   import { persistSyncOnStart, readSyncOnStart } from "$lib/stores/syncOnStart";
-  import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
+  import { hasAllFilesAccess, requestAllFilesAccess } from "$lib/sync/androidStorageAccess";
+  import { cleanSyncRecycleBin, previewCleanSyncRecycleBin } from "$lib/sync/cleanSyncRecycleBin";
   import { formatCleanRecycleSummary } from "$lib/sync/formatCleanRecycleSummary";
-  import { previewCleanSyncRecycleBin, cleanSyncRecycleBin } from "$lib/sync/cleanSyncRecycleBin";
-  import { exportToSyncFolder } from "$lib/sync/exportToSyncFolder";
+  import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
   import { mergeFromSyncFolder } from "$lib/sync/mergeFromFolder";
   import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
   import { validateSyncFolderPath } from "$lib/sync/validateSyncFolder";
-  import { hasAllFilesAccess, requestAllFilesAccess } from "$lib/sync/androidStorageAccess";
-  import { ANDROID_DEFAULT_SYNC_DIR, isAndroidPlatform } from "$lib/platform";
-  import { copyRuntimeLogsToClipboard, logError, logInfo, logWarn } from "$lib/logs/runtimeLogs";
 
   let dbPath = $state("");
   let dbSize = $state<string>("—");
@@ -231,19 +232,19 @@
   }
 
   async function runExportMd() {
-    if (!syncFolder) {
-      logError("settings.sync.export_md.no_folder");
-      setMessage("err", t("settings.sync_no_folder"));
-      return;
-    }
+    if (!(await ensureStorageAccess())) return;
     busy = "md";
     message = null;
-    logInfo("settings.sync.export_md.start", { syncFolder });
     try {
+      const { libraryDir, usedDownloadFallback } = await resolveMarkdownExportDestination(syncFolder);
+      logInfo("settings.sync.export_md.start", { libraryDir, usedDownloadFallback, syncFolder });
       const db = await getDatabase();
-      const n = await exportToSyncFolder(db, syncFolder);
-      logInfo("settings.sync.export_md.ok", { count: n, syncFolder });
-      setMessage("ok", `${t("settings.export_md_ok")} (${n})`);
+      const n = await exportAllMarkdownToLibraryDir(db, libraryDir);
+      logInfo("settings.sync.export_md.ok", { count: n, libraryDir });
+      const msg = t("settings.export_md_ok_path")
+        .replace("{n}", String(n))
+        .replace("{path}", libraryDir);
+      setMessage("ok", usedDownloadFallback ? `${t("settings.export_md_fallback")} ${msg}` : msg);
     } catch (e) {
       logError("settings.sync.export_md.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
@@ -325,16 +326,21 @@
     message = null;
     logInfo("settings.export_csv.start");
     try {
-      const dest = await save({
+      const resolved = await resolveSavePath({
         defaultPath: "library.csv",
         filters: [{ name: "CSV", extensions: ["csv"] }],
       });
-      if (!dest) return;
+      if (resolved.kind === "cancelled") return;
       const db = await getDatabase();
       const csv = await buildLibraryCsv(db);
-      await writeTextFile(dest, csv);
-      logInfo("settings.export_csv.ok", { destination: dest, bytes: csv.length });
-      setMessage("ok", t("settings.action_done"));
+      await writeTextFile(resolved.path, csv);
+      logInfo("settings.export_csv.ok", { destination: resolved.path, bytes: csv.length });
+      setMessage(
+        "ok",
+        resolved.kind === "fallback"
+          ? t("settings.saved_to_path").replace("{path}", resolved.path)
+          : t("settings.action_done"),
+      );
     } catch (e) {
       logError("settings.export_csv.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));
@@ -348,14 +354,19 @@
     message = null;
     logInfo("settings.backup.start");
     try {
-      const dest = await save({
+      const resolved = await resolveSavePath({
         defaultPath: backupFilenameSuggestion(),
         filters: [{ name: "SQLite", extensions: ["db"] }],
       });
-      if (!dest) return;
-      await writeDatabaseBackup(dest);
-      logInfo("settings.backup.ok", { destination: dest });
-      setMessage("ok", t("settings.action_done"));
+      if (resolved.kind === "cancelled") return;
+      await writeDatabaseBackup(resolved.path);
+      logInfo("settings.backup.ok", { destination: resolved.path });
+      setMessage(
+        "ok",
+        resolved.kind === "fallback"
+          ? t("settings.saved_to_path").replace("{path}", resolved.path)
+          : t("settings.action_done"),
+      );
     } catch (e) {
       logError("settings.backup.error", e);
       setMessage("err", e instanceof Error ? e.message : String(e));

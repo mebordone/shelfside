@@ -6,13 +6,13 @@ import { serializeMarkdownEntry } from "$lib/sync/parseMarkdown";
 import { ensureLibraryDir } from "$lib/sync/libraryDir";
 import { libraryMarkdownFilename } from "./slug";
 
-export async function exportAllMarkdownToFolder(db: SqlDb, syncDir: string): Promise<number> {
+/** Escribe un `.md` por entrada en `libraryDir` (ya creado). */
+export async function exportAllMarkdownToLibraryDir(db: SqlDb, libraryDir: string): Promise<number> {
   const rows = await listLibraryWithCatalog(db, {});
   const catalogRows = await db.select<{ id: number; updated_at: string }[]>(
     "SELECT id, updated_at FROM catalog_item",
   );
   const catalogMap = new Map(catalogRows.map((c) => [c.id, c.updated_at]));
-  const libraryDir = await ensureLibraryDir(syncDir);
 
   for (const r of rows) {
     const content = serializeMarkdownEntry({
@@ -41,4 +41,9 @@ export async function exportAllMarkdownToFolder(db: SqlDb, syncDir: string): Pro
   }
 
   return rows.length;
+}
+
+export async function exportAllMarkdownToFolder(db: SqlDb, syncDir: string): Promise<number> {
+  const libraryDir = await ensureLibraryDir(syncDir);
+  return exportAllMarkdownToLibraryDir(db, libraryDir);
 }

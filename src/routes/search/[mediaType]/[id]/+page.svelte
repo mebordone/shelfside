@@ -8,6 +8,7 @@
     type TmdbDetail,
     type TmdbSearchHit,
   } from "$lib/api";
+  import { userFacingError } from "$lib/api/userFacingError";
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import type { Status } from "$lib/db/types";
@@ -15,6 +16,7 @@
   import { t } from "$lib/i18n";
   import { addTmdbSearchHitToLibrary } from "$lib/library/sources/registry";
   import { resolvePosterDisplayUrl } from "$lib/poster";
+  import { mobileLayout } from "$lib/stores/mobileLayout.svelte";
   import { searchSession } from "$lib/stores/searchSession.svelte";
 
   let loading = $state(true);
@@ -86,7 +88,7 @@
         detail = d;
         posterUrl = await resolvePosterDisplayUrl(null, client.posterUrlFromPath(d.posterPath));
       } catch (e) {
-        err = e instanceof Error ? e.message : String(e);
+        err = userFacingError(e);
       } finally {
         loading = false;
       }
@@ -107,7 +109,7 @@
         await goto(resolve("/library/[id]", { id: String(r.libraryId) }));
       }
     } catch (e) {
-      err = e instanceof Error ? e.message : String(e);
+      err = userFacingError(e);
     } finally {
       adding = false;
     }
@@ -139,10 +141,11 @@
           <p class="mt-1 text-sm text-zinc-500">
             {t(`media.${detail.mediaType}`)}{#if yearLabel} · {yearLabel}{/if}
           </p>
-          <div class="mt-3">
+          <div class="mt-3 {mobileLayout.current ? 'w-full' : ''}">
             <AddToLibraryMenuButton
               menuId={detailMenuId}
               variant="row"
+              fullWidth={mobileLayout.current}
               busy={adding}
               disabled={!hasKey}
               onAdd={(status) => addToLibrary(status)}

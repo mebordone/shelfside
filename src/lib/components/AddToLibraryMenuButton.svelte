@@ -11,15 +11,31 @@
     disabled?: boolean;
     /** `row`: lista / detalle; `compact`: carrusel (solo +). */
     variant?: "row" | "compact";
+    /** CTA a ancho completo (detalle móvil). */
+    fullWidth?: boolean;
   }
 
-  let { onAdd, menuId, busy = false, disabled = false, variant = "row" }: Props = $props();
+  let {
+    onAdd,
+    menuId,
+    busy = false,
+    disabled = false,
+    variant = "row",
+    fullWidth = false,
+  }: Props = $props();
 
   let menuOpen = $state(false);
   let triggerRef = $state<HTMLButtonElement | null>(null);
   let menuBoxStyle = $state("");
 
   const MENU_WIDTH = 168;
+
+  function triggerClass(): string {
+    if (variant === "compact") {
+      return "shelf-touch inline-flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold leading-none text-white shadow-md ring-1 ring-black/20 hover:bg-emerald-500 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300";
+    }
+    return `shelf-btn-primary px-3${fullWidth ? " w-full" : ""}`;
+  }
 
   function updateMenuPosition() {
     if (!menuOpen || !triggerRef) return;
@@ -115,13 +131,11 @@
   });
 </script>
 
-<div class="inline-flex max-w-full" data-add-menu={menuId}>
+<div class="{fullWidth && variant !== 'compact' ? 'flex w-full' : 'inline-flex'} max-w-full" data-add-menu={menuId}>
   <button
     bind:this={triggerRef}
     type="button"
-    class="{variant === 'compact'
-      ? 'inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold leading-none text-white shadow-md ring-1 ring-black/20 hover:bg-emerald-500 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300'
-      : 'rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300'}"
+    class={triggerClass()}
     disabled={disabled || busy}
     aria-expanded={menuOpen}
     aria-haspopup="menu"
@@ -154,7 +168,7 @@
         <button
           type="button"
           role="menuitem"
-          class="block w-full whitespace-nowrap px-3 py-2 text-left hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-950/80"
+          class="flex min-h-11 w-full items-center whitespace-nowrap px-3 text-left text-sm hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-950/80"
           disabled={disabled || busy}
           onclick={(e) => void pickStatus(st, e)}
         >
