@@ -37,4 +37,13 @@
     @apply focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30;
     @apply dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100;
   }
+
+  /** Target táctil mínimo ~44px (v0.4.3). */
+  .shelf-touch {
+    @apply min-h-11 min-w-11;
+  }
+
+  .shelf-btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50;
+  }
 }

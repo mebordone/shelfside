@@ -111,7 +111,7 @@
       />
       <button
         type="button"
-        class="shrink-0 rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700"
+        class="shelf-btn-primary shrink-0"
         onclick={reloadFromFilters}
       >
         {t("common.apply")}

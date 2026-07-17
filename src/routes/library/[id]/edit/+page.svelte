@@ -247,7 +247,7 @@
       <div class="flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-700">
         <button
           type="submit"
-          class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          class="shelf-btn-primary"
           disabled={saving}
         >
           {t("common.save")}

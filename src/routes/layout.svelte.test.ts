@@ -1,21 +1,30 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/svelte";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import LayoutHarness from "../test/LayoutHarness.svelte";
 
-const { runMigrations, syncSyncFolder, getDatabase, afterLibraryChanged } = vi.hoisted(() => ({
-  runMigrations: vi.fn().mockResolvedValue(undefined),
-  syncSyncFolder: vi.fn().mockResolvedValue({
-    merge: { imported: 1, updated: 0, deleted: 0, skipped: 0, errors: [] },
-    exported: 1,
+const { runMigrations, syncSyncFolder, getDatabase, afterLibraryChanged, mobileLayout } = vi.hoisted(
+  () => ({
+    runMigrations: vi.fn().mockResolvedValue(undefined),
+    syncSyncFolder: vi.fn().mockResolvedValue({
+      merge: { imported: 1, updated: 0, deleted: 0, skipped: 0, errors: [] },
+      exported: 1,
+    }),
+    getDatabase: vi.fn().mockResolvedValue({}),
+    afterLibraryChanged: vi.fn(),
+    mobileLayout: { current: false },
   }),
-  getDatabase: vi.fn().mockResolvedValue({}),
-  afterLibraryChanged: vi.fn(),
-}));
+);
 
 vi.mock("$lib/db", () => ({ runMigrations }));
 vi.mock("$lib/db/connection", () => ({ getDatabase }));
 vi.mock("$lib/sync/syncSyncFolder", () => ({ syncSyncFolder }));
 vi.mock("$lib/library/mutations", () => ({ afterLibraryChanged }));
+vi.mock("$lib/stores/mobileLayout.svelte", () => ({
+  mobileLayout,
+  initMobileLayout: vi.fn(() => () => {}),
+  destroyMobileLayout: vi.fn(),
+}));
 
 afterEach(() => {
   cleanup();
@@ -28,6 +37,7 @@ describe("+layout (arranque)", () => {
     syncSyncFolder.mockClear();
     getDatabase.mockClear();
     afterLibraryChanged.mockClear();
+    mobileLayout.current = false;
     localStorage.clear();
     localStorage.removeItem("shelfside-theme");
     document.documentElement.classList.remove("dark");
@@ -88,5 +98,34 @@ describe("+layout (arranque)", () => {
       expect(afterLibraryChanged).toHaveBeenCalled();
     });
     expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("en desktop muestra top nav y no bottom nav", async () => {
+    mobileLayout.current = false;
+    render(LayoutHarness);
+    await waitFor(() => {
+      expect(screen.getByTestId("layout-child")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("top-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId("bottom-nav")).not.toBeInTheDocument();
+  });
+
+  it("en móvil muestra bottom nav y la hoja Más", async () => {
+    mobileLayout.current = true;
+    const user = userEvent.setup();
+    render(LayoutHarness);
+    await waitFor(() => {
+      expect(screen.getByTestId("layout-child")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-header")).toBeInTheDocument();
+    expect(screen.queryByTestId("top-nav")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("more-sheet")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("nav-more-tab"));
+    expect(screen.getByTestId("more-sheet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Configuración|Settings/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Estadísticas|Statistics/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Añadir manual|Add manual/i })).toBeInTheDocument();
   });
 });

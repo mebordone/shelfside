@@ -157,7 +157,7 @@
 
     <button
       type="submit"
-      class="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
+      class="shelf-btn-primary"
       disabled={saving}
     >
       {t("manual.submit")}

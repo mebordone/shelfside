@@ -66,7 +66,7 @@
   {/if}
   <button
     type="button"
-    class="rounded-md bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700"
+    class="shelf-btn-primary px-3"
     disabled={busy}
     onclick={() => void goto(resolve("/library/[id]/edit", { id: String(libraryId) }))}
   >

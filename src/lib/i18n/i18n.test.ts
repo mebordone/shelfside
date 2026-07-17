@@ -53,4 +53,15 @@ describe("i18n", () => {
     expect(t("sync.boot_running")).toBe("Syncing…");
     expect(t("common.close")).toBe("Close");
   });
+
+  it("incluye claves de nav móvil 0.4.3 en es y en", () => {
+    setAppLocale("es");
+    expect(t("nav.more")).toBe("Más");
+    expect(t("nav.more_aria")).toMatch(/Más/i);
+    expect(t("nav.bottom_aria")).toMatch(/inferior/i);
+    setAppLocale("en");
+    expect(t("nav.more")).toBe("More");
+    expect(t("nav.more_aria")).toMatch(/More/i);
+    expect(t("nav.bottom_aria")).toMatch(/Bottom/i);
+  });
 });
