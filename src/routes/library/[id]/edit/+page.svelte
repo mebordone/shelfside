@@ -24,6 +24,8 @@
   let currentSeason = $state("");
   /** Último episodio: sigue siendo numérico libre (varía por temporada). */
   let lastEpisode = $state<string | number>("");
+  let progressCurrent = $state<string | number>("");
+  let progressTotal = $state<string | number>("");
 
   const libraryId = $derived(Number(page.params.id));
 
@@ -58,6 +60,8 @@
           notes = row.notes ?? "";
           currentSeason = row.current_season != null ? String(row.current_season) : "";
           lastEpisode = row.last_episode_watched != null ? String(row.last_episode_watched) : "";
+          progressCurrent = row.progress_current != null ? String(row.progress_current) : "";
+          progressTotal = row.progress_total != null ? String(row.progress_total) : "";
         }
       } catch (e) {
         err = e instanceof Error ? e.message : String(e);
@@ -96,6 +100,8 @@
     score: number | null;
     current_season: number | null;
     last_episode_watched: number | null;
+    progress_current: number | null;
+    progress_total: number | null;
   };
 
   /** Resultado de validar y parsear el formulario de edición. */
@@ -104,6 +110,8 @@
     scoreRaw: string,
     seasonRaw: string,
     lastEpRaw: unknown,
+    progressCurrentRaw: unknown,
+    progressTotalRaw: unknown,
     cat: ReturnType<typeof tmdbTvCatalogFromMetadata>,
   ): { ok: true; data: ParsedEdit } | { ok: false; message: string } {
     const scoreParsed = parseOptionalScore(scoreRaw);
@@ -119,6 +127,8 @@
         score: scoreParsed,
         current_season: seasonNum,
         last_episode_watched: mediaType === "tv" ? parseIntOrNull(lastEpRaw) : null,
+        progress_current: mediaType === "book" ? parseIntOrNull(progressCurrentRaw) : null,
+        progress_total: mediaType === "book" ? parseIntOrNull(progressTotalRaw) : null,
       },
     };
   }
@@ -128,7 +138,15 @@
     saving = true;
     err = null;
     try {
-      const parsed = parseEditForSave(row.media_type, scoreStr, currentSeason, lastEpisode, tvCatalog);
+      const parsed = parseEditForSave(
+        row.media_type,
+        scoreStr,
+        currentSeason,
+        lastEpisode,
+        progressCurrent,
+        progressTotal,
+        tvCatalog,
+      );
       if (!parsed.ok) {
         err = parsed.message;
         return;
@@ -140,6 +158,12 @@
         notes: notes.trim() || null,
         current_season: parsed.data.current_season,
         last_episode_watched: parsed.data.last_episode_watched,
+        ...(row.media_type === "book"
+          ? {
+              progress_current: parsed.data.progress_current,
+              progress_total: parsed.data.progress_total,
+            }
+          : {}),
       });
       afterLibraryChanged();
       await goto(resolve("/library/[id]", { id: String(libraryId) }));
@@ -239,24 +263,33 @@
         {/if}
       {/if}
 
+      {#if row.media_type === "book"}
+        <label class="block text-sm">
+          <span class="text-zinc-600 dark:text-zinc-400">{t("edit.progress_current")}</span>
+          <input type="number" min="0" class="shelf-field mt-1" bind:value={progressCurrent} />
+        </label>
+        <label class="block text-sm">
+          <span class="text-zinc-600 dark:text-zinc-400">{t("edit.progress_total")}</span>
+          <input type="number" min="0" class="shelf-field mt-1" bind:value={progressTotal} />
+        </label>
+      {/if}
+
       <label class="block text-sm">
         <span class="text-zinc-600 dark:text-zinc-400">{t("detail.notes")}</span>
         <textarea rows="4" class="shelf-field mt-1 min-h-[6rem] resize-y" bind:value={notes}></textarea>
       </label>
 
-      <div class="flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-700">
-        <button
-          type="submit"
-          class="shelf-btn-primary"
-          disabled={saving}
-        >
+      <div
+        class="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-zinc-200 bg-zinc-50/95 px-4 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-950/95 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:pt-4 sm:backdrop-blur-none"
+      >
+        <button type="submit" class="shelf-btn-primary" disabled={saving}>
           {t("common.save")}
         </button>
         {#if saving}
           <span class="text-sm text-zinc-500 dark:text-zinc-400">{t("edit.saving")}</span>
         {/if}
         <a
-          class="text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200"
+          class="inline-flex min-h-11 items-center text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200"
           href={resolve("/library/[id]", { id: String(libraryId) })}>{t("common.cancel")}</a
         >
       </div>

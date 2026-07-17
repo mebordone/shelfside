@@ -310,6 +310,8 @@ export type UpdateLibraryInput = {
   notes?: string | null;
   current_season?: number | null;
   last_episode_watched?: number | null;
+  progress_current?: number | null;
+  progress_total?: number | null;
 };
 
 /** Quita entrada de biblioteca y fila de catálogo (1:1). No borra poster en disco. */
@@ -349,6 +351,10 @@ export async function updateLibraryEntry(db: SqlDb, libraryId: number, patch: Up
   const current_season = patch.current_season !== undefined ? patch.current_season : row.current_season;
   const last_episode_watched =
     patch.last_episode_watched !== undefined ? patch.last_episode_watched : row.last_episode_watched;
+  const progress_current =
+    patch.progress_current !== undefined ? patch.progress_current : row.progress_current;
+  const progress_total =
+    patch.progress_total !== undefined ? patch.progress_total : row.progress_total;
 
   await db.execute(
     `UPDATE library_entry SET
@@ -357,10 +363,23 @@ export async function updateLibraryEntry(db: SqlDb, libraryId: number, patch: Up
        notes = $3,
        current_season = $4,
        last_episode_watched = $5,
-       started_at = $6,
-       completed_at = $7,
+       progress_current = $6,
+       progress_total = $7,
+       started_at = $8,
+       completed_at = $9,
        updated_at = datetime('now')
-     WHERE id = $8`,
-    [status, score, notes, current_season, last_episode_watched, started_at, completed_at, libraryId],
+     WHERE id = $10`,
+    [
+      status,
+      score,
+      notes,
+      current_season,
+      last_episode_watched,
+      progress_current,
+      progress_total,
+      started_at,
+      completed_at,
+      libraryId,
+    ],
   );
 }

@@ -3,6 +3,7 @@
   import { resolve } from "$app/paths";
   import type { LibraryListRow } from "$lib/db";
   import { t } from "$lib/i18n";
+  import { mobileLayout } from "$lib/stores/mobileLayout.svelte";
 
   interface Props {
     row: LibraryListRow;
@@ -31,32 +32,33 @@
     onDeleteCancel,
     onDeleteOpen,
   }: Props = $props();
+
+  const btnSecondary = $derived(
+    mobileLayout.current
+      ? "shelf-touch inline-flex w-full min-h-11 items-center justify-center rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-600"
+      : "rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600",
+  );
+  const actionsClass = $derived(
+    mobileLayout.current ? "flex flex-col gap-2" : "flex flex-wrap gap-2",
+  );
 </script>
 
-<div class="flex flex-wrap gap-2">
+<div class={actionsClass}>
   {#if row.source === "tmdb"}
-    <button
-      type="button"
-      class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
-      disabled={busy}
-      onclick={() => onRefreshTmdb()}
-    >
+    <button type="button" class={btnSecondary} disabled={busy} onclick={() => onRefreshTmdb()}>
       {t("detail.refresh_tmdb")}
     </button>
   {/if}
   {#if row.source === "openlibrary"}
-    <button
-      type="button"
-      class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
-      disabled={busy}
-      onclick={() => onRefreshOpenLibrary()}
-    >
+    <button type="button" class={btnSecondary} disabled={busy} onclick={() => onRefreshOpenLibrary()}>
       {t("detail.refresh_openlibrary")}
     </button>
     {#if showRepairCover}
       <button
         type="button"
-        class="rounded-md border border-amber-300 px-3 py-1.5 text-sm text-amber-800 dark:border-amber-800 dark:text-amber-300"
+        class="{mobileLayout.current
+          ? 'shelf-touch inline-flex w-full min-h-11 items-center justify-center'
+          : ''} rounded-md border border-amber-300 px-3 py-1.5 text-sm text-amber-800 dark:border-amber-800 dark:text-amber-300"
         disabled={busy}
         onclick={() => onRepairCover()}
       >
@@ -66,7 +68,7 @@
   {/if}
   <button
     type="button"
-    class="shelf-btn-primary px-3"
+    class="shelf-btn-primary {mobileLayout.current ? 'w-full' : 'px-3'}"
     disabled={busy}
     onclick={() => void goto(resolve("/library/[id]/edit", { id: String(libraryId) }))}
   >
@@ -74,7 +76,9 @@
   </button>
   <button
     type="button"
-    class="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+    class="{mobileLayout.current
+      ? 'shelf-touch inline-flex w-full min-h-11 items-center justify-center'
+      : ''} rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
     disabled={busy}
     onclick={() => onDeleteOpen()}
   >
@@ -89,10 +93,12 @@
     aria-labelledby="delete-confirm-title"
   >
     <p id="delete-confirm-title" class="text-zinc-800 dark:text-zinc-200">{t("detail.delete_confirm")}</p>
-    <div class="mt-3 flex flex-wrap gap-2">
+    <div class="{mobileLayout.current ? 'mt-3 flex flex-col gap-2' : 'mt-3 flex flex-wrap gap-2'}">
       <button
         type="button"
-        class="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+        class="shelf-touch inline-flex min-h-11 items-center justify-center rounded-md bg-red-600 px-3 text-sm text-white hover:bg-red-700 disabled:opacity-50 {mobileLayout.current
+          ? 'w-full'
+          : ''}"
         disabled={busy}
         onclick={() => onDeleteConfirm()}
       >
@@ -100,7 +106,7 @@
       </button>
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
+        class={btnSecondary}
         disabled={busy}
         onclick={() => onDeleteCancel()}
       >

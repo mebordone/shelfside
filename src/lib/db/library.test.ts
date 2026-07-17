@@ -390,9 +390,52 @@ describe("updateLibraryEntry", () => {
 
     const upd = execute.mock.calls[0];
     expect(String(upd?.[0])).toContain("UPDATE library_entry");
-    expect(upd?.[1]).toEqual(
-      expect.arrayContaining(["in_progress", null, null, null, null, expect.any(String), null, 1]),
-    );
+    expect(String(upd?.[0])).toContain("progress_current");
+    expect(upd?.[1]).toEqual([
+      "in_progress",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      expect.any(String),
+      null,
+      1,
+    ]);
+  });
+
+  it("persiste progreso de libro", async () => {
+    const { db, execute, select } = mockDb();
+    select.mockResolvedValueOnce([
+      {
+        id: 1,
+        catalog_item_id: 9,
+        status: "in_progress",
+        score: null,
+        current_season: null,
+        last_episode_watched: null,
+        progress_current: 10,
+        progress_total: 300,
+        owned: null,
+        started_at: null,
+        completed_at: null,
+        notes: null,
+        updated_at: "",
+        media_type: "book",
+        source: "openlibrary",
+        external_id: "OL1",
+        title: "T",
+        image_url: null,
+        poster_local_path: null,
+        metadata_json: null,
+      },
+    ]);
+
+    await updateLibraryEntry(db, 1, { progress_current: 42, progress_total: 300 });
+
+    expect(execute.mock.calls[0]?.[1]?.[5]).toBe(42);
+    expect(execute.mock.calls[0]?.[1]?.[6]).toBe(300);
   });
 });
 

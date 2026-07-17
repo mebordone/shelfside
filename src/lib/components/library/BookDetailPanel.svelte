@@ -4,12 +4,23 @@
 
   interface Props {
     bookCatalog: BookCatalogFields;
+    progressCurrent?: number | null;
+    progressTotal?: number | null;
   }
 
-  let { bookCatalog }: Props = $props();
+  let { bookCatalog, progressCurrent = null, progressTotal = null }: Props = $props();
+
+  const hasProgress = $derived(progressCurrent != null || progressTotal != null);
 </script>
 
 <section class="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+  {#if hasProgress}
+    <p class="mb-2 font-medium text-zinc-700 dark:text-zinc-300">{t("detail.progress_book")}</p>
+    <p class="mb-3 text-zinc-600 dark:text-zinc-400">
+      {t("detail.progress_pages")}:
+      {progressCurrent ?? "—"}{#if progressTotal != null}<span> / {progressTotal}</span>{/if}
+    </p>
+  {/if}
   {#if bookCatalog.authors.length > 0}
     <p>
       <span class="font-medium">{t("detail.book_authors")}:</span>

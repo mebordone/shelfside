@@ -153,7 +153,11 @@
     {/if}
 
     {#if row.media_type === "book" && bookCatalog}
-      <BookDetailPanel {bookCatalog} />
+      <BookDetailPanel
+        {bookCatalog}
+        progressCurrent={row.progress_current}
+        progressTotal={row.progress_total}
+      />
     {/if}
 
     {#if row.media_type === "tv"}
