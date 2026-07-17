@@ -25,6 +25,7 @@ export const esMessages: Record<string, string> = {
   "common.error": "Error",
   "common.apply": "Aplicar",
   "common.cancel": "Cancelar",
+  "common.close": "Cerrar",
   "media.all": "Todos los tipos",
   "filter.all": "Todos",
   "media.movie": "Película",
@@ -186,7 +187,11 @@ export const esMessages: Record<string, string> = {
   "settings.sync_storage_permission_denied":
     "Sin acceso a archivos no se puede sincronizar. Concedé el permiso e intentá de nuevo.",
   "settings.sync_no_folder": "Elegí o escribí la carpeta de Syncthing primero.",
+  "settings.sync_on_start": "Sincronizar al abrir",
+  "settings.sync_on_start_help":
+    "Al iniciar la app, importa y reexporta shelfside.csv si hay carpeta configurada. Desactivá para sincronizar solo a mano.",
   "settings.sync_now": "Sincronizar",
+  "sync.boot_running": "Sincronizando…",
   "settings.sync_advanced": "Más opciones (Markdown, papelera)",
   "settings.sync_summary":
     "Del CSV: {imported} nuevas · {updated} actualizadas · {deleted} borradas · {skipped} sin cambios. Luego se reescribió el CSV con {exported} filas (toda la biblioteca).",

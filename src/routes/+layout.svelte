@@ -5,7 +5,13 @@
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { runMigrations } from "$lib/db";
+  import { getDatabase } from "$lib/db/connection";
+  import { afterLibraryChanged } from "$lib/library/mutations";
   import { initTheme } from "$lib/stores/theme.svelte";
+  import { readSyncFolder } from "$lib/stores/syncFolder";
+  import { readSyncOnStart } from "$lib/stores/syncOnStart";
+  import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
+  import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
   import { appLocale, initAppLocale, t } from "$lib/i18n";
   import { initRuntimeLogs, logError, logInfo } from "$lib/logs/runtimeLogs";
 
@@ -17,6 +23,7 @@
 
   let ready = $state(false);
   let bootError = $state<string | null>(null);
+  let bootSyncBanner = $state<{ kind: "ok" | "err" | "info"; text: string } | null>(null);
 
   const pathname = $derived(page.url.pathname);
 
@@ -56,6 +63,30 @@
       : `${base} text-zinc-600 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800`;
   }
 
+  async function runBootSyncIfNeeded() {
+    const syncDir = readSyncFolder();
+    if (!readSyncOnStart() || !syncDir) return;
+
+    bootSyncBanner = { kind: "info", text: t("sync.boot_running") };
+    logInfo("sync.boot.start", { syncDir });
+    try {
+      const db = await getDatabase();
+      const { merge, exported } = await syncSyncFolder(db, syncDir);
+      logInfo("sync.boot.ok", { ...merge, exported, syncDir });
+      afterLibraryChanged();
+      bootSyncBanner = {
+        kind: merge.errors.length ? "err" : "ok",
+        text: formatSyncSummary(merge, exported),
+      };
+    } catch (e) {
+      logError("sync.boot.error", e);
+      bootSyncBanner = {
+        kind: "err",
+        text: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
   onMount(() => {
     initRuntimeLogs();
     initAppLocale();
@@ -66,6 +97,7 @@
         await runMigrations();
         logInfo("db.migrations.ok");
         ready = true;
+        void runBootSyncIfNeeded();
       } catch (e) {
         logError("db.migrations.error", e);
         bootError = e instanceof Error ? e.message : String(e);
@@ -127,6 +159,27 @@
         </svg>
       </a>
     </nav>
+    {#if bootSyncBanner}
+      <div
+        class="flex items-start gap-2 border-b px-3 py-2 text-sm {bootSyncBanner.kind === 'ok'
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+          : bootSyncBanner.kind === 'err'
+            ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'
+            : 'border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'}"
+        role="status"
+      >
+        <p class="min-w-0 flex-1 break-words">{bootSyncBanner.text}</p>
+        <button
+          type="button"
+          class="shrink-0 rounded px-1.5 py-0.5 text-xs opacity-70 hover:opacity-100"
+          onclick={() => {
+            bootSyncBanner = null;
+          }}
+        >
+          {t("common.close")}
+        </button>
+      </div>
+    {/if}
     <div class="flex-1">
       {@render children()}
     </div>

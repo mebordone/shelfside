@@ -25,6 +25,7 @@ export const enMessages: Record<string, string> = {
   "common.error": "Error",
   "common.apply": "Apply",
   "common.cancel": "Cancel",
+  "common.close": "Close",
   "media.all": "All types",
   "filter.all": "All",
   "media.movie": "Movie",
@@ -185,7 +186,11 @@ export const enMessages: Record<string, string> = {
   "settings.sync_storage_permission_denied":
     "Without file access sync cannot run. Grant the permission and try again.",
   "settings.sync_no_folder": "Choose or type your Syncthing folder first.",
+  "settings.sync_on_start": "Sync on open",
+  "settings.sync_on_start_help":
+    "When the app starts, import and rewrite shelfside.csv if a sync folder is set. Turn off to sync only manually.",
   "settings.sync_now": "Sync",
+  "sync.boot_running": "Syncing…",
   "settings.sync_advanced": "More options (Markdown, recycle bin)",
   "settings.sync_summary":
     "From CSV: {imported} new · {updated} updated · {deleted} removed · {skipped} unchanged. Then rewrote the CSV with {exported} rows (full library).",
