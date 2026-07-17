@@ -6,6 +6,8 @@
   import { LIBRARY_LIST_PAGE_SIZE, listLibraryWithCatalogPage } from "$lib/db";
   import FilterChipBar from "$lib/components/FilterChipBar.svelte";
   import SearchResultsPagination from "$lib/components/SearchResultsPagination.svelte";
+  import LibraryQuickEditSheet from "$lib/components/library/LibraryQuickEditSheet.svelte";
+  import { longPress } from "$lib/actions/longPress";
   import { applyPageFromCache, commitSearchPage } from "$lib/library/catalogSearchPage";
   import { t } from "$lib/i18n";
   import {
@@ -15,8 +17,13 @@
   import { labelForMedia, labelForStatus } from "$lib/i18n/labels";
   import { mapLibraryRowsWithPosters } from "$lib/poster";
   import { clearLibraryPagination, librarySession } from "$lib/stores/librarySession.svelte";
+  import type { LibraryListRow } from "$lib/db";
+  import type { WithDisplayUrl } from "$lib/poster";
+
+  type Row = WithDisplayUrl<LibraryListRow>;
 
   let loading = $state(false);
+  let quickEditRow = $state<Row | null>(null);
 
   function currentFilters() {
     const f: { mediaType?: string; status?: string; search?: string } = {};
@@ -25,6 +32,14 @@
     if (librarySession.search.trim()) f.search = librarySession.search.trim();
     return f;
   }
+
+  const hasActiveFilters = $derived(
+    Boolean(
+      librarySession.mediaFilter ||
+        librarySession.statusFilter ||
+        librarySession.search.trim(),
+    ),
+  );
 
   async function loadPage(targetPage: number, force = false) {
     if (!force) {
@@ -77,7 +92,7 @@
 <div class="mx-auto max-w-3xl space-y-6 px-4 py-8">
   <h1 class="text-2xl font-semibold tracking-tight">{t("library.title")}</h1>
 
-  <div class="space-y-2" aria-label={t("library.filters")}>
+  <div class="space-y-3" aria-label={t("library.filters")}>
     <FilterChipBar
       options={mediaChipOptions}
       value={librarySession.mediaFilter}
@@ -89,31 +104,27 @@
         reloadFromFilters();
       }}
     />
+    <FilterChipBar
+      options={statusChipOptions}
+      value={librarySession.statusFilter}
+      includeAll
+      allLabel={t("filter.all")}
+      ariaLabel={t("library.status_filter")}
+      onchange={(v) => {
+        librarySession.statusFilter = v;
+        reloadFromFilters();
+      }}
+    />
     <div class="flex flex-wrap items-center gap-2">
-      <FilterChipBar
-        options={statusChipOptions}
-        value={librarySession.statusFilter}
-        includeAll
-        allLabel={t("filter.all")}
-        ariaLabel={t("library.status_filter")}
-        onchange={(v) => {
-          librarySession.statusFilter = v;
-          reloadFromFilters();
-        }}
-      />
       <input
-        class="shelf-field shelf-field-compact min-w-[12rem] flex-1"
+        class="shelf-field min-w-0 flex-1"
         placeholder={t("library.search_placeholder")}
         bind:value={librarySession.search}
         onkeydown={(e) => {
           if (e.key === "Enter") reloadFromFilters();
         }}
       />
-      <button
-        type="button"
-        class="shelf-btn-primary shrink-0"
-        onclick={reloadFromFilters}
-      >
+      <button type="button" class="shelf-btn-primary shrink-0" onclick={reloadFromFilters}>
         {t("common.apply")}
       </button>
     </div>
@@ -121,8 +132,22 @@
 
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
-  {:else if librarySession.rows.length === 0 && librarySession.total === 0}
-    <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("library.empty")}</p>
+  {:else if librarySession.total === 0}
+    <div class="space-y-3">
+      <p class="text-sm text-zinc-600 dark:text-zinc-400">
+        {hasActiveFilters ? t("library.empty_filtered") : t("library.empty")}
+      </p>
+      <p class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <a
+          class="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+          href={resolve("/search")}>{t("nav.search")}</a
+        >
+        <a
+          class="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+          href={resolve("/add/manual")}>{t("nav.manual")}</a
+        >
+      </p>
+    </div>
   {:else if librarySession.rows.length > 0}
     <SearchResultsPagination
       page={librarySession.page}
@@ -133,24 +158,39 @@
       onPrev={() => void loadPage(librarySession.page - 1)}
       onNext={() => void loadPage(librarySession.page + 1)}
     />
-    <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+    <ul
+      class="divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800"
+      data-testid="library-list"
+    >
       {#each librarySession.rows as r (r.id)}
-        <li class="flex gap-3 bg-white p-3 dark:bg-zinc-900">
-          {#if r.displayUrl}
-            <img src={r.displayUrl} alt="" class="h-16 w-11 shrink-0 rounded object-cover" />
-          {:else}
-            <div class="h-16 w-11 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800"></div>
-          {/if}
-          <div class="min-w-0 flex-1">
-            <a class="font-medium text-emerald-700 hover:underline dark:text-emerald-400" href={resolve("/library/[id]", { id: String(r.id) })}
-              >{r.title}</a
-            >
-            <p class="text-xs text-zinc-500">
-              {labelForMedia(r.media_type)} · {labelForStatus(r.status)}
-            </p>
-          </div>
+        <li>
+          <a
+            class="flex min-h-14 gap-3 bg-white p-3 transition-colors hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
+            href={resolve("/library/[id]", { id: String(r.id) })}
+            data-library-id={String(r.id)}
+            use:longPress={() => (quickEditRow = r)}
+          >
+            {#if r.displayUrl}
+              <img src={r.displayUrl} alt="" class="h-16 w-11 shrink-0 rounded object-cover" />
+            {:else}
+              <div class="h-16 w-11 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+            {/if}
+            <div class="min-w-0 flex-1 self-center">
+              <p class="font-medium text-zinc-900 dark:text-zinc-100">{r.title}</p>
+              <p class="text-xs text-zinc-500">
+                {labelForMedia(r.media_type)} · {labelForStatus(r.status)}
+              </p>
+            </div>
+          </a>
         </li>
       {/each}
     </ul>
   {/if}
 </div>
+
+<LibraryQuickEditSheet
+  open={quickEditRow != null}
+  row={quickEditRow}
+  onClose={() => (quickEditRow = null)}
+  onSaved={() => void loadPage(librarySession.page, true)}
+/>

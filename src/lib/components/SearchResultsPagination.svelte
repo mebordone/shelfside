@@ -37,7 +37,7 @@
     <div class="flex gap-2">
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1 text-xs disabled:opacity-40 dark:border-zinc-600"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm disabled:opacity-40 dark:border-zinc-600"
         disabled={!canSearchPagePrev(page) || loading}
         onclick={onPrev}
       >
@@ -45,7 +45,7 @@
       </button>
       <button
         type="button"
-        class="rounded-md border border-zinc-300 px-3 py-1 text-xs disabled:opacity-40 dark:border-zinc-600"
+        class="shelf-touch inline-flex min-h-11 items-center rounded-md border border-zinc-300 px-3 text-sm disabled:opacity-40 dark:border-zinc-600"
         disabled={!canSearchPageNext(page, pageSize, total, totalPages) || loading}
         onclick={onNext}
       >
