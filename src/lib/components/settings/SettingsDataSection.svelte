@@ -9,6 +9,7 @@
     syncFolderPlaceholder: string;
     showFolderPicker: boolean;
     needsStoragePermission: boolean;
+    syncOnStart: boolean;
     statusMessage: { kind: "ok" | "err"; text: string } | null;
     busy: string | null;
     resetConfirmOpen: boolean;
@@ -16,6 +17,7 @@
     resetWord: string;
     onChooseSyncFolder: () => void;
     onRequestStoragePermission: () => void;
+    onSyncOnStartChange: (value: boolean) => void;
     onSyncFolderDraftChange: (value: string) => void;
     onApplySyncFolderPath: () => void;
     onSyncFolder: () => void;
@@ -43,6 +45,7 @@
     syncFolderPlaceholder,
     showFolderPicker,
     needsStoragePermission,
+    syncOnStart,
     statusMessage,
     busy,
     resetConfirmOpen,
@@ -50,6 +53,7 @@
     resetWord,
     onChooseSyncFolder,
     onRequestStoragePermission,
+    onSyncOnStartChange,
     onSyncFolderDraftChange,
     onApplySyncFolderPath,
     onSyncFolder,
@@ -89,6 +93,19 @@
     {t("settings.sync")}
   </h2>
   <p class="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.sync_help")}</p>
+  <label class="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+    <input
+      type="checkbox"
+      class="mt-0.5"
+      checked={syncOnStart}
+      disabled={busy !== null}
+      onchange={(e) => onSyncOnStartChange((e.currentTarget as HTMLInputElement).checked)}
+    />
+    <span>
+      <span class="font-medium">{t("settings.sync_on_start")}</span>
+      <span class="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">{t("settings.sync_on_start_help")}</span>
+    </span>
+  </label>
   {#if needsStoragePermission}
     <div
       class="space-y-2 rounded-md border border-amber-300 bg-amber-50/80 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/30"

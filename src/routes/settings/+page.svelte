@@ -21,6 +21,7 @@
   } from "$lib/stores/catalogPrefs";
   import { clearSearchResults, searchSession } from "$lib/stores/searchSession.svelte";
   import { persistSyncFolder, readSyncFolder } from "$lib/stores/syncFolder";
+  import { persistSyncOnStart, readSyncOnStart } from "$lib/stores/syncOnStart";
   import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
   import { formatCleanRecycleSummary } from "$lib/sync/formatCleanRecycleSummary";
   import { previewCleanSyncRecycleBin, cleanSyncRecycleBin } from "$lib/sync/cleanSyncRecycleBin";
@@ -46,6 +47,7 @@
   let olStrict = $state(readOlStrictLanguage());
   let isAndroid = $state(false);
   let hasStorageAccess = $state(true);
+  let syncOnStart = $state(readSyncOnStart());
   const resetWord = $derived(appLocale.current === "en" ? "DELETE" : "BORRAR");
   const showFolderPicker = $derived(!isAndroid);
   const needsStoragePermission = $derived(isAndroid && !hasStorageAccess);
@@ -69,6 +71,11 @@
     olStrict = checked;
     persistOlStrictLanguage(checked);
     clearOpenLibrarySearchResults();
+  }
+
+  function onSyncOnStartChange(checked: boolean) {
+    syncOnStart = checked;
+    persistSyncOnStart(checked);
   }
 
   onMount(() => {
@@ -426,6 +433,7 @@
     {syncFolderPlaceholder}
     {showFolderPicker}
     {needsStoragePermission}
+    {syncOnStart}
     statusMessage={message}
     {busy}
     {resetConfirmOpen}
@@ -433,6 +441,7 @@
     {resetWord}
     onChooseSyncFolder={() => void chooseSyncFolder()}
     onRequestStoragePermission={() => void runRequestStoragePermission()}
+    onSyncOnStartChange={onSyncOnStartChange}
     onSyncFolderDraftChange={(v) => {
       syncFolderDraft = v;
     }}

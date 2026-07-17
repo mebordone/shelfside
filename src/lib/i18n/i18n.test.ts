@@ -40,9 +40,17 @@ describe("i18n", () => {
     expect(t("settings.sync_help")).toMatch(/shelfside\.csv/i);
     expect(t("settings.sync_folder_placeholder_android")).toMatch(/storage\/emulated\/0\/Sync/);
     expect(t("settings.sync_storage_permission_grant")).toMatch(/acceso/i);
+    expect(t("settings.sync_on_start")).toBe("Sincronizar al abrir");
+    expect(t("settings.sync_on_start_help")).toMatch(/iniciar/i);
+    expect(t("sync.boot_running")).toBe("Sincronizando…");
+    expect(t("common.close")).toBe("Cerrar");
     setAppLocale("en");
     expect(t("settings.sync_now")).toBe("Sync");
     expect(t("settings.sync_help")).toMatch(/shelfside\.csv/i);
     expect(t("settings.sync_folder_placeholder_android")).toMatch(/storage\/emulated\/0\/Sync/);
+    expect(t("settings.sync_on_start")).toBe("Sync on open");
+    expect(t("settings.sync_on_start_help")).toMatch(/starts/i);
+    expect(t("sync.boot_running")).toBe("Syncing…");
+    expect(t("common.close")).toBe("Close");
   });
 });
