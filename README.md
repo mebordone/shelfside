@@ -2,6 +2,8 @@
 
 Aplicación minimalista para seguimiento de consumos culturales con soberanía de datos y portabilidad (**Tauri** + **Svelte 5**).
 
+![Inicio de Shelfside en escritorio (tema oscuro)](./docs/screenshot-home.png)
+
 - Especificación: [project.md](./project.md)
 - Roadmap: [roadmap.md](./roadmap.md)
 - Cambios por versión: [CHANGELOG.md](./CHANGELOG.md)
