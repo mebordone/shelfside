@@ -39,6 +39,14 @@ export function brandClass(active: boolean): string {
     : `${base} text-emerald-900 hover:bg-zinc-200 dark:text-emerald-300 dark:hover:bg-zinc-800`;
 }
 
+/** Marca en header móvil: sin bloque sólido (el tab Inicio ya marca contexto). */
+export function brandClassMobile(active: boolean): string {
+  const base =
+    "shrink-0 inline-flex min-h-11 items-center rounded px-1 py-1 text-lg font-semibold tracking-tight transition-colors";
+  return active
+    ? `${base} text-emerald-700 dark:text-emerald-300`
+    : `${base} text-zinc-800 hover:text-emerald-700 dark:text-zinc-100 dark:hover:text-emerald-300`;
+}
 
 export function settingsIconClass(active: boolean): string {
   const base =
