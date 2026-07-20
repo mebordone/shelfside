@@ -156,8 +156,25 @@ export function mergeCandidatesByWork(
 
 type QuotaKind = "series" | "author" | "thematic" | "distant";
 
+function isThematicDiscovery(c: RelatedBookCandidate, origin: RelatedOriginContext): boolean {
+  const fromSubject =
+    c.sources.includes("subject") || c.sources.includes("subject_pair");
+  if (!fromSubject) return false;
+  if (setsOverlap(c.seriesKeys, origin.seriesKeys)) return false;
+  if (setsOverlap(c.authorKeys, origin.authorKeys)) return false;
+  // También contar como temático si vino de subject aunque seriesKeys estén vacíos
+  // pero sources tiene "series" — no
+  if (c.sources.includes("series") && !fromSubject) return false;
+  return true;
+}
+
 function classifyQuota(c: RelatedBookCandidate, origin: RelatedOriginContext): QuotaKind {
-  if (setsOverlap(c.seriesKeys, origin.seriesKeys)) return "series";
+  const sameSeries =
+    setsOverlap(c.seriesKeys, origin.seriesKeys) ||
+    (c.sources.includes("series") &&
+      !c.sources.includes("subject") &&
+      !c.sources.includes("subject_pair"));
+  if (sameSeries) return "series";
   if (setsOverlap(c.authorKeys, origin.authorKeys)) return "author";
   if (
     origin.year != null &&
@@ -171,52 +188,108 @@ function classifyQuota(c: RelatedBookCandidate, origin: RelatedOriginContext): Q
 }
 
 /**
- * Diversifica el top: máx 4 serie, máx 2 autor extra, máx 2 lejanos en año.
- * Rellena el resto con temáticos / lo que quede por score.
+ * Diversifica el top priorizando descubrimiento:
+ * - máx 3 misma serie
+ * - máx 2 mismo autor (fuera de serie)
+ * - mín 5 temáticos (subject/subject_pair de otros autores)
  */
 export function diversifyRelatedCandidates(
   ranked: RelatedBookCandidate[],
   origin: RelatedOriginContext,
   cap: number = RELATED_OPEN_LIBRARY_HITS_CAP,
 ): RelatedBookCandidate[] {
-  const maxSeries = 4;
+  const maxSeries = 3;
   const maxAuthorExtra = 2;
+  const minThematic = Math.min(5, cap);
   const maxDistant = origin.year != null && origin.year >= 1950 ? 2 : cap;
 
   const out: RelatedBookCandidate[] = [];
   const used = new Set<string>();
   let seriesCount = 0;
   let authorCount = 0;
+  let thematicCount = 0;
   let distantCount = 0;
 
-  const tryTake = (c: RelatedBookCandidate, kind: QuotaKind): boolean => {
-    if (used.has(c.workKey)) return false;
-    if (kind === "series" && seriesCount >= maxSeries) return false;
-    if (kind === "author" && authorCount >= maxAuthorExtra) return false;
-    if (kind === "distant" && distantCount >= maxDistant) return false;
+  const take = (c: RelatedBookCandidate): void => {
     used.add(c.workKey);
     out.push(c);
+  };
+
+  // 1) Primero garantizar temáticos de descubrimiento
+  for (const c of ranked) {
+    if (thematicCount >= minThematic || out.length >= cap) break;
+    if (used.has(c.workKey)) continue;
+    if (!isThematicDiscovery(c, origin)) continue;
+    if (
+      origin.year != null &&
+      c.year > 0 &&
+      Math.abs(c.year - origin.year) > 100 &&
+      origin.year >= 1950 &&
+      distantCount >= maxDistant
+    ) {
+      continue;
+    }
+    take(c);
+    thematicCount += 1;
+    if (
+      origin.year != null &&
+      c.year > 0 &&
+      Math.abs(c.year - origin.year) > 100 &&
+      origin.year >= 1950
+    ) {
+      distantCount += 1;
+    }
+  }
+
+  // 2) Serie (máx 3)
+  for (const c of ranked) {
+    if (out.length >= cap || seriesCount >= maxSeries) break;
+    if (used.has(c.workKey)) continue;
+    const kind = classifyQuota(c, origin);
+    if (kind !== "series") continue;
+    take(c);
+    seriesCount += 1;
+  }
+
+  // 3) Autor extra (máx 2)
+  for (const c of ranked) {
+    if (out.length >= cap || authorCount >= maxAuthorExtra) break;
+    if (used.has(c.workKey)) continue;
+    if (classifyQuota(c, origin) !== "author") continue;
+    take(c);
+    authorCount += 1;
+  }
+
+  // 4) Más temáticos
+  for (const c of ranked) {
+    if (out.length >= cap) break;
+    if (used.has(c.workKey)) continue;
+    if (!isThematicDiscovery(c, origin) && classifyQuota(c, origin) !== "thematic") continue;
+    if (classifyQuota(c, origin) === "series" || classifyQuota(c, origin) === "author") continue;
+    take(c);
+    if (isThematicDiscovery(c, origin)) thematicCount += 1;
+  }
+
+  // 5) Relleno final respetando techos de serie/autor
+  for (const c of ranked) {
+    if (out.length >= cap) break;
+    if (used.has(c.workKey)) continue;
+    const kind = classifyQuota(c, origin);
+    if (kind === "series" && seriesCount >= maxSeries) continue;
+    if (kind === "author" && authorCount >= maxAuthorExtra) continue;
+    if (kind === "distant" && distantCount >= maxDistant) continue;
+    take(c);
     if (kind === "series") seriesCount += 1;
     if (kind === "author") authorCount += 1;
     if (kind === "distant") distantCount += 1;
-    return true;
-  };
-
-  // Primera pasada: respetando cuotas
-  for (const c of ranked) {
-    if (out.length >= cap) break;
-    tryTake(c, classifyQuota(c, origin));
   }
 
-  // Segunda pasada: rellenar solo con temáticos (no romper cuotas de serie/autor/lejanos)
-  if (out.length < cap) {
+  // 6) Si el pool no trajo temáticos, relajar techos para no dejar el carrusel en 2–3
+  if (out.length < Math.min(cap, 6)) {
     for (const c of ranked) {
       if (out.length >= cap) break;
       if (used.has(c.workKey)) continue;
-      const kind = classifyQuota(c, origin);
-      if (kind === "series" || kind === "author" || kind === "distant") continue;
-      used.add(c.workKey);
-      out.push(c);
+      take(c);
     }
   }
 

@@ -6,10 +6,18 @@ export type PickedSubjects = {
   slugs: string[];
   /** Primer género concreto, si hay. */
   genre: string | null;
-  /** Primer tema concreto, si hay. */
+  /**
+   * Primer tema allowlisted para par (intersección), o null.
+   * Solo themes de PAIR_THEME_ALLOWLIST.
+   */
   theme: string | null;
   /** Par para `subject_key:A AND subject_key:B`, o null si no hay ambos. */
   pair: { genre: string; theme: string } | null;
+  /**
+   * Género a usar en query de descubrimiento (siempre o fallback sparse).
+   * Puede venir de alias locales cuando no hay genre explícito.
+   */
+  discoveryGenre: string | null;
 };
 
 const BLACKLIST_EXACT = new Set([
@@ -24,18 +32,34 @@ const BLACKLIST_EXACT = new Set([
   "long_now_manual_for_civilization",
   "open_library_staff_picks",
   "open_syllabus_project",
-  "translations_into_spanish",
-  "translations_into_english",
-  "translations_into_french",
-  "translations_into_russian",
   "large_type_books",
   "large_print_books",
   "audiobooks",
   "comic_books_strips",
   "graphic_novels",
+  // Ruido que antes se filtraba mal como "theme"
+  "love",
+  "family",
+  "smear_campaigns",
+  "information_superhighway",
+  "dans_la_litterature",
+  "english_fantasy_fiction",
+  "american_fantasy_fiction",
+  "romans_nouvelles",
+  "vie_extraterrestre",
+  "business_intelligence",
+  "computer_hackers",
+  "ciencia_ficcion",
 ]);
 
-const BLACKLIST_PREFIXES = ["nyt:", "award:", "reading_level", "reading_level_grade"];
+const BLACKLIST_PREFIXES = [
+  "nyt:",
+  "award:",
+  "reading_level",
+  "reading_level_grade",
+  "translations_",
+  "translation_",
+];
 
 /** Géneros concretos (slug canónico). */
 const GENRE_SLUGS = new Set([
@@ -64,11 +88,19 @@ const GENRE_SLUGS = new Set([
   "cyberpunk",
   "young_adult_fiction",
   "juvenile_fiction",
+  "philosophical_fiction",
 ]);
 
-/** Temas (no género) útiles para intersección. */
-const THEME_SLUGS = new Set([
+/**
+ * Temas permitidos SOLO para armar el par género∩tema.
+ * Cualquier otro "theme" de OL no se usa en la intersección.
+ */
+export const PAIR_THEME_ALLOWLIST = new Set([
   "ecology",
+  "environmentalism",
+  "climate",
+  "global_warming",
+  "desert",
   "politics",
   "religion",
   "philosophy",
@@ -76,27 +108,26 @@ const THEME_SLUGS = new Set([
   "space_travel",
   "interplanetary_voyages",
   "life_on_other_planets",
+  "extraterrestrial_beings",
   "artificial_intelligence",
   "robots",
   "genetic_engineering",
   "totalitarianism",
   "utopias",
+  "dystopias_in_fiction",
   "vampires",
   "wizards",
   "magic",
   "war",
-  "environmentalism",
-  "climate",
-  "global_warming",
-  "desert",
   "planets",
   "empires",
   "espionage",
   "crime",
   "murder",
-  "love",
-  "family",
   "coming_of_age",
+  "psychohistory",
+  "space_stations",
+  "cyberpunk",
 ]);
 
 /** Variantes → slug canónico de género. */
@@ -126,6 +157,9 @@ const GENRE_ALIASES: Record<string, string> = {
   romance_fiction: "romance",
   romance: "romance",
   fiction_romance_general: "romance",
+  brazilian_romance_fiction: "romance",
+  brazilian_love_stories: "romance",
+  love_stories: "romance",
   mystery: "mystery",
   detective_and_mystery_stories: "mystery",
   thriller: "thriller",
@@ -135,6 +169,9 @@ const GENRE_ALIASES: Record<string, string> = {
   fiction_historical_general: "historical_fiction",
   gothic_fiction: "gothic_fiction",
   gothic: "gothic_fiction",
+  philosophical_novels: "philosophical_fiction",
+  philosophical_fiction: "philosophical_fiction",
+  cyberpunk: "cyberpunk",
 };
 
 /**
@@ -154,16 +191,15 @@ export function normalizeSubject(raw: string): string {
 
   if (!base) return "";
 
-  // Prefijos que se mantienen como-is para blacklist por prefijo.
   if (base.startsWith("nyt:") || base.startsWith("award:")) return base;
 
   if (GENRE_ALIASES[base]) return GENRE_ALIASES[base];
 
-  // "Fiction, science fiction, general" ya normalizado a fiction_science_fiction_general
   if (base.startsWith("fiction_science_fiction")) return "science_fiction";
   if (base.startsWith("fiction_fantasy")) return "fantasy_fiction";
   if (base.startsWith("fiction_horror")) return "horror";
   if (base.startsWith("fiction_dystopian")) return "dystopia";
+  if (base.startsWith("fiction_romance")) return "romance";
 
   return base;
 }
@@ -174,12 +210,15 @@ function isBlacklisted(slug: string): boolean {
   for (const p of BLACKLIST_PREFIXES) {
     if (slug.startsWith(p)) return true;
   }
-  // Premios escritos en prosa ("Hugo Award Winner") además de award:*
   if (slug.includes("award") || slug.includes("bestseller") || slug.includes("reviewed")) {
     return true;
   }
-  // Tags demasiado genéricos de una sola palabra (si no están en genre/theme).
-  if (!slug.includes("_") && !GENRE_SLUGS.has(slug) && !THEME_SLUGS.has(slug)) {
+  // Tags demasiado genéricos de una sola palabra (si no están en genre/allowlist).
+  if (
+    !slug.includes("_") &&
+    !GENRE_SLUGS.has(slug) &&
+    !PAIR_THEME_ALLOWLIST.has(slug)
+  ) {
     if (slug.length < 5) return true;
   }
   return false;
@@ -187,19 +226,16 @@ function isBlacklisted(slug: string): boolean {
 
 function classifyBucket(slug: string): SubjectBucket {
   if (GENRE_SLUGS.has(slug)) return "genre";
-  if (THEME_SLUGS.has(slug)) return "theme";
-  // Lugares imaginarios / personajes suelen terminar en _fiction o contener imaginary
+  if (PAIR_THEME_ALLOWLIST.has(slug)) return "theme";
   if (
     slug.includes("imaginary_place") ||
     slug.includes("fictitious_character") ||
     slug.includes("imaginary_places") ||
-    /_fiction$/.test(slug) && slug.split("_").length >= 3
+    (/_fiction$/.test(slug) && slug.split("_").length >= 3)
   ) {
-    // "dune_imaginary_place_fiction" / "dune_imaginary_place"
     if (slug.includes("imaginary") || slug.includes("fictitious")) return "universe";
   }
   if (slug.includes("imaginary") || slug.includes("fictitious_character")) return "universe";
-  // Ambientación / setting genérico
   if (
     slug.includes("place") ||
     slug.includes("planets") ||
@@ -208,10 +244,9 @@ function classifyBucket(slug: string): SubjectBucket {
   ) {
     return "setting";
   }
-  // Temas no listados explícitamente: longitud media → theme; muy específicos → universe
   const parts = slug.split("_").filter(Boolean);
   if (parts.length >= 4) return "universe";
-  if (parts.length >= 2) return "theme";
+  if (parts.length >= 2) return "setting"; // no promover a theme si no está allowlisted
   return "setting";
 }
 
@@ -224,7 +259,7 @@ const BUCKET_PRIORITY: Record<SubjectBucket, number> = {
 
 /**
  * Filtra, normaliza y prioriza subjects del work origen.
- * Devuelve hasta 5 slugs + par género/tema para intersección.
+ * Devuelve hasta 5 slugs + par género/tema (solo theme allowlisted).
  */
 export function pickRelatedSubjects(rawSubjects: string[] | null | undefined): PickedSubjects {
   const seen = new Set<string>();
@@ -242,13 +277,21 @@ export function pickRelatedSubjects(rawSubjects: string[] | null | undefined): P
 
   const slugs = classified.slice(0, 5).map((c) => c.slug);
   const genre = classified.find((c) => c.bucket === "genre")?.slug ?? null;
+  // Solo themes allowlisted entran al par
   const theme =
-    classified.find((c) => c.bucket === "theme" && c.slug !== genre)?.slug ?? null;
+    classified.find(
+      (c) => c.bucket === "theme" && PAIR_THEME_ALLOWLIST.has(c.slug) && c.slug !== genre,
+    )?.slug ?? null;
+
+  // Sin género explícito: theme allowlisted o primer slug usable como discovery.
+  const discoveryGenre =
+    genre ?? theme ?? slugs.find((s) => !isBlacklisted(s) && s.includes("_")) ?? null;
 
   return {
     slugs,
     genre,
     theme,
     pair: genre && theme ? { genre, theme } : null,
+    discoveryGenre,
   };
 }

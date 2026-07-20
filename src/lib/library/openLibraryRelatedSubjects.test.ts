@@ -31,6 +31,11 @@ describe("normalizeSubject", () => {
     expect(normalizeSubject("American Science fiction")).toBe("science_fiction");
   });
 
+  it("mapea romance brasileño a romance", () => {
+    expect(normalizeSubject("brazilian romance fiction")).toBe("romance");
+    expect(normalizeSubject("Brazilian love stories")).toBe("romance");
+  });
+
   it("preserva prefijos nyt/award para blacklist", () => {
     expect(normalizeSubject("nyt:mass-market-monthly=2021-11-07")).toMatch(/^nyt:/);
     expect(normalizeSubject("award:hugo_award=1966")).toMatch(/^award:/);
@@ -48,6 +53,7 @@ describe("pickRelatedSubjects", () => {
     expect(picked.genre).toBe("science_fiction");
     expect(picked.theme).toBe("ecology");
     expect(picked.pair).toEqual({ genre: "science_fiction", theme: "ecology" });
+    expect(picked.discoveryGenre).toBe("science_fiction");
     expect(picked.slugs).toContain("science_fiction");
     expect(picked.slugs).toContain("ecology");
     expect(picked.slugs.length).toBeLessThanOrEqual(5);
@@ -63,11 +69,36 @@ describe("pickRelatedSubjects", () => {
     }
   });
 
-  it("sin tema concreto no arma par", () => {
-    const picked = pickRelatedSubjects(["Science fiction", "Fiction"]);
+  it("sin tema allowlisted no arma par", () => {
+    const picked = pickRelatedSubjects(["Science fiction", "Fiction", "smear campaigns"]);
     expect(picked.genre).toBe("science_fiction");
     expect(picked.theme).toBeNull();
     expect(picked.pair).toBeNull();
+  });
+
+  it("no usa love ni translations como theme de par", () => {
+    const picked = pickRelatedSubjects([
+      "Fantasy fiction",
+      "love",
+      "Translations into Russian",
+      "english fantasy fiction",
+    ]);
+    expect(picked.genre).toBe("fantasy_fiction");
+    expect(picked.theme).toBeNull();
+    expect(picked.pair).toBeNull();
+  });
+
+  it("Gabriela: mapea brazilian romance a genre romance", () => {
+    const picked = pickRelatedSubjects([
+      "Brazilian love stories",
+      "Translations into Russian",
+      "Women cooks",
+      "Love stories",
+      "Brazilian romance fiction",
+    ]);
+    expect(picked.genre).toBe("romance");
+    expect(picked.discoveryGenre).toBe("romance");
+    expect(picked.pair).toBeNull(); // sin theme allowlisted
   });
 
   it("lista vacía o null", () => {
@@ -76,6 +107,7 @@ describe("pickRelatedSubjects", () => {
       genre: null,
       theme: null,
       pair: null,
+      discoveryGenre: null,
     });
     expect(pickRelatedSubjects(null).slugs).toEqual([]);
   });

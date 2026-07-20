@@ -180,7 +180,9 @@ export function createOpenLibraryClient(options: OpenLibraryClientOptions = {}):
       parallel.push(relatedSearch(`series_key:${seriesKeys[0]}`, 8, "series"));
     }
     if (authorKeys[0]) {
-      parallel.push(relatedSearch(`author_key:${authorKeys[0]}`, 8, "author"));
+      // Más resultados de autor cuando no hay género (casos sparse)
+      const authorLimit = picked.discoveryGenre ? 8 : 16;
+      parallel.push(relatedSearch(`author_key:${authorKeys[0]}`, authorLimit, "author"));
     }
     if (picked.pair) {
       parallel.push(
@@ -191,26 +193,33 @@ export function createOpenLibraryClient(options: OpenLibraryClientOptions = {}):
         ),
       );
     }
-
-    const primaryLists = await Promise.all(parallel);
-
-    // Fallback de género solo si hay pocos candidatos únicos tras serie/autor/par.
-    const uniqueWorks = new Set(
-      primaryLists.flat().map((c) => c.workKey).filter((k) => k !== workOlid),
-    );
-    let genreList: RelatedBookCandidate[] = [];
-    if (picked.genre && uniqueWorks.size < 8) {
-      genreList = await relatedSearch(`subject_key:${picked.genre}`, 12, "subject");
+    // Género limpio siempre en paralelo cuando hay discoveryGenre.
+    if (picked.discoveryGenre) {
+      parallel.push(relatedSearch(`subject_key:${picked.discoveryGenre}`, 12, "subject"));
+    } else {
+      // Sin género: discovery en paralelo (no depender de uniqueWorks < 6 — el autor
+      // solo puede llenar works propios y las cuotas dejan el carrusel en 2).
+      const forcedDiscovery =
+        picked.slugs.find((s) =>
+          ["romance", "mystery", "horror", "historical_fiction", "philosophical_fiction"].includes(
+            s,
+          ),
+        ) ??
+        picked.slugs.find((s) => s.includes("_")) ??
+        "fantasy_fiction";
+      parallel.push(relatedSearch(`subject_key:${forcedDiscovery}`, 12, "subject"));
     }
 
+    const lists = await Promise.all(parallel);
+
     return rankRelatedOpenLibraryHits(
-      [...primaryLists, genreList],
+      lists,
       {
         year: originYear,
         authorKeys,
         seriesKeys,
         subjectSlugs: picked.slugs,
-        primaryGenre: picked.genre,
+        primaryGenre: picked.discoveryGenre ?? picked.genre,
         excludeEditionId: olid,
         excludeWorkKey: workOlid,
       },

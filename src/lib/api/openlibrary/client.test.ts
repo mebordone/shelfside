@@ -228,8 +228,91 @@ describe("createOpenLibraryClient", () => {
     expect(
       searchUrls.some((u) => decodeURIComponent(u).includes("science_fiction") && decodeURIComponent(u).includes("ecology")),
     ).toBe(true);
-    expect(searchUrls.length).toBeLessThanOrEqual(4);
+    // Género limpio siempre en paralelo (no solo fallback)
+    expect(
+      searchUrls.some((u) => {
+        const q = decodeURIComponent(u);
+        return q.includes("subject_key:science_fiction") && !q.includes("AND");
+      }),
+    ).toBe(true);
+    expect(searchUrls.length).toBe(4);
     expect(hits.length).toBeGreaterThan(0);
     expect(hits.some((h) => h.title === "Dune Messiah")).toBe(true);
+  });
+
+  it("getRelatedEditionHits sin género pide discovery en paralelo", async () => {
+    const urls: string[] = [];
+    const fetchImpl = vi.fn().mockImplementation(async (url: string) => {
+      urls.push(url);
+      if (url.includes("/books/OLSPARSE1M.json")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            title: "Sparse Book",
+            publish_year: 2000,
+            works: [{ key: "/works/OLSPARSE1W" }],
+          }),
+        };
+      }
+      if (url.includes("/works/OLSPARSE1W.json")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            title: "Sparse Book",
+            first_publish_year: 2000,
+            subjects: ["Fiction", "Translations into Russian"],
+            authors: [{ author: { key: "/authors/OL999A" } }],
+          }),
+        };
+      }
+      if (url.includes("/search.json")) {
+        const isAuthor = url.includes("author_key");
+        const isForcedGenre = decodeURIComponent(url).includes("subject_key:fantasy_fiction");
+        const docs: Record<string, unknown>[] = [];
+        if (isAuthor) {
+          for (let i = 0; i < 8; i++) {
+            docs.push({
+              key: `/works/OLA${i}W`,
+              title: `Author Book ${i}`,
+              author_name: ["Author"],
+              author_key: ["OL999A"],
+              first_publish_year: 2001,
+              cover_i: 1,
+              subject: [],
+              editions: { docs: [{ key: `/books/OLA${i}M`, publish_year: 2001, cover_i: 1 }] },
+            });
+          }
+        }
+        if (isForcedGenre) {
+          for (let i = 0; i < 6; i++) {
+            docs.push({
+              key: `/works/OLF${i}W`,
+              title: `Fantasy ${i}`,
+              author_name: [`Other ${i}`],
+              author_key: [`OLO${i}A`],
+              first_publish_year: 1990 + i,
+              cover_i: 2,
+              subject: ["Fantasy fiction"],
+              editions: { docs: [{ key: `/books/OLF${i}M`, publish_year: 1990 + i, cover_i: 2 }] },
+            });
+          }
+        }
+        return { ok: true, status: 200, json: async () => ({ docs }) };
+      }
+      throw new Error(`unexpected url: ${url}`);
+    });
+
+    const client = createOpenLibraryClient({ fetchImpl, lang: "es" });
+    const hits = await client.getRelatedEditionHits("OLSPARSE1M");
+    const searchUrls = urls.filter((u) => u.includes("/search.json"));
+    expect(searchUrls.some((u) => u.includes("author_key"))).toBe(true);
+    expect(
+      searchUrls.some((u) => decodeURIComponent(u).includes("subject_key:fantasy_fiction")),
+    ).toBe(true);
+    expect(searchUrls.length).toBe(2);
+    expect(hits.some((h) => h.title.startsWith("Fantasy"))).toBe(true);
+    expect(hits.length).toBeGreaterThanOrEqual(6);
   });
 });
