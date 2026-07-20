@@ -34,6 +34,22 @@ export function persistLastSync(value: LastSync): void {
   }
 }
 
+/** Fecha y hora absoluta según el idioma de la app (ej: "18/07/2026 22:31"). */
+export function formatDateTime(at: number, locale: "es" | "en" = "es"): string {
+  const localeTag = locale === "en" ? "en-US" : "es-AR";
+  try {
+    return new Date(at).toLocaleString(localeTag, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return new Date(at).toISOString();
+  }
+}
+
 /** Etiqueta relativa simple (es): "hace X min/h/d" o "recién". */
 export function formatRelativeTime(at: number, now: number = Date.now()): string {
   const diffMs = Math.max(0, now - at);

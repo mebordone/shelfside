@@ -106,3 +106,19 @@ export async function updateCatalogItem(
   args.push(id);
   await db.execute(`UPDATE catalog_item SET ${sets.join(", ")} WHERE id = $${i}`, args);
 }
+
+/**
+ * Setea solo la ruta local del poster SIN bumpear `updated_at`.
+ * El poster local es un dato específico del dispositivo (no viaja en el CSV),
+ * así que persistirlo no debe afectar `catalog_updated_at` ni disparar re-sync.
+ */
+export async function setPosterLocalPath(
+  db: SqlDb,
+  id: number,
+  posterLocalPath: string | null,
+): Promise<void> {
+  await db.execute(`UPDATE catalog_item SET poster_local_path = $1 WHERE id = $2`, [
+    posterLocalPath,
+    id,
+  ]);
+}

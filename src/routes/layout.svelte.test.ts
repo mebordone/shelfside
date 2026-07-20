@@ -9,6 +9,7 @@ const { runMigrations, syncSyncFolder, getDatabase, afterLibraryChanged, mobileL
     syncSyncFolder: vi.fn().mockResolvedValue({
       merge: { imported: 1, updated: 0, deleted: 0, skipped: 0, errors: [] },
       exported: 1,
+      wrote: true,
     }),
     getDatabase: vi.fn().mockResolvedValue({}),
     afterLibraryChanged: vi.fn(),
@@ -103,10 +104,15 @@ describe("+layout (arranque)", () => {
     await waitFor(() => {
       expect(afterLibraryChanged).toHaveBeenCalled();
     });
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    // La sync es silenciosa: no hay cartel, pero el resultado queda persistido.
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem("shelfside-last-sync") ?? "null");
+      expect(stored?.kind).toBe("ok");
+    });
   });
 
-  it("si el sync al abrir falla, la UI igual carga y muestra el error", async () => {
+  it("si el sync al abrir falla, la UI igual carga y persiste el error en silencio", async () => {
     localStorage.setItem("shelfside-sync-dir", "/vault/sync");
     localStorage.setItem("shelfside-sync-on-start", "1");
     syncSyncFolder.mockRejectedValueOnce(new Error("fs-denied"));
@@ -115,8 +121,11 @@ describe("+layout (arranque)", () => {
       expect(screen.getByTestId("layout-child")).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(screen.getByText(/fs-denied/)).toBeInTheDocument();
+      const stored = JSON.parse(localStorage.getItem("shelfside-last-sync") ?? "null");
+      expect(stored?.kind).toBe("err");
+      expect(stored?.summary).toContain("fs-denied");
     });
+    expect(screen.queryByText(/fs-denied/)).not.toBeInTheDocument();
     expect(runMigrations).toHaveBeenCalled();
   });
 

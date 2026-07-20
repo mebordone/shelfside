@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { formatRelativeTime, persistLastSync, readLastSync } from "./lastSync";
+import { formatDateTime, formatRelativeTime, persistLastSync, readLastSync } from "./lastSync";
 
 describe("lastSync", () => {
   beforeEach(() => {
@@ -28,5 +28,14 @@ describe("lastSync", () => {
     expect(formatRelativeTime(now - 5 * 60_000, now)).toBe("hace 5 min");
     expect(formatRelativeTime(now - 3 * 3_600_000, now)).toBe("hace 3 h");
     expect(formatRelativeTime(now - 2 * 86_400_000, now)).toBe("hace 2 d");
+  });
+
+  it("formatDateTime incluye fecha y hora", () => {
+    const at = Date.UTC(2026, 6, 20, 12, 30, 0);
+    const es = formatDateTime(at, "es");
+    const en = formatDateTime(at, "en");
+    expect(es).toMatch(/2026/);
+    expect(en).toMatch(/2026/);
+    expect(es.length).toBeGreaterThan(8);
   });
 });

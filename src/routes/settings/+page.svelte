@@ -14,6 +14,7 @@
   import { resolveMarkdownExportDestination, resolveSavePath } from "$lib/export/saveDestination";
   import { appLocale, setAppLocale, t } from "$lib/i18n";
   import { afterLibraryChanged } from "$lib/library/mutations";
+  import { backfillMissingPosters } from "$lib/poster";
   import { copyRuntimeLogsToClipboard, logError, logInfo, logWarn } from "$lib/logs/runtimeLogs";
   import { ANDROID_DEFAULT_SYNC_DIR, isAndroidPlatform } from "$lib/platform";
   import {
@@ -25,6 +26,7 @@
   } from "$lib/stores/catalogPrefs";
   import { clearSearchResults, searchSession } from "$lib/stores/searchSession.svelte";
   import {
+    formatDateTime,
     formatRelativeTime,
     persistLastSync,
     readLastSync,
@@ -56,7 +58,11 @@
   let hasStorageAccess = $state(true);
   let syncOnStart = $state(readSyncOnStart());
   let lastSync = $state<LastSync | null>(null);
-  const lastSyncLabel = $derived(lastSync ? formatRelativeTime(lastSync.at) : null);
+  const lastSyncLabel = $derived(
+    lastSync
+      ? `${formatDateTime(lastSync.at, appLocale.current)} · ${formatRelativeTime(lastSync.at)}`
+      : null,
+  );
   const resetWord = $derived(appLocale.current === "en" ? "DELETE" : "BORRAR");
   const showFolderPicker = $derived(!isAndroid);
   const needsStoragePermission = $derived(isAndroid && !hasStorageAccess);
@@ -234,12 +240,17 @@
     logInfo("settings.sync.run.start", { syncFolder });
     try {
       const db = await getDatabase();
-      const { merge, exported } = await syncSyncFolder(db, syncFolder);
-      logInfo("settings.sync.run.ok", { ...merge, exported, syncFolder });
+      const { merge, exported, wrote } = await syncSyncFolder(db, syncFolder);
+      logInfo("settings.sync.run.ok", { ...merge, exported, wrote, syncFolder });
       afterLibraryChanged();
-      const summary = formatSyncSummary(merge, exported);
+      const summary = formatSyncSummary(merge, exported, wrote);
       setMessage(merge.errors.length ? "err" : "ok", summary);
       recordLastSync(merge.errors.length ? "err" : "ok", summary);
+      void backfillMissingPosters(db)
+        .then((r) => {
+          if (r.downloaded > 0) afterLibraryChanged();
+        })
+        .catch(() => {});
     } catch (e) {
       logError("settings.sync.run.error", e);
       const errText = e instanceof Error ? e.message : String(e);

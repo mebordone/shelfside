@@ -17,6 +17,7 @@
   import { readSyncFolder } from "$lib/stores/syncFolder";
   import { readSyncOnStart } from "$lib/stores/syncOnStart";
   import { persistLastSync } from "$lib/stores/lastSync";
+  import { backfillMissingPosters } from "$lib/poster";
   import { formatSyncSummary } from "$lib/sync/formatSyncSummary";
   import { syncSyncFolder } from "$lib/sync/syncSyncFolder";
   interface Props {
@@ -27,31 +28,34 @@
 
   let ready = $state(false);
   let bootError = $state<string | null>(null);
-  let bootSyncBanner = $state<{ kind: "ok" | "err" | "info"; text: string } | null>(null);
   let moreOpen = $state(false);
 
   const pathname = $derived(page.url.pathname);
   const showMobileHeader = $derived(mobileLayout.current);
 
+  // La sync de arranque corre en silencio: el resultado se persiste y se ve en Configuración.
   async function runBootSyncIfNeeded() {
     const syncDir = readSyncFolder();
     if (!readSyncOnStart() || !syncDir) return;
 
-    bootSyncBanner = { kind: "info", text: t("sync.boot_running") };
     logInfo("sync.boot.start", { syncDir });
     try {
       const db = await getDatabase();
-      const { merge, exported } = await syncSyncFolder(db, syncDir);
-      logInfo("sync.boot.ok", { ...merge, exported, syncDir });
+      const { merge, exported, wrote } = await syncSyncFolder(db, syncDir);
+      logInfo("sync.boot.ok", { ...merge, exported, wrote, syncDir });
       afterLibraryChanged();
-      const summary = formatSyncSummary(merge, exported);
+      const summary = formatSyncSummary(merge, exported, wrote);
       const kind = merge.errors.length ? "err" : "ok";
-      bootSyncBanner = { kind, text: summary };
       persistLastSync({ at: Date.now(), kind, summary });
+      // Persiste pósters faltantes (p. ej. ítems llegados por sync) en segundo plano.
+      void backfillMissingPosters(db)
+        .then((r) => {
+          if (r.downloaded > 0) afterLibraryChanged();
+        })
+        .catch(() => {});
     } catch (e) {
       logError("sync.boot.error", e);
       const errText = e instanceof Error ? e.message : String(e);
-      bootSyncBanner = { kind: "err", text: errText };
       persistLastSync({ at: Date.now(), kind: "err", summary: errText });
     }
   }
@@ -101,30 +105,6 @@
       {/if}
     {:else}
       <TopNav />
-    {/if}
-    {#if bootSyncBanner}
-      <div
-        class="flex items-start gap-2 border-b px-3 py-2 text-sm {mobileLayout.current &&
-        !showMobileHeader
-          ? 'pt-[max(0.5rem,env(safe-area-inset-top,0px))]'
-          : ''} {bootSyncBanner.kind === 'ok'
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
-          : bootSyncBanner.kind === 'err'
-            ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'
-            : 'border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'}"
-        role="status"
-      >
-        <p class="min-w-0 flex-1 break-words">{bootSyncBanner.text}</p>
-        <button
-          type="button"
-          class="shelf-touch inline-flex shrink-0 items-center justify-center self-start rounded-md px-2 text-xs font-medium opacity-80 hover:opacity-100"
-          onclick={() => {
-            bootSyncBanner = null;
-          }}
-        >
-          {t("common.close")}
-        </button>
-      </div>
     {/if}
     <div class="flex-1">
       {@render children()}

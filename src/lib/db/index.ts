@@ -6,6 +6,7 @@ export {
   findCatalogBySource,
   getCatalogById,
   insertCatalogItem,
+  setPosterLocalPath,
   updateCatalogItem,
   type InsertCatalogInput,
   type SqlDb,
