@@ -143,4 +143,93 @@ describe("createOpenLibraryClient", () => {
     const client = createOpenLibraryClient({ fetchImpl });
     await expect(client.searchBooks("x")).rejects.toBeInstanceOf(OpenLibraryHttpError);
   });
+
+  it("getRelatedEditionHits usa series+autor+par en paralelo, sin /subjects ni N×works", async () => {
+    const urls: string[] = [];
+    const fetchImpl = vi.fn().mockImplementation(async (url: string) => {
+      urls.push(url);
+      if (url.includes("/books/OL26242482M.json")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            title: "Dune",
+            publish_year: 1965,
+            works: [{ key: "/works/OL893415W" }],
+          }),
+        };
+      }
+      if (url.includes("/works/OL893415W.json")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            title: "Dune",
+            first_publish_year: 1965,
+            subjects: [
+              "Dune (Imaginary place)",
+              "Fiction",
+              "Science fiction",
+              "Ecology",
+              "nyt:foo=1",
+            ],
+            authors: [{ author: { key: "/authors/OL79034A" } }],
+            series: [{ series: { key: "/series/OL331367L" }, position: "1" }],
+          }),
+        };
+      }
+      if (url.includes("/search.json")) {
+        const isSeries = url.includes("series_key");
+        const isAuthor = url.includes("author_key");
+        const isPair =
+          (url.includes("science_fiction") && url.includes("ecology")) ||
+          (url.includes("subject_key") && url.includes("AND"));
+        const docs: Record<string, unknown>[] = [];
+        if (isSeries || isAuthor) {
+          docs.push({
+            key: "/works/OL893526W",
+            title: "Dune Messiah",
+            author_name: ["Frank Herbert"],
+            author_key: ["OL79034A"],
+            first_publish_year: 1969,
+            cover_i: 1,
+            subject: ["Science fiction"],
+            editions: {
+              docs: [{ key: "/books/OL7525229M", title: "Dune Messiah", publish_year: 1969, cover_i: 1 }],
+            },
+          });
+        }
+        if (isPair || (url.includes("subject_key") && !isSeries && !isAuthor)) {
+          docs.push({
+            key: "/works/OL1811933W",
+            title: "Ecotopia",
+            author_name: ["Ernest Callenbach"],
+            author_key: ["OL217346A"],
+            first_publish_year: 1975,
+            cover_i: 2,
+            subject: ["Science fiction", "Ecology"],
+            editions: { docs: [{ key: "/books/OL24945948M", publish_year: 1975, cover_i: 2 }] },
+          });
+        }
+        return { ok: true, status: 200, json: async () => ({ docs }) };
+      }
+      throw new Error(`unexpected url: ${url}`);
+    });
+
+    const client = createOpenLibraryClient({ fetchImpl, lang: "es" });
+    const hits = await client.getRelatedEditionHits("OL26242482M");
+
+    const searchUrls = urls.filter((u) => u.includes("/search.json"));
+    expect(searchUrls.length).toBeLessThanOrEqual(6);
+    expect(urls.some((u) => u.includes("/subjects/"))).toBe(false);
+    expect(urls.some((u) => /key[=:]\/works\//.test(decodeURIComponent(u)))).toBe(false);
+    expect(searchUrls.some((u) => u.includes("series_key"))).toBe(true);
+    expect(searchUrls.some((u) => u.includes("author_key"))).toBe(true);
+    expect(
+      searchUrls.some((u) => decodeURIComponent(u).includes("science_fiction") && decodeURIComponent(u).includes("ecology")),
+    ).toBe(true);
+    expect(searchUrls.length).toBeLessThanOrEqual(4);
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.some((h) => h.title === "Dune Messiah")).toBe(true);
+  });
 });

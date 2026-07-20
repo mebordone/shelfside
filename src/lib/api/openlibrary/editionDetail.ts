@@ -24,6 +24,8 @@ export type OlWorkJson = {
   first_publish_date?: string;
   /** Presente en /works/OL…W.json y en search.json. */
   first_publish_year?: number;
+  /** Serie(s) a las que pertenece la obra. */
+  series?: { series?: { key?: string }; key?: string; position?: string }[];
 };
 
 type OlFetch = <T>(path: string) => Promise<T>;

@@ -5,8 +5,12 @@ export type OlSearchDoc = {
   key?: string;
   title?: string;
   author_name?: string[];
+  author_key?: string[];
   first_publish_year?: number;
   cover_i?: number;
+  subject?: string[];
+  /** Claves de serie (strings) o estructuras según el endpoint. */
+  series?: (string | { key?: string })[];
   editions?: { docs?: OlEditionDoc[] };
 };
 
@@ -21,7 +25,7 @@ export type OlEditionDoc = {
 
 export function olidFromKey(key: string | undefined): string | null {
   if (!key) return null;
-  const m = key.match(/\/(books|works|authors)\/(OL[\dA-Z]+[WMA]?)/i);
+  const m = key.match(/\/(books|works|authors|series)\/(OL[\dA-Z]+[WMA]?)/i);
   return m?.[2] ?? null;
 }
 
@@ -90,4 +94,40 @@ export function mapSearchDocToHit(doc: OlSearchDoc): OpenLibrarySearchHit | null
   if (year == null) return null;
 
   return hitFromSearchDoc(doc, ids, authors, year);
+}
+
+/** Extrae OLIDs de serie desde el JSON de un work. */
+export function seriesKeysFromWork(
+  series: { series?: { key?: string }; key?: string }[] | undefined,
+): string[] {
+  const out: string[] = [];
+  for (const entry of series ?? []) {
+    const key = entry.series?.key ?? entry.key;
+    const id = olidFromKey(key);
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+export function seriesKeysFromSearchDoc(doc: OlSearchDoc): string[] {
+  const out: string[] = [];
+  for (const s of doc.series ?? []) {
+    if (typeof s === "string") {
+      const id = olidFromKey(s.startsWith("/") ? s : `/series/${s}`) ?? s.replace(/^\/series\//, "");
+      if (id) out.push(id);
+      continue;
+    }
+    const id = olidFromKey(s.key);
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+export function authorKeysFromSearchDoc(doc: OlSearchDoc): string[] {
+  const out: string[] = [];
+  for (const k of doc.author_key ?? []) {
+    const id = olidFromKey(k.startsWith("/") ? k : `/authors/${k}`) ?? k;
+    if (id) out.push(id);
+  }
+  return out;
 }

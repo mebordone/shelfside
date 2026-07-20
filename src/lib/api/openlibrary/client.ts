@@ -1,18 +1,29 @@
 import { buildOpenLibrarySearchQuery, getOpenLibraryLangParam } from "$lib/i18n/catalogLocale";
+import { RELATED_OPEN_LIBRARY_HITS_CAP } from "$lib/library/openLibraryRelatedHits";
+import {
+  mapSearchDocToRelatedCandidate,
+  rankRelatedOpenLibraryHits,
+  type RelatedBookCandidate,
+  type RelatedCandidateSource,
+} from "$lib/library/openLibraryRelatedRank";
+import { pickRelatedSubjects } from "$lib/library/openLibraryRelatedSubjects";
 import { coverUrlFromCoverId, coverUrlFromEditionOlid } from "./covers";
 import {
   buildOpenLibraryDetail,
   fetchAuthorNames,
+  resolvePublicationYear,
+  resolvePublicationYearFromSearch,
   resolveWorkKeyFromEdition,
   type OlEditionJson,
   type OlWorkJson,
 } from "./editionDetail";
 import { OpenLibraryHttpError } from "./errors";
-import { mapSearchDocToHit, olidFromKey, type OlSearchDoc } from "./parse";
 import {
-  resolvePublicationYear,
-  resolvePublicationYearFromSearch,
-} from "./editionDetail";
+  mapSearchDocToHit,
+  olidFromKey,
+  seriesKeysFromWork,
+  type OlSearchDoc,
+} from "./parse";
 import type {
   GetEditionDetailOptions,
   OpenLibraryClient,
@@ -36,17 +47,10 @@ export type {
 } from "./types";
 
 const OL_BASE = "https://openlibrary.org";
-const RELATED_PER_SUBJECT = 8;
-const RELATED_SUBJECTS_MAX = 2;
 
-function subjectToSlug(subject: string): string {
-  return subject
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
-}
+const RELATED_SEARCH_FIELDS =
+  "key,title,author_name,author_key,first_publish_year,cover_i,editions,subject";
+const RELATED_EDITION_FIELDS = "key,title,publish_year,cover_i";
 
 function resolveCoverUrl(editionOlid: string, edition: OlEditionJson, work: OlWorkJson): string | null {
   const coverId = edition.covers?.[0] ?? work.covers?.[0];
@@ -131,60 +135,29 @@ export function createOpenLibraryClient(options: OpenLibraryClientOptions = {}):
     return buildOpenLibraryDetail(olid, edition, work, workKey, authorNames, coverUrl, yearHint);
   }
 
-  async function editionHitFromWorkOlid(workOlid: string, excludeEditionId: string | null): Promise<OpenLibrarySearchHit | null> {
-    const params = new URLSearchParams({
-      q: `key:/works/${workOlid}`,
-      limit: "1",
-      lang,
-      fields: "key,title,author_name,first_publish_year,cover_i,editions",
-      "editions.fields": "key,title,publish_year,cover_i",
-    });
-    const data = await olFetch<{ docs?: OlSearchDoc[] }>(`/search.json?${params.toString()}`);
-    const hit = mapSearchDocToHit(data.docs?.[0] ?? {});
-    if (!hit || hit.editionId === excludeEditionId) return null;
-    return hit;
-  }
-
-  async function hitsFromSubject(subject: string, excludeEditionId: string | null): Promise<OpenLibrarySearchHit[]> {
-    const slug = subjectToSlug(subject);
-    if (!slug) return [];
+  async function relatedSearch(
+    q: string,
+    limit: number,
+    source: RelatedCandidateSource,
+  ): Promise<RelatedBookCandidate[]> {
     try {
-      const data = await olFetch<{ works?: { key?: string }[] }>(
-        `/subjects/${encodeURIComponent(slug)}.json?limit=${RELATED_PER_SUBJECT}`,
-      );
-      const hits: OpenLibrarySearchHit[] = [];
-      for (const w of data.works ?? []) {
-        const workOlid = olidFromKey(w.key);
-        if (!workOlid) continue;
-        const hit = await editionHitFromWorkOlid(workOlid, excludeEditionId);
-        if (hit) hits.push(hit);
-        if (hits.length >= RELATED_PER_SUBJECT) break;
+      const params = new URLSearchParams({
+        q,
+        limit: String(limit),
+        lang,
+        fields: RELATED_SEARCH_FIELDS,
+        "editions.fields": RELATED_EDITION_FIELDS,
+      });
+      const data = await olFetch<{ docs?: OlSearchDoc[] }>(`/search.json?${params.toString()}`);
+      const out: RelatedBookCandidate[] = [];
+      for (const doc of data.docs ?? []) {
+        const c = mapSearchDocToRelatedCandidate(doc, source);
+        if (c) out.push(c);
       }
-      return hits;
+      return out;
     } catch {
       return [];
     }
-  }
-
-  async function hitsFromAuthorKeys(authorKeys: string[], excludeEditionId: string | null): Promise<OpenLibrarySearchHit[]> {
-    const hits: OpenLibrarySearchHit[] = [];
-    const ak = authorKeys[0];
-    if (!ak) return hits;
-    const authorOlid = olidFromKey(ak);
-    if (!authorOlid) return hits;
-    try {
-      const data = await olFetch<{ docs?: OlSearchDoc[] }>(
-        `/search.json?q=author_key:${authorOlid}&limit=${RELATED_PER_SUBJECT}&lang=${lang}&fields=key,title,author_name,first_publish_year,cover_i,editions&editions.fields=key,title,publish_year,cover_i`,
-      );
-      for (const doc of data.docs ?? []) {
-        const hit = mapSearchDocToHit(doc);
-        if (hit && hit.editionId !== excludeEditionId) hits.push(hit);
-        if (hits.length >= RELATED_PER_SUBJECT) break;
-      }
-    } catch {
-      /* omitir */
-    }
-    return hits;
   }
 
   async function getRelatedEditionHits(editionId: string): Promise<OpenLibrarySearchHit[]> {
@@ -192,21 +165,57 @@ export function createOpenLibraryClient(options: OpenLibraryClientOptions = {}):
     const edition = await fetchEditionJson(olid);
     const workKey = await resolveWorkKeyFromEdition(olFetch, edition, olid);
     const work = await fetchWorkJson(workKey);
+    const workOlid = workKey.replace(/^\/works\//, "");
 
-    const lists: OpenLibrarySearchHit[][] = [];
-    const subjects = (work.subjects ?? []).filter((s) => s.trim().length > 2).slice(0, RELATED_SUBJECTS_MAX);
-    for (const subj of subjects) {
-      lists.push(await hitsFromSubject(subj, olid));
+    const picked = pickRelatedSubjects(work.subjects);
+    const seriesKeys = seriesKeysFromWork(work.series);
+    const authorKeys = (work.authors ?? [])
+      .map((a) => olidFromKey(a.author?.key ?? a.key))
+      .filter((k): k is string => Boolean(k));
+    const originYear = resolvePublicationYear(work, edition, undefined);
+
+    const parallel: Promise<RelatedBookCandidate[]>[] = [];
+
+    if (seriesKeys[0]) {
+      parallel.push(relatedSearch(`series_key:${seriesKeys[0]}`, 8, "series"));
+    }
+    if (authorKeys[0]) {
+      parallel.push(relatedSearch(`author_key:${authorKeys[0]}`, 8, "author"));
+    }
+    if (picked.pair) {
+      parallel.push(
+        relatedSearch(
+          `subject_key:${picked.pair.genre} AND subject_key:${picked.pair.theme}`,
+          12,
+          "subject_pair",
+        ),
+      );
     }
 
-    if (lists.every((l) => l.length === 0)) {
-      const authorKeys = (work.authors ?? [])
-        .map((a) => a.author?.key ?? a.key)
-        .filter((k): k is string => Boolean(k));
-      lists.push(await hitsFromAuthorKeys(authorKeys, olid));
+    const primaryLists = await Promise.all(parallel);
+
+    // Fallback de género solo si hay pocos candidatos únicos tras serie/autor/par.
+    const uniqueWorks = new Set(
+      primaryLists.flat().map((c) => c.workKey).filter((k) => k !== workOlid),
+    );
+    let genreList: RelatedBookCandidate[] = [];
+    if (picked.genre && uniqueWorks.size < 8) {
+      genreList = await relatedSearch(`subject_key:${picked.genre}`, 12, "subject");
     }
 
-    return lists.flat();
+    return rankRelatedOpenLibraryHits(
+      [...primaryLists, genreList],
+      {
+        year: originYear,
+        authorKeys,
+        seriesKeys,
+        subjectSlugs: picked.slugs,
+        primaryGenre: picked.genre,
+        excludeEditionId: olid,
+        excludeWorkKey: workOlid,
+      },
+      RELATED_OPEN_LIBRARY_HITS_CAP,
+    );
   }
 
   return {
