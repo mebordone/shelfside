@@ -4,6 +4,25 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+## [0.4.8] — 2026-07-20
+
+> Pulido post-madurez R4: sync que no molesta ni reescribe de más, posters offline tras sync, y recomendaciones de libros mucho más relevantes.
+
+### Añadido
+
+- **Posters:** backfill en segundo plano tras sincronizar — descarga y guarda localmente los pósters de ítems que llegaron por CSV (u otros sin `poster_local_path`), sin bumpear `updated_at` del catálogo.
+- **Libros / sugerencias:** recomendaciones Open Library por **serie + autor + subjects** filtrados (blacklist de tags genéricos), scoring y diversificación; menos requests (sin N+1 a `/subjects`).
+
+### Cambiado
+
+- **Sync CSV:** no reescribe `shelfside.csv` si el contenido serializado es idéntico al del disco (evita re-propagación Syncthing).
+- **Arranque:** la sync al abrir sigue corriendo pero **sin cartel** en Inicio; el resultado se persiste y se ve en Ajustes.
+- **Ajustes → Datos:** «Última sincronización» con **fecha/hora** + relativo + resumen; el texto distingue «reescribió» vs «ya estaba al día».
+
+### Release
+
+- Versión **0.4.8**. `npm run check` sin errores; 249 tests en verde. APK validado en dispositivo.
+
 ## [0.4.7] — 2026-07-17
 
 > Paquete de madurez post-R4. Retoques de UX pedidos (limpiar/derivar búsqueda, ver categorías en grilla, más sugerencias, recomendados clicables) más piezas de madurez (Inicio con marca + toggle, filtros recordados, última sync, retry, vacíos).

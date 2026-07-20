@@ -174,7 +174,7 @@ Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri):
 
 **Opcional si no entró en 3.3:** B4 `*.sync-conflict`; `activity_log`; etiquetas/listas.
 
-**Criterio de cierre Release 4 (tag `v0.4.6`):** APK release instala en celular físico; paridad de flujos; sync manual y automático (con toggle) **sobre CSV**; carpeta sync por diálogo o texto validado; roundtrip PC ↔ Syncthing ↔ Android (CSV) verificado y documentado; export Markdown para Obsidian sigue disponible.
+**Criterio de cierre Release 4 (tag `v0.4.6`):** APK release instala en celular físico; paridad de flujos; sync manual y automático (con toggle) **sobre CSV**; carpeta sync por diálogo o texto validado; roundtrip PC ↔ Syncthing ↔ Android (CSV) verificado y documentado; export Markdown para Obsidian sigue disponible. Pulido posterior: `v0.4.7` (madurez UX), `v0.4.8` (sync/posters/related libros).
 
 ---
 
@@ -311,6 +311,16 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | 4.7d | **UX previa** | ✅ Limpiar/derivar búsqueda, categorías en grilla, «Ver más», recomendados clicables |
 | 4.7e | **CHANGELOG + versión** | ✅ `0.4.7` |
 
+#### `v0.4.8` — Sync silencioso, posters offline, related libros ✅
+
+| Id | Entregable | Notas |
+|----|------------|--------|
+| 4.8a | **Sync CSV** | ✅ No reescribir si el contenido es idéntico; resumen «ya estaba al día» |
+| 4.8b | **UX sync** | ✅ Arranque sin cartel; última sync con fecha/hora en Ajustes |
+| 4.8c | **Posters** | ✅ Backfill local tras sync (ítems sin `poster_local_path`) |
+| 4.8d | **Related libros** | ✅ Serie/autor/subjects rankeados; menos consultas OL |
+| 4.8e | **CHANGELOG + versión** | ✅ `0.4.8` |
+
 ---
 
 ### Mapa rápido versión ↔ tema
@@ -326,6 +336,7 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | `0.4.5-ux.1` | Acciones rápidas (estado/progreso) + filtros ✅ |
 | `v0.4.6` | APK release + documentación + cierre R4 ✅ |
 | `v0.4.7` | Madurez R4: UX Inicio/Biblioteca + última sync + retry ✅ |
+| `v0.4.8` | Sync sin rewrite inútil + posters backfill + related OL ✅ |
 
 ---
 
