@@ -174,7 +174,7 @@ Tras el MVP multiplataforma personal (**Linux + Android**, mismo código Tauri):
 
 **Opcional si no entró en 3.3:** B4 `*.sync-conflict`; `activity_log`; etiquetas/listas.
 
-**Criterio de cierre Release 4 (tag `v0.4.6`):** APK release instala en celular físico; paridad de flujos; sync manual y automático (con toggle) **sobre CSV**; carpeta sync por diálogo o texto validado; roundtrip PC ↔ Syncthing ↔ Android (CSV) verificado y documentado; export Markdown para Obsidian sigue disponible. Pulido posterior: `v0.4.7` (madurez UX), `v0.4.8` (sync/posters/related libros).
+**Criterio de cierre Release 4 (tag `v0.4.6`):** APK release instala en celular físico; paridad de flujos; sync manual y automático (con toggle) **sobre CSV**; carpeta sync por diálogo o texto validado; roundtrip PC ↔ Syncthing ↔ Android (CSV) verificado y documentado; export Markdown para Obsidian sigue disponible. Pulido posterior: `v0.4.7` (madurez UX), `v0.4.8` (sync/posters/related libros); post-`0.4.8` Unreleased: related diversificado + «Ya en la biblioteca» en búsqueda.
 
 ---
 
@@ -320,6 +320,13 @@ Cada fila = un tag semver sugerido; un PR/issue por micro-release cuando sea pos
 | 4.8c | **Posters** | ✅ Backfill local tras sync (ítems sin `poster_local_path`) |
 | 4.8d | **Related libros** | ✅ Serie/autor/subjects rankeados; menos consultas OL |
 | 4.8e | **CHANGELOG + versión** | ✅ `0.4.8` |
+
+#### Post-`v0.4.8` (Unreleased) — related diversificado + presence en búsqueda
+
+| Id | Entregable | Notas |
+|----|------------|--------|
+| 4.8f | **Related OL v2** | ✅ Allowlist de themes, género siempre, cuotas min. temáticos, sparse discovery |
+| 4.8g | **Búsqueda → biblioteca** | ✅ «Ya en la biblioteca» en resultados (presence batch) |
 
 ---
 

@@ -4,6 +4,14 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 
 ## [Unreleased]
 
+### Añadido
+
+- **Búsqueda:** en resultados, si el ítem ya está en la biblioteca se muestra **«Ya en la biblioteca»** (enlace a la ficha) en lugar de «Añadir»; presence en batch TMDB/OL por página.
+
+### Cambiado
+
+- **Libros / sugerencias OL:** themes con allowlist estricta + blacklist ampliada; género siempre en paralelo; cuotas de descubrimiento (máx 3 serie / 2 autor / mín 5 temáticos); discovery forzado cuando no hay género detectado (casos sparse).
+
 ## [0.4.8] — 2026-07-20
 
 > Pulido post-madurez R4: sync que no molesta ni reescribe de más, posters offline tras sync, y recomendaciones de libros mucho más relevantes.
