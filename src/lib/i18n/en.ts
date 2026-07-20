@@ -238,7 +238,9 @@ export const enMessages: Record<string, string> = {
   "sync.boot_running": "Syncing…",
   "settings.sync_advanced": "More options (Markdown, recycle bin)",
   "settings.sync_summary":
-    "From CSV: {imported} new · {updated} updated · {deleted} removed · {skipped} unchanged. Then rewrote the CSV with {exported} rows (full library).",
+    "From CSV: {imported} new · {updated} updated · {deleted} removed · {skipped} unchanged.",
+  "settings.sync_rewrote": "Then rewrote the CSV with {exported} rows (full library).",
+  "settings.sync_no_rewrite": "The CSV was already up to date; nothing was rewritten.",
   "settings.sync_errors_prefix": "{count} error(s)",
   "settings.sync_export_md": "Export Markdown (Obsidian)",
   "settings.sync_import": "Import Markdown (migration)",

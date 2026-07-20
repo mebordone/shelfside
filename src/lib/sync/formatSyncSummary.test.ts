@@ -12,6 +12,17 @@ describe("formatSyncSummary", () => {
     expect(text).toContain("61");
   });
 
+  it("indica que no reescribió si wrote es false", () => {
+    initAppLocale();
+    const text = formatSyncSummary(
+      { imported: 0, updated: 0, deleted: 0, skipped: 10, errors: [] },
+      10,
+      false,
+    );
+    expect(text).toMatch(/al día|up to date|no se reescribió|nothing was rewritten/i);
+    expect(text).not.toMatch(/Luego se reescribió|Then rewrote/i);
+  });
+
   it("incluye primer error si hay fallos", () => {
     initAppLocale();
     const text = formatSyncSummary(

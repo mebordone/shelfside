@@ -12,7 +12,7 @@ describe("syncSyncFolder", () => {
     });
     vi.spyOn(exportCsv, "exportToSyncCsv").mockImplementation(async () => {
       order.push("export");
-      return 6;
+      return { exported: 6, wrote: true };
     });
 
     const db = { select: vi.fn(), execute: vi.fn() };

@@ -239,7 +239,9 @@ export const esMessages: Record<string, string> = {
   "sync.boot_running": "Sincronizando…",
   "settings.sync_advanced": "Más opciones (Markdown, papelera)",
   "settings.sync_summary":
-    "Del CSV: {imported} nuevas · {updated} actualizadas · {deleted} borradas · {skipped} sin cambios. Luego se reescribió el CSV con {exported} filas (toda la biblioteca).",
+    "Del CSV: {imported} nuevas · {updated} actualizadas · {deleted} borradas · {skipped} sin cambios.",
+  "settings.sync_rewrote": "Luego se reescribió el CSV con {exported} filas (toda la biblioteca).",
+  "settings.sync_no_rewrite": "El CSV ya estaba al día; no se reescribió.",
   "settings.sync_errors_prefix": "{count} error(es)",
   "settings.sync_export_md": "Exportar Markdown (Obsidian)",
   "settings.sync_import": "Importar Markdown (migración)",

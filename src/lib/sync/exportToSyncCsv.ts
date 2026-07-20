@@ -1,4 +1,4 @@
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { exists, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import type { SqlDb } from "$lib/db/catalog";
 import { listLibraryWithCatalog } from "$lib/db/library";
 import { syncCsvPath } from "./csvPath";
@@ -44,8 +44,15 @@ function liveRowFromLibrary(
   };
 }
 
+export type ExportCsvResult = {
+  /** Cantidad de obras vivas exportadas. */
+  exported: number;
+  /** `true` si el archivo fue reescrito; `false` si el contenido ya estaba al día. */
+  wrote: boolean;
+};
+
 /** Escribe vivos + preserva filas tombstone del CSV que no tienen obra viva con la misma clave. */
-export async function exportToSyncCsv(db: SqlDb, syncDir: string): Promise<number> {
+export async function exportToSyncCsv(db: SqlDb, syncDir: string): Promise<ExportCsvResult> {
   const existing = await readExistingSyncCsv(syncDir);
   const catalogMap = await catalogUpdatedMap(db);
   const live = await listLibraryWithCatalog(db, {});
@@ -57,6 +64,15 @@ export async function exportToSyncCsv(db: SqlDb, syncDir: string): Promise<numbe
   const preservedTombs = existing.filter((r) => r.deleted && !liveKeys.has(syncCsvCatalogKey(r)));
   const rows = [...liveRows, ...preservedTombs];
   const path = await syncCsvPath(syncDir);
-  await writeTextFile(path, serializeSyncCsv(rows));
-  return liveRows.length;
+  const newContent = serializeSyncCsv(rows);
+
+  let existingRaw = "";
+  if (await exists(path)) existingRaw = await readTextFile(path);
+
+  // Evita reescribir (y disparar sync/Syncthing) si el CSV ya está al día.
+  const wrote = newContent !== existingRaw;
+  if (wrote) {
+    await writeTextFile(path, newContent);
+  }
+  return { exported: liveRows.length, wrote };
 }
