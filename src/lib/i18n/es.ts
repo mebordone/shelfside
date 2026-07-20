@@ -152,6 +152,8 @@ export const esMessages: Record<string, string> = {
   "search.results": "Resultados",
   "search.add_status_hint": "En «Añadir» elegís el estado; el último queda guardado para la próxima vez.",
   "search.add": "Añadir a biblioteca",
+  "search.in_library": "Ya en la biblioteca",
+  "search.in_library_aria": "Abrir en tu biblioteca",
   "search.empty": "Sin resultados.",
   "search.catalog_chip_es": "Catálogo: español",
   "search.catalog_chip_en": "Catálogo: inglés",

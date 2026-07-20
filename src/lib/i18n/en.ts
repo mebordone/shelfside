@@ -151,6 +151,8 @@ export const enMessages: Record<string, string> = {
   "search.results": "Results",
   "search.add_status_hint": "In «Add» you pick the status; the last one is saved for next time.",
   "search.add": "Add to library",
+  "search.in_library": "Already in library",
+  "search.in_library_aria": "Open in your library",
   "search.empty": "No results.",
   "search.catalog_chip_es": "Catalog: Spanish",
   "search.catalog_chip_en": "Catalog: English",

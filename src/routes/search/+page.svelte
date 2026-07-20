@@ -15,6 +15,10 @@
     commitSearchPage,
     fetchSearchPage,
   } from "$lib/library/catalogSearchPage";
+  import {
+    getSearchHitsLibraryPresence,
+    searchHitKey,
+  } from "$lib/library/searchHitsLibraryPresence";
   import { buildSearchSourceChipOptions } from "$lib/library/searchSourceOptions";
   import { addSearchHitToLibrary } from "$lib/library/sources/registry";
   import { resolveCatalogLang } from "$lib/i18n/catalogLocale";
@@ -32,6 +36,8 @@
 
   let loading = $state(false);
   let addingKey = $state<string | null>(null);
+  /** library_entry.id por `searchHitKey`, o null si no está en biblioteca. */
+  let libraryIdByHitKey = $state<Map<string, number | null>>(new Map());
 
   const hasTmdbKey = $derived(Boolean(getTmdbApiKeyFromEnv().trim()));
   const canSearch = $derived(
@@ -46,12 +52,17 @@
   const olStrictActive = $derived(readOlStrictLanguage());
 
   function hitKey(h: SearchHitRow): string {
-    return h.kind === "tmdb" ? `tmdb-${h.mediaType}-${h.id}` : `ol-${h.editionId}`;
+    return searchHitKey(h);
+  }
+
+  function libraryIdFor(h: SearchHitRow): number | null {
+    return libraryIdByHitKey.get(hitKey(h)) ?? null;
   }
 
   function onSourceChange(next: SearchSource) {
     if (searchSession.source === next) return;
     searchSession.source = next;
+    libraryIdByHitKey = new Map();
     clearSearchResults();
   }
 
@@ -59,11 +70,25 @@
     return `${h.authors.join(", ")} · ${String(h.year)}`;
   }
 
+  async function refreshLibraryPresence(hits: SearchHitRow[]) {
+    if (hits.length === 0) {
+      libraryIdByHitKey = new Map();
+      return;
+    }
+    try {
+      const db = await getDatabase();
+      libraryIdByHitKey = await getSearchHitsLibraryPresence(db, hits);
+    } catch {
+      libraryIdByHitKey = new Map();
+    }
+  }
+
   async function loadPage(page: number) {
     const cached = applyPageFromCache(searchSession.pageCache, page);
     if (cached) {
       searchSession.page = page;
       searchSession.hits = cached;
+      await refreshLibraryPresence(cached);
       return;
     }
 
@@ -82,9 +107,11 @@
       searchSession.pageSize = meta.pageSize;
       searchSession.page = page;
       searchSession.hits = rows;
+      await refreshLibraryPresence(rows);
     } catch (e) {
       searchSession.err = userFacingError(e);
       searchSession.hits = [];
+      libraryIdByHitKey = new Map();
     } finally {
       loading = false;
     }
@@ -105,12 +132,14 @@
     } catch (e) {
       searchSession.err = userFacingError(e);
       searchSession.hits = [];
+      libraryIdByHitKey = new Map();
     } finally {
       loading = false;
     }
   }
 
   function onClearSearch() {
+    libraryIdByHitKey = new Map();
     resetSearchSession();
   }
 
@@ -129,6 +158,9 @@
     try {
       const db = await getDatabase();
       const r = await addSearchHitToLibrary(db, hit, status);
+      const next = new Map(libraryIdByHitKey);
+      next.set(key, r.libraryId);
+      libraryIdByHitKey = next;
       if (r.alreadyInLibrary) {
         searchSession.msg = t("search.already");
       } else {
@@ -145,6 +177,8 @@
   onMount(() => {
     if (consumePendingAutoSearch()) {
       void runSearch();
+    } else if (searchSession.hits.length > 0) {
+      void refreshLibraryPresence(searchSession.hits);
     }
   });
 </script>
@@ -263,6 +297,7 @@
     <p class="mb-2 text-xs text-zinc-500 dark:text-zinc-400">{t("search.add_status_hint")}</p>
     <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
       {#each searchSession.hits as h (hitKey(h))}
+        {@const inLibraryId = libraryIdFor(h)}
         <li class="flex items-center gap-3 bg-white p-3 dark:bg-zinc-900">
           <a
             class="group flex min-h-0 min-w-0 flex-1 items-center gap-3 self-stretch rounded-md outline-none ring-emerald-500/40 focus-visible:ring-2"
@@ -299,13 +334,24 @@
             </div>
           </a>
           <div class="flex shrink-0 flex-col justify-center border-l border-zinc-200/70 pl-3 dark:border-zinc-700/70">
-            <AddToLibraryMenuButton
-              menuId={hitKey(h)}
-              variant="row"
-              busy={addingKey === hitKey(h)}
-              disabled={!canSearch}
-              onAdd={(status) => addHit(h, status)}
-            />
+            {#if inLibraryId != null}
+              <a
+                class="shelf-touch inline-flex min-h-11 max-w-[9.5rem] items-center justify-center rounded-md border border-zinc-300 px-3 text-center text-sm font-medium leading-snug text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                href={resolve("/library/[id]", { id: String(inLibraryId) })}
+                aria-label={t("search.in_library_aria")}
+                title={t("search.in_library")}
+              >
+                {t("search.in_library")}
+              </a>
+            {:else}
+              <AddToLibraryMenuButton
+                menuId={hitKey(h)}
+                variant="row"
+                busy={addingKey === hitKey(h)}
+                disabled={!canSearch}
+                onAdd={(status) => addHit(h, status)}
+              />
+            {/if}
           </div>
         </li>
       {/each}
