@@ -27,6 +27,8 @@
   import { tmdbTvCatalogFromMetadata } from "$lib/library/tmdbCatalogMeta";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { logError } from "$lib/logs/runtimeLogs";
+  import { safeAppReturnTo } from "$lib/nav/returnTo";
+  import { scheduleEphemeralClear } from "$lib/ui/ephemeralMessage";
 
   let row = $state<LibraryListRow | null>(null);
   let posterUrl = $state<string | null>(null);
@@ -37,6 +39,17 @@
   let okMsg = $state<string | null>(null);
 
   const libraryId = $derived(Number(page.params.id));
+  const returnToHere = $derived(
+    Number.isFinite(libraryId) && libraryId > 0
+      ? resolve("/library/[id]", { id: String(libraryId) })
+      : null,
+  );
+  const backHref = $derived(
+    safeAppReturnTo(page.url.searchParams.get("returnTo")) ?? resolve("/library"),
+  );
+  const backLabel = $derived(
+    backHref.startsWith("/search") ? t("search.back_search") : t("common.back"),
+  );
 
   const tvCatalog = $derived(
     row?.media_type === "tv" && row.metadata_json != null ? tmdbTvCatalogFromMetadata(row.metadata_json) : null,
@@ -71,6 +84,15 @@
       }
     })();
   });
+
+  $effect(() =>
+    scheduleEphemeralClear(
+      () => okMsg,
+      (v) => {
+        okMsg = v;
+      },
+    ),
+  );
 
   async function reloadRow() {
     const db = await getDatabase();
@@ -178,9 +200,9 @@
   }
 </script>
 
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
+<div class="shelf-page-detail max-w-2xl">
   <p>
-    <a class="text-sm text-emerald-700 hover:underline dark:text-emerald-400" href={resolve("/library")}>{t("common.back")}</a>
+    <a class="text-sm text-emerald-700 hover:underline dark:text-emerald-400" href={backHref}>{backLabel}</a>
   </p>
 
   {#if loading}
@@ -207,9 +229,7 @@
     </header>
 
     {#if okMsg}
-      <p class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100" role="status">
-        {okMsg}
-      </p>
+      <p class="shelf-toast-ok" role="status">{okMsg}</p>
     {/if}
     {#if err}
       <p class="text-sm text-red-600 dark:text-red-400">{err}</p>
@@ -236,11 +256,15 @@
     {/if}
 
     {#if row.source === "tmdb" && hasTmdbKey && (row.media_type === "movie" || row.media_type === "tv")}
-      <TmdbRelatedSuggestionsBlock mediaType={row.media_type} tmdbId={Number(row.external_id)} />
+      <TmdbRelatedSuggestionsBlock
+        mediaType={row.media_type}
+        tmdbId={Number(row.external_id)}
+        returnTo={returnToHere}
+      />
     {/if}
 
     {#if row.source === "openlibrary" && row.media_type === "book"}
-      <OpenLibraryRelatedSuggestionsBlock editionId={row.external_id} />
+      <OpenLibraryRelatedSuggestionsBlock editionId={row.external_id} returnTo={returnToHere} />
     {/if}
 
     {#if row.notes}

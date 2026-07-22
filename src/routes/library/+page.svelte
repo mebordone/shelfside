@@ -25,7 +25,13 @@
     setLibraryStatusFilter,
   } from "$lib/stores/librarySession.svelte";
   import { handoffLibraryQueryToSearch } from "$lib/stores/searchSession.svelte";
-  import { persistLibraryView, readLibraryView, type LibraryView } from "$lib/stores/libraryView";
+  import {
+    initLibraryView,
+    libraryView,
+    setLibraryView,
+    type LibraryView,
+  } from "$lib/stores/libraryView.svelte";
+  import { mobileLayout } from "$lib/stores/mobileLayout.svelte";
   import ViewToggle from "$lib/components/ViewToggle.svelte";
   import type { LibraryListRow } from "$lib/db";
   import type { WithDisplayUrl } from "$lib/poster";
@@ -34,7 +40,6 @@
 
   let loading = $state(false);
   let quickEditRow = $state<Row | null>(null);
-  let view = $state<LibraryView>("grid");
 
   function currentFilters() {
     const f: { mediaType?: string; status?: string; search?: string } = {};
@@ -97,13 +102,8 @@
 
   const libraryPath = resolve("/library");
 
-  function onViewChange(v: LibraryView) {
-    view = v;
-    persistLibraryView(v);
-  }
-
   onMount(() => {
-    view = readLibraryView();
+    initLibraryView();
     initLibraryFilters();
     if (!librarySession.hydrated) {
       void loadPage(0);
@@ -117,32 +117,36 @@
   });
 </script>
 
-<div class="mx-auto max-w-5xl space-y-6 px-4 py-8">
-  <div class="flex items-center justify-between gap-3">
-    <h1 class="text-2xl font-semibold tracking-tight">{t("library.title")}</h1>
-    <ViewToggle
-      value={view}
-      first="grid"
-      second="list"
-      firstLabel={t("library.view_grid")}
-      secondLabel={t("library.view_list")}
-      ariaLabel={t("library.view_toggle")}
-      onchange={(v) => onViewChange(v as LibraryView)}
-    />
-  </div>
+<div class="shelf-page-browse max-w-5xl">
+  <h1 class="sr-only">{t("library.title")}</h1>
 
   <div class="space-y-3" aria-label={t("library.filters")}>
-    <FilterChipBar
-      options={mediaChipOptions}
-      value={librarySession.mediaFilter}
-      includeAll
-      allLabel={t("media.all")}
-      ariaLabel={t("library.media_filter")}
-      onchange={(v) => {
-        setLibraryMediaFilter(v);
-        reloadFromFilters();
-      }}
-    />
+    <div class="flex items-center gap-3">
+      <div class="min-w-0 flex-1">
+        <FilterChipBar
+          options={mediaChipOptions}
+          value={librarySession.mediaFilter}
+          includeAll
+          allLabel={t("media.all")}
+          ariaLabel={t("library.media_filter")}
+          onchange={(v) => {
+            setLibraryMediaFilter(v);
+            reloadFromFilters();
+          }}
+        />
+      </div>
+      {#if !mobileLayout.current}
+        <ViewToggle
+          value={libraryView.current}
+          first="grid"
+          second="list"
+          firstLabel={t("library.view_grid")}
+          secondLabel={t("library.view_list")}
+          ariaLabel={t("library.view_toggle")}
+          onchange={(v) => setLibraryView(v as LibraryView)}
+        />
+      {/if}
+    </div>
     <FilterChipBar
       options={statusChipOptions}
       value={librarySession.statusFilter}
@@ -154,20 +158,29 @@
         reloadFromFilters();
       }}
     />
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="relative min-w-0 flex-1">
-        <input
-          class="shelf-field w-full {librarySession.search.trim() ? 'pr-11' : ''}"
-          placeholder={t("library.search_placeholder")}
-          bind:value={librarySession.search}
-          onkeydown={(e) => {
-            if (e.key === "Enter") reloadFromFilters();
-          }}
-        />
+  </div>
+
+  <form
+    class="w-full"
+    onsubmit={(e) => {
+      e.preventDefault();
+      reloadFromFilters();
+    }}
+  >
+    <div class="relative w-full">
+      <input
+        type="search"
+        enterkeyhint="search"
+        class="shelf-field w-full pr-[5.5rem]"
+        placeholder={t("library.search_placeholder")}
+        bind:value={librarySession.search}
+        aria-label={t("library.search_placeholder")}
+      />
+      <div class="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
         {#if librarySession.search.trim()}
           <button
             type="button"
-            class="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-lg leading-none text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            class="shelf-touch flex h-9 w-9 items-center justify-center rounded-md text-lg leading-none text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
             aria-label={t("library.clear_search")}
             title={t("common.clear")}
             onclick={onClearLibrarySearch}
@@ -175,12 +188,24 @@
             ×
           </button>
         {/if}
+        <button
+          type="submit"
+          class="shelf-touch flex h-9 w-9 items-center justify-center rounded-md text-emerald-600 hover:bg-emerald-50 disabled:opacity-40 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+          disabled={loading}
+          aria-label={t("common.apply")}
+          title={t("common.apply")}
+        >
+          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M8.5 3a5.5 5.5 0 104.384 8.737l3.19 3.19a.75.75 0 101.06-1.06l-3.19-3.19A5.5 5.5 0 008.5 3zm-4 5.5a4 4 0 118 0 4 4 0 01-8 0z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </button>
       </div>
-      <button type="button" class="shelf-btn-primary shrink-0" onclick={reloadFromFilters}>
-        {t("common.apply")}
-      </button>
     </div>
-  </div>
+  </form>
 
   {#if loading}
     <p class="text-sm text-zinc-500">{t("common.loading")}</p>
@@ -204,17 +229,25 @@
       </p>
     </div>
   {:else if librarySession.rows.length > 0}
-    <SearchResultsPagination
-      page={librarySession.page}
-      pageSize={LIBRARY_LIST_PAGE_SIZE}
-      total={librarySession.total}
-      shownCount={librarySession.rows.length}
-      {loading}
-      onPrev={() => void loadPage(librarySession.page - 1)}
-      onNext={() => void loadPage(librarySession.page + 1)}
-    />
-    {#if view === "list"}
-      <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800" data-testid="library-list">
+    <div class="flex items-baseline justify-between gap-2">
+      <span class="sr-only">{t("library.title")}</span>
+      <SearchResultsPagination
+        page={librarySession.page}
+        pageSize={LIBRARY_LIST_PAGE_SIZE}
+        total={librarySession.total}
+        shownCount={librarySession.rows.length}
+        {loading}
+        variant="meta"
+        onPrev={() => void loadPage(librarySession.page - 1)}
+        onNext={() => void loadPage(librarySession.page + 1)}
+      />
+    </div>
+
+    {#if libraryView.current === "list"}
+      <ul
+        class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800"
+        data-testid="library-list"
+      >
         {#each librarySession.rows as r (r.id)}
           <li>
             <a
@@ -264,6 +297,19 @@
         {/each}
       </div>
     {/if}
+
+    <div class="pt-1">
+      <SearchResultsPagination
+        page={librarySession.page}
+        pageSize={LIBRARY_LIST_PAGE_SIZE}
+        total={librarySession.total}
+        shownCount={librarySession.rows.length}
+        {loading}
+        variant="controls"
+        onPrev={() => void loadPage(librarySession.page - 1)}
+        onNext={() => void loadPage(librarySession.page + 1)}
+      />
+    </div>
   {/if}
 </div>
 
