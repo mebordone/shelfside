@@ -7,11 +7,17 @@ Todos los cambios notables de **Shelfside** se documentan aquí (formato inspira
 ### Añadido
 
 - **Búsqueda:** en resultados, si el ítem ya está en la biblioteca se muestra **«Ya en la biblioteca»** (enlace a la ficha) en lugar de «Añadir»; presence en batch TMDB/OL por página.
+- **Búsqueda:** paginación también **al final** de la lista de resultados.
 
 ### Cambiado
 
 - **Libros / sugerencias OL:** themes con allowlist estricta + blacklist ampliada; género siempre en paralelo; cuotas de descubrimiento (máx 3 serie / 2 autor / mín 5 temáticos); discovery forzado cuando no hay género detectado (casos sparse).
-
+- **Búsqueda:** al añadir desde la lista (o ficha de catálogo) **no navega** a la ficha de biblioteca; el CTA pasa a «En biblioteca».
+- **Navegación:** desde recomendaciones, «Volver» respeta el origen (`returnTo`) y regresa a la ficha de biblioteca en lugar de forzar `/search`.
+- **Búsqueda (móvil):** menos chrome — sin título grande, input a ancho completo, idioma como enlace, lista primero, meta compacta arriba y paginación abajo; toast efímero al añadir.
+- **Biblioteca (browsing):** mismo criterio que Buscar — título `sr-only`, búsqueda a ancho completo (lupa/Enter, sin «Aplicar»), meta de paginación arriba y controles abajo; shell `.shelf-page-browse`.
+- **Fichas detalle** (biblioteca/catálogo): padding con `.shelf-page-detail`; toast de éxito efímero compartido (`scheduleEphemeralClear` + `.shelf-toast-ok`).
+- **Header móvil:** marca «Shelfside» siempre en verde; toggle grilla/lista de Biblioteca en el header (como Inicio), sin solaparse con los chips.
 ## [0.4.8] — 2026-07-20
 
 > Pulido post-madurez R4: sync que no molesta ni reescribe de más, posters offline tras sync, y recomendaciones de libros mucho más relevantes.
