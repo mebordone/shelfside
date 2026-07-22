@@ -46,4 +46,20 @@
   .shelf-btn-primary {
     @apply inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50;
   }
+
+  /** Pantallas browsing (Buscar, Biblioteca): denso, contenido primero. */
+  .shelf-page-browse {
+    @apply mx-auto space-y-3 px-4 pb-6 pt-4;
+  }
+
+  /** Fichas de detalle: un poco más de aire que browse. */
+  .shelf-page-detail {
+    @apply mx-auto space-y-5 px-4 py-6;
+  }
+
+  /** Feedback de éxito efímero. */
+  .shelf-toast-ok {
+    @apply rounded-md border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-sm text-emerald-800;
+    @apply dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300;
+  }
 }
