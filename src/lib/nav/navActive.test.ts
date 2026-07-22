@@ -15,8 +15,8 @@ describe("navActive", () => {
     expect(navActive("/library", "more")).toBe(false);
   });
 
-  it("brandClassMobile no usa fondo sólido emerald", () => {
-    expect(brandClassMobile(true)).not.toMatch(/bg-emerald/);
-    expect(brandClassMobile(true)).toMatch(/text-emerald/);
+  it("brandClassMobile siempre usa texto emerald sin fondo sólido", () => {
+    expect(brandClassMobile()).not.toMatch(/bg-emerald/);
+    expect(brandClassMobile()).toMatch(/text-emerald/);
   });
 });

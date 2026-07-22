@@ -5,9 +5,12 @@
   import { brandClassMobile, navActive } from "$lib/nav/navActive";
   import ViewToggle from "$lib/components/ViewToggle.svelte";
   import { homeView, setHomeView } from "$lib/stores/homeView.svelte";
+  import { libraryView, setLibraryView } from "$lib/stores/libraryView.svelte";
 
   const pathname = $derived(page.url.pathname);
   const isHome = $derived(navActive(pathname, "home"));
+  /** Solo lista de Biblioteca (no ficha/edición). */
+  const isLibraryBrowse = $derived(pathname === "/library" || pathname === "/library/");
 </script>
 
 <header
@@ -15,7 +18,7 @@
   data-testid="mobile-header"
 >
   <a
-    class={brandClassMobile(isHome)}
+    class={brandClassMobile()}
     href={resolve("/")}
     aria-current={isHome ? "page" : undefined}
     >{t("app.title")}</a
@@ -30,6 +33,18 @@
         secondLabel={t("home.view_grid")}
         ariaLabel={t("home.view_toggle")}
         onchange={(v) => setHomeView(v as "carousel" | "grid")}
+      />
+    </div>
+  {:else if isLibraryBrowse}
+    <div class="ml-auto">
+      <ViewToggle
+        value={libraryView.current}
+        first="grid"
+        second="list"
+        firstLabel={t("library.view_grid")}
+        secondLabel={t("library.view_list")}
+        ariaLabel={t("library.view_toggle")}
+        onchange={(v) => setLibraryView(v as "grid" | "list")}
       />
     </div>
   {/if}

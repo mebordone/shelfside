@@ -25,3 +25,15 @@ export function persistLibraryView(value: LibraryView): void {
     /* ignore */
   }
 }
+
+/** Estado reactivo compartido entre el header móvil y la página Biblioteca. */
+export const libraryView = $state<{ current: LibraryView }>({ current: "grid" });
+
+export function initLibraryView(): void {
+  libraryView.current = readLibraryView();
+}
+
+export function setLibraryView(value: LibraryView): void {
+  libraryView.current = value;
+  persistLibraryView(value);
+}
