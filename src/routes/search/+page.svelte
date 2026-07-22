@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { onMount } from "svelte";
   import { getTmdbApiKeyFromEnv } from "$lib/api";
@@ -33,6 +32,7 @@
     type SearchHitRow,
     type SearchSource,
   } from "$lib/stores/searchSession.svelte";
+  import { scheduleEphemeralClear } from "$lib/ui/ephemeralMessage";
 
   let loading = $state(false);
   let addingKey = $state<string | null>(null);
@@ -50,6 +50,10 @@
     catalogLangResolved === "es" ? t("search.catalog_chip_es") : t("search.catalog_chip_en"),
   );
   const olStrictActive = $derived(readOlStrictLanguage());
+
+  const canSubmit = $derived(
+    Boolean(searchSession.query.trim()) && canSearch && !loading,
+  );
 
   function hitKey(h: SearchHitRow): string {
     return searchHitKey(h);
@@ -161,18 +165,23 @@
       const next = new Map(libraryIdByHitKey);
       next.set(key, r.libraryId);
       libraryIdByHitKey = next;
-      if (r.alreadyInLibrary) {
-        searchSession.msg = t("search.already");
-      } else {
-        searchSession.msg = t("search.added");
-        await goto(resolve("/library/[id]", { id: String(r.libraryId) }));
-      }
+      searchSession.msg = r.alreadyInLibrary ? t("search.already") : t("search.added");
     } catch (e) {
       searchSession.err = userFacingError(e);
     } finally {
       addingKey = null;
     }
   }
+
+  /** Toast efímero: no ocupa layout permanente. */
+  $effect(() =>
+    scheduleEphemeralClear(
+      () => searchSession.msg,
+      (v) => {
+        searchSession.msg = v;
+      },
+    ),
+  );
 
   onMount(() => {
     if (consumePendingAutoSearch()) {
@@ -183,8 +192,8 @@
   });
 </script>
 
-<div class="mx-auto max-w-2xl space-y-4 px-4 py-8">
-  <h1 class="text-2xl font-semibold">{t("search.title")}</h1>
+<div class="shelf-page-browse max-w-2xl">
+  <h1 class="sr-only">{t("search.title")}</h1>
 
   <FilterChipBar
     options={searchSourceChips}
@@ -197,28 +206,18 @@
     <p class="text-sm text-amber-700 dark:text-amber-400">{t("search.need_key")}</p>
   {/if}
 
-  <p class="text-xs text-zinc-600 dark:text-zinc-400">
-    <a
-      class="inline-flex items-center gap-1 rounded-full border border-zinc-300 px-2.5 py-0.5 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
-      href={resolve("/settings")}
-      title={t("search.catalog_chip_settings")}
-    >
-      {catalogChipLabel}
-    </a>
-  </p>
-
   <form
-    class="flex flex-wrap gap-2"
+    class="w-full"
     onsubmit={(e) => {
       e.preventDefault();
       void runSearch();
     }}
   >
-    <div class="relative min-w-[12rem] flex-1">
+    <div class="relative w-full">
       <input
         type="search"
         enterkeyhint="search"
-        class="shelf-field w-full {searchSession.query.trim() ? 'pr-11' : ''}"
+        class="shelf-field w-full pr-[5.5rem]"
         placeholder={searchSession.source === "openlibrary"
           ? t("search.query_placeholder_books")
           : t("search.query_placeholder")}
@@ -226,27 +225,48 @@
         onfocus={(e) => {
           (e.currentTarget as HTMLInputElement).scrollIntoView({ block: "center", behavior: "smooth" });
         }}
+        aria-label={t("search.title")}
       />
-      {#if searchSession.query.trim() || searchSession.hits.length > 0}
+      <div class="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+        {#if searchSession.query.trim() || searchSession.hits.length > 0}
+          <button
+            type="button"
+            class="shelf-touch flex h-9 w-9 items-center justify-center rounded-md text-lg leading-none text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            aria-label={t("search.clear")}
+            title={t("common.clear")}
+            onclick={onClearSearch}
+          >
+            ×
+          </button>
+        {/if}
         <button
-          type="button"
-          class="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-lg leading-none text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-          aria-label={t("search.clear")}
-          title={t("common.clear")}
-          onclick={onClearSearch}
+          type="submit"
+          class="shelf-touch flex h-9 w-9 items-center justify-center rounded-md text-emerald-600 hover:bg-emerald-50 disabled:opacity-40 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+          disabled={!canSubmit}
+          aria-label={t("search.submit")}
+          title={t("search.submit")}
         >
-          ×
+          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M8.5 3a5.5 5.5 0 104.384 8.737l3.19 3.19a.75.75 0 101.06-1.06l-3.19-3.19A5.5 5.5 0 008.5 3zm-4 5.5a4 4 0 118 0 4 4 0 01-8 0z"
+              clip-rule="evenodd"
+            />
+          </svg>
         </button>
-      {/if}
+      </div>
     </div>
-    <button
-      type="submit"
-      class="shelf-btn-primary"
-      disabled={loading || !searchSession.query.trim() || !canSearch}
-    >
-      {t("search.submit")}
-    </button>
   </form>
+
+  <p class="text-xs text-zinc-500 dark:text-zinc-400">
+    <a
+      class="underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-200"
+      href={resolve("/settings")}
+      title={t("search.catalog_chip_settings")}
+    >
+      {catalogChipLabel}
+    </a>
+  </p>
 
   {#if searchSession.err}
     <div class="flex flex-wrap items-center gap-3">
@@ -263,8 +283,9 @@
       {/if}
     </div>
   {/if}
+
   {#if searchSession.msg}
-    <p class="text-sm text-zinc-600 dark:text-zinc-400">{searchSession.msg}</p>
+    <p class="shelf-toast-ok" role="status">{searchSession.msg}</p>
   {/if}
 
   {#if loading}
@@ -283,18 +304,21 @@
       <p class="text-sm text-zinc-600 dark:text-zinc-400">{t("search.empty")}</p>
     {/if}
   {:else if searchSession.hits.length > 0}
-    <h2 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("search.results")}</h2>
-    <SearchResultsPagination
-      page={searchSession.page}
-      pageSize={searchSession.pageSize}
-      total={searchSession.total}
-      totalPages={searchSession.totalPages}
-      shownCount={searchSession.hits.length}
-      {loading}
-      onPrev={() => void loadPage(searchSession.page - 1)}
-      onNext={() => void loadPage(searchSession.page + 1)}
-    />
-    <p class="mb-2 text-xs text-zinc-500 dark:text-zinc-400">{t("search.add_status_hint")}</p>
+    <div class="flex items-baseline justify-between gap-2">
+      <h2 class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t("search.results")}</h2>
+      <SearchResultsPagination
+        page={searchSession.page}
+        pageSize={searchSession.pageSize}
+        total={searchSession.total}
+        totalPages={searchSession.totalPages}
+        shownCount={searchSession.hits.length}
+        {loading}
+        variant="meta"
+        onPrev={() => void loadPage(searchSession.page - 1)}
+        onNext={() => void loadPage(searchSession.page + 1)}
+      />
+    </div>
+
     <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
       {#each searchSession.hits as h (hitKey(h))}
         {@const inLibraryId = libraryIdFor(h)}
@@ -310,33 +334,32 @@
               <img
                 src={h.thumb}
                 alt=""
-                class="h-20 w-14 shrink-0 rounded object-cover"
+                class="h-16 w-11 shrink-0 rounded object-cover sm:h-20 sm:w-14"
                 onerror={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
                 }}
               />
             {:else}
-              <div class="h-20 w-14 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+              <div class="h-16 w-11 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800 sm:h-20 sm:w-14"></div>
             {/if}
             <div class="min-w-0 flex-1">
-              <p class="font-medium group-hover:underline">{h.title}</p>
+              <p class="font-medium leading-snug group-hover:underline">{h.title}</p>
               {#if h.kind === "openlibrary" && h.workTitle}
                 <p class="text-xs text-zinc-500 italic">{h.workTitle}</p>
               {/if}
               {#if h.kind === "tmdb"}
-                <p class="text-xs text-zinc-500">
+                <p class="mt-0.5 text-xs text-zinc-500">
                   {t(`media.${h.mediaType}`)}{#if h.yearLabel} · {h.yearLabel}{/if}
                 </p>
               {:else}
-                <p class="text-xs text-zinc-500">{bookAuthorsLine(h)}</p>
+                <p class="mt-0.5 text-xs text-zinc-500">{bookAuthorsLine(h)}</p>
               {/if}
-              <p class="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{t("search.open_detail_hint")}</p>
             </div>
           </a>
-          <div class="flex shrink-0 flex-col justify-center border-l border-zinc-200/70 pl-3 dark:border-zinc-700/70">
+          <div class="flex shrink-0 flex-col justify-center border-l border-zinc-200/70 pl-2 dark:border-zinc-700/70 sm:pl-3">
             {#if inLibraryId != null}
               <a
-                class="shelf-touch inline-flex min-h-11 max-w-[9.5rem] items-center justify-center rounded-md border border-zinc-300 px-3 text-center text-sm font-medium leading-snug text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                class="shelf-touch inline-flex min-h-11 max-w-[7.5rem] items-center justify-center rounded-md border border-zinc-300 px-2.5 text-center text-sm font-medium leading-snug text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 href={resolve("/library/[id]", { id: String(inLibraryId) })}
                 aria-label={t("search.in_library_aria")}
                 title={t("search.in_library")}
@@ -356,5 +379,19 @@
         </li>
       {/each}
     </ul>
+
+    <div class="pt-1">
+      <SearchResultsPagination
+        page={searchSession.page}
+        pageSize={searchSession.pageSize}
+        total={searchSession.total}
+        totalPages={searchSession.totalPages}
+        shownCount={searchSession.hits.length}
+        {loading}
+        variant="controls"
+        onPrev={() => void loadPage(searchSession.page - 1)}
+        onNext={() => void loadPage(searchSession.page + 1)}
+      />
+    </div>
   {/if}
 </div>

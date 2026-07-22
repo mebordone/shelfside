@@ -18,6 +18,19 @@ export function formatSearchPageCounter(
   return `Página ${page + 1} de ${pageTotal} · ${start}–${end} de ${total}`;
 }
 
+/** Rango compacto «11–20» para la barra meta (sin controles). */
+export function formatSearchPageRange(
+  page: number,
+  pageSize: number,
+  total: number,
+  shownCount: number,
+): { start: number; end: number; total: number } | null {
+  if (total <= 0) return null;
+  const start = page * pageSize + 1;
+  const end = Math.min(start + Math.max(shownCount, 1) - 1, total);
+  return { start, end, total };
+}
+
 export function canSearchPagePrev(page: number): boolean {
   return page > 0;
 }

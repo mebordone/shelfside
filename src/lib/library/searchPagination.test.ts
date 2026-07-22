@@ -3,6 +3,7 @@ import {
   canSearchPageNext,
   canSearchPagePrev,
   formatSearchPageCounter,
+  formatSearchPageRange,
   getPageSizeForSource,
 } from "./searchPagination";
 
@@ -14,6 +15,11 @@ describe("searchPagination", () => {
 
   it("formatea contador con totalPages de TMDB", () => {
     expect(formatSearchPageCounter(1, 20, 100, 18, 5)).toBe("Página 2 de 5 · 21–38 de 100");
+  });
+
+  it("formatea rango compacto", () => {
+    expect(formatSearchPageRange(1, 10, 312, 10)).toEqual({ start: 11, end: 20, total: 312 });
+    expect(formatSearchPageRange(0, 10, 0, 0)).toBeNull();
   });
 
   it("navegación prev/next según total o totalPages", () => {
