@@ -20,9 +20,11 @@
 
   interface Props {
     editionId: string;
+    /** Origen para «Volver» en ficha de catálogo. */
+    returnTo?: string | null;
   }
 
-  let { editionId }: Props = $props();
+  let { editionId, returnTo = null }: Props = $props();
 
   let hitsByKey = new SvelteMap<string, OpenLibrarySearchHit>();
   let allRowsCache = $state<RelatedSuggestionRow[]>([]);
@@ -98,6 +100,7 @@
   openAriaLabel={t("detail.related_open_aria")}
   openLabel={t("detail.related_open")}
   canSeeMore={canSeeMore || allRowsCache.length > 0}
+  {returnTo}
   {loadRows}
   {loadMoreRows}
   {onAdd}

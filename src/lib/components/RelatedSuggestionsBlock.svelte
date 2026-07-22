@@ -4,6 +4,7 @@
   import AddToLibraryMenuButton from "$lib/components/AddToLibraryMenuButton.svelte";
   import { userFacingError } from "$lib/api/userFacingError";
   import { t } from "$lib/i18n";
+  import { withReturnTo } from "$lib/nav/returnTo";
 
   export type RelatedDetailTarget =
     | { kind: "library"; id: number }
@@ -34,6 +35,8 @@
     addDisabled?: boolean;
     /** Si hay más de lo mostrado en el carrusel o se puede paginar. */
     canSeeMore?: boolean;
+    /** Ruta de origen (ficha biblioteca) para que «Volver» en catálogo regrese ahí. */
+    returnTo?: string | null;
     loadRows: () => Promise<RelatedSuggestionRow[]>;
     /** Carga acumulada para el sheet (página siguiente). */
     loadMoreRows?: (current: RelatedSuggestionRow[]) => Promise<RelatedSuggestionRow[]>;
@@ -54,6 +57,7 @@
     openLabel,
     addDisabled = false,
     canSeeMore = false,
+    returnTo = null,
     loadRows,
     loadMoreRows,
     onAdd,
@@ -71,16 +75,18 @@
   let reloadNonce = $state(0);
 
   function detailHref(target: RelatedDetailTarget): string {
+    let href: string;
     if (target.kind === "library") {
-      return resolve("/library/[id]", { id: String(target.id) });
+      href = resolve("/library/[id]", { id: String(target.id) });
+    } else if (target.kind === "book") {
+      href = resolve("/search/book/[editionId]", { editionId: target.editionId });
+    } else {
+      href = resolve("/search/[mediaType]/[id]", {
+        mediaType: target.mediaType,
+        id: String(target.id),
+      });
     }
-    if (target.kind === "book") {
-      return resolve("/search/book/[editionId]", { editionId: target.editionId });
-    }
-    return resolve("/search/[mediaType]/[id]", {
-      mediaType: target.mediaType,
-      id: String(target.id),
-    });
+    return withReturnTo(href, returnTo);
   }
 
   function detailAria(row: RelatedSuggestionRow): string {

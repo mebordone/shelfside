@@ -20,9 +20,11 @@
   interface Props {
     mediaType: "movie" | "tv";
     tmdbId: number;
+    /** Origen para «Volver» en ficha de catálogo. */
+    returnTo?: string | null;
   }
 
-  let { mediaType, tmdbId }: Props = $props();
+  let { mediaType, tmdbId, returnTo = null }: Props = $props();
 
   const hasTmdbKey = $derived(Boolean(getTmdbApiKeyFromEnv().trim()));
   let hitsByKey = new SvelteMap<string, TmdbSearchHit>();
@@ -131,6 +133,7 @@
     openLabel={t("detail.related_open")}
     addDisabled={!hasTmdbKey}
     canSeeMore={hasTmdbKey}
+    {returnTo}
     {loadRows}
     {loadMoreRows}
     {onAdd}
