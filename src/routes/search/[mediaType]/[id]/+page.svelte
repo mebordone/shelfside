@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import {
@@ -13,8 +12,10 @@
   import TmdbRelatedSuggestionsBlock from "$lib/components/TmdbRelatedSuggestionsBlock.svelte";
   import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
+  import { getTmdbHitsLibraryPresence } from "$lib/db";
   import { t } from "$lib/i18n";
   import { addTmdbSearchHitToLibrary } from "$lib/library/sources/registry";
+  import { safeAppReturnTo } from "$lib/nav/returnTo";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { mobileLayout } from "$lib/stores/mobileLayout.svelte";
   import { searchSession } from "$lib/stores/searchSession.svelte";
@@ -24,6 +25,8 @@
   let detail = $state<TmdbDetail | null>(null);
   let posterUrl = $state<string | null>(null);
   let adding = $state(false);
+  let inLibraryId = $state<number | null>(null);
+  let addMsg = $state<string | null>(null);
 
   const hasKey = $derived(Boolean(getTmdbApiKeyFromEnv().trim()));
   const mediaType = $derived(page.params.mediaType ?? "");
@@ -35,6 +38,13 @@
 
   const detailMenuId = $derived(
     paramsValid ? `search-detail-${mediaType}-${tmdbId}` : "search-detail-invalid",
+  );
+
+  const backHref = $derived(
+    safeAppReturnTo(page.url.searchParams.get("returnTo")) ?? resolve("/search"),
+  );
+  const backLabel = $derived(
+    backHref.startsWith("/library") ? t("common.back") : t("search.back_search"),
   );
 
   function yearFromDetail(d: TmdbDetail): string | null {
@@ -66,6 +76,7 @@
       err = t("search.need_key");
       detail = null;
       posterUrl = null;
+      inLibraryId = null;
       return;
     }
     if (!paramsValid) {
@@ -73,6 +84,7 @@
       err = t("search.invalid_link");
       detail = null;
       posterUrl = null;
+      inLibraryId = null;
       return;
     }
     const mt = mediaType as "movie" | "tv";
@@ -81,12 +93,17 @@
     err = null;
     detail = null;
     posterUrl = null;
+    addMsg = null;
+    inLibraryId = null;
     void (async () => {
       try {
         const client = createTmdbClient({ apiKey: getTmdbApiKeyFromEnv() });
         const d = mt === "movie" ? await client.getMovieDetail(id) : await client.getTvDetail(id);
         detail = d;
         posterUrl = await resolvePosterDisplayUrl(null, client.posterUrlFromPath(d.posterPath));
+        const db = await getDatabase();
+        const presence = await getTmdbHitsLibraryPresence(db, [{ mediaType: mt, id }]);
+        inLibraryId = presence.get(`${mt}-${id}`) ?? null;
       } catch (e) {
         err = userFacingError(e);
       } finally {
@@ -99,15 +116,13 @@
     if (!detail || !hasKey) return;
     adding = true;
     err = null;
+    addMsg = null;
     try {
       const db = await getDatabase();
       const r = await addTmdbSearchHitToLibrary(db, hitFromDetail(detail), status);
-      if (r.alreadyInLibrary) {
-        searchSession.msg = t("search.already");
-        await goto(resolve("/search"));
-      } else {
-        await goto(resolve("/library/[id]", { id: String(r.libraryId) }));
-      }
+      inLibraryId = r.libraryId;
+      addMsg = r.alreadyInLibrary ? t("search.already") : t("search.added");
+      searchSession.msg = addMsg;
     } catch (e) {
       err = userFacingError(e);
     } finally {
@@ -116,11 +131,11 @@
   }
 </script>
 
-<div class="mx-auto max-w-lg space-y-6 px-4 py-8">
+<div class="shelf-page-detail max-w-lg">
   <p>
     <a
       class="text-sm text-emerald-700 hover:underline dark:text-emerald-400"
-      href={resolve("/search")}>{t("search.back_search")}</a
+      href={backHref}>{backLabel}</a
     >
   </p>
 
@@ -142,17 +157,33 @@
             {t(`media.${detail.mediaType}`)}{#if yearLabel} · {yearLabel}{/if}
           </p>
           <div class="mt-3 {mobileLayout.current ? 'w-full' : ''}">
-            <AddToLibraryMenuButton
-              menuId={detailMenuId}
-              variant="row"
-              fullWidth={mobileLayout.current}
-              busy={adding}
-              disabled={!hasKey}
-              onAdd={(status) => addToLibrary(status)}
-            />
+            {#if inLibraryId != null}
+              <a
+                class="shelf-touch inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-300 px-3 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800 {mobileLayout.current
+                  ? 'w-full'
+                  : ''}"
+                href={resolve("/library/[id]", { id: String(inLibraryId) })}
+                aria-label={t("search.in_library_aria")}
+              >
+                {t("search.in_library")}
+              </a>
+            {:else}
+              <AddToLibraryMenuButton
+                menuId={detailMenuId}
+                variant="row"
+                fullWidth={mobileLayout.current}
+                busy={adding}
+                disabled={!hasKey}
+                onAdd={(status) => addToLibrary(status)}
+              />
+            {/if}
           </div>
         </div>
       </div>
+
+      {#if addMsg}
+        <p class="text-sm text-zinc-600 dark:text-zinc-400">{addMsg}</p>
+      {/if}
 
       {#if err}
         <p class="text-sm text-red-600 dark:text-red-400">{err}</p>
@@ -166,7 +197,11 @@
       {/if}
 
       {#if hasKey && paramsValid}
-        <TmdbRelatedSuggestionsBlock mediaType={mediaType as "movie" | "tv"} tmdbId={tmdbId} />
+        <TmdbRelatedSuggestionsBlock
+          mediaType={mediaType as "movie" | "tv"}
+          tmdbId={tmdbId}
+          returnTo={safeAppReturnTo(page.url.searchParams.get("returnTo")) ?? resolve("/search")}
+        />
       {/if}
     </article>
   {/if}

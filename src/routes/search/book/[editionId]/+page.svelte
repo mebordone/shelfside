@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { createOpenLibraryClient, type OpenLibrarySearchHit } from "$lib/api";
@@ -8,8 +7,10 @@
   import OpenLibraryRelatedSuggestionsBlock from "$lib/components/OpenLibraryRelatedSuggestionsBlock.svelte";
   import type { Status } from "$lib/db/types";
   import { getDatabase } from "$lib/db/connection";
+  import { getOpenLibraryHitsLibraryPresence } from "$lib/db";
   import { t } from "$lib/i18n";
   import { addOpenLibrarySearchHitToLibrary } from "$lib/library/sources/registry";
+  import { safeAppReturnTo } from "$lib/nav/returnTo";
   import { resolvePosterDisplayUrl } from "$lib/poster";
   import { mobileLayout } from "$lib/stores/mobileLayout.svelte";
   import { searchSession } from "$lib/stores/searchSession.svelte";
@@ -21,11 +22,20 @@
   );
   let posterUrl = $state<string | null>(null);
   let adding = $state(false);
+  let inLibraryId = $state<number | null>(null);
+  let addMsg = $state<string | null>(null);
 
   const editionId = $derived((page.params.editionId ?? "").replace(/^\/books\//, ""));
   const paramsValid = $derived(/^OL[\dA-Z]+M$/i.test(editionId));
 
   const detailMenuId = $derived(paramsValid ? `search-book-${editionId}` : "search-book-invalid");
+
+  const backHref = $derived(
+    safeAppReturnTo(page.url.searchParams.get("returnTo")) ?? resolve("/search"),
+  );
+  const backLabel = $derived(
+    backHref.startsWith("/library") ? t("common.back") : t("search.back_search"),
+  );
 
   /** Año del listado de búsqueda (evita fallo si /works no trae first_publish_date). */
   const yearFromSearch = $derived.by(() => {
@@ -53,11 +63,13 @@
       loading = false;
       err = t("search.invalid_link");
       detail = null;
+      inLibraryId = null;
       return;
     }
     let cancelled = false;
     loading = true;
     err = null;
+    addMsg = null;
     void (async () => {
       try {
         const client = createOpenLibraryClient();
@@ -65,10 +77,14 @@
         if (cancelled) return;
         detail = d;
         posterUrl = await resolvePosterDisplayUrl(null, d.coverUrl);
+        const db = await getDatabase();
+        const presence = await getOpenLibraryHitsLibraryPresence(db, [{ editionId: id }]);
+        if (!cancelled) inLibraryId = presence.get(id) ?? null;
       } catch (e) {
         if (!cancelled) {
           err = userFacingError(e);
           detail = null;
+          inLibraryId = null;
         }
       } finally {
         if (!cancelled) loading = false;
@@ -84,15 +100,13 @@
     if (!hit) return;
     adding = true;
     err = null;
+    addMsg = null;
     try {
       const db = await getDatabase();
       const r = await addOpenLibrarySearchHitToLibrary(db, hit, status);
-      if (r.alreadyInLibrary) {
-        searchSession.msg = t("search.already");
-      } else {
-        searchSession.msg = t("search.added");
-        await goto(resolve("/library/[id]", { id: String(r.libraryId) }));
-      }
+      inLibraryId = r.libraryId;
+      addMsg = r.alreadyInLibrary ? t("search.already") : t("search.added");
+      searchSession.msg = addMsg;
     } catch (e) {
       err = userFacingError(e);
     } finally {
@@ -101,10 +115,10 @@
   }
 </script>
 
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-8">
+<div class="shelf-page-detail max-w-2xl">
   <p>
-    <a class="text-sm text-emerald-700 hover:underline dark:text-emerald-400" href={resolve("/search")}
-      >{t("search.back_search")}</a
+    <a class="text-sm text-emerald-700 hover:underline dark:text-emerald-400" href={backHref}
+      >{backLabel}</a
     >
   </p>
 
@@ -140,15 +154,31 @@
           {t("detail.book_open_library")}
         </button>
         <div class="mt-2 {mobileLayout.current ? 'w-full' : ''}">
-          <AddToLibraryMenuButton
-            menuId={detailMenuId}
-            busy={adding}
-            fullWidth={mobileLayout.current}
-            onAdd={(st) => addWithStatus(st)}
-          />
+          {#if inLibraryId != null}
+            <a
+              class="shelf-touch inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-300 px-3 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800 {mobileLayout.current
+                ? 'w-full'
+                : ''}"
+              href={resolve("/library/[id]", { id: String(inLibraryId) })}
+              aria-label={t("search.in_library_aria")}
+            >
+              {t("search.in_library")}
+            </a>
+          {:else}
+            <AddToLibraryMenuButton
+              menuId={detailMenuId}
+              busy={adding}
+              fullWidth={mobileLayout.current}
+              onAdd={(st) => addWithStatus(st)}
+            />
+          {/if}
         </div>
       </div>
     </header>
+
+    {#if addMsg}
+      <p class="text-sm text-zinc-600 dark:text-zinc-400">{addMsg}</p>
+    {/if}
 
     {#if detail.overview}
       <section class="space-y-2">
@@ -161,6 +191,9 @@
       <p class="text-sm text-red-600 dark:text-red-400">{err}</p>
     {/if}
 
-    <OpenLibraryRelatedSuggestionsBlock editionId={detail.editionId} />
+    <OpenLibraryRelatedSuggestionsBlock
+      editionId={detail.editionId}
+      returnTo={safeAppReturnTo(page.url.searchParams.get("returnTo")) ?? resolve("/search")}
+    />
   {/if}
 </div>
